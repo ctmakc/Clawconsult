@@ -40,6 +40,8 @@ interface FormData {
   skill: string
   template: string
   usecase: string
+  // CAPTCHA integration-ready field (Cloudflare Turnstile response token)
+  turnstileToken: string
 }
 
 const INITIAL_FORM: FormData = {
@@ -50,6 +52,7 @@ const INITIAL_FORM: FormData = {
   website_url: '',
   utm_source: '', utm_medium: '', utm_campaign: '',
   service: '', skill: '', template: '', usecase: '',
+  turnstileToken: '',
 }
 
 type FieldError = Partial<Record<keyof FormData, string>>

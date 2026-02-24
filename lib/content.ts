@@ -4,23 +4,80 @@ type Locale = 'en' | 'ru' | 'fr'
 
 // ── Generic loader ────────────────────────────────────────────────────────────
 
-async function loadJSON<T>(locale: Locale, entity: string): Promise<T[]> {
-  try {
-    // Use require for server-side JSON loading (works with Next.js)
-    const data = (await import(`@/content/${locale}/${entity}/index.json`)).default
-    return data as T[]
-  } catch {
-    // Fallback to 'en' if locale not available
-    if (locale !== 'en') {
-      try {
-        const data = (await import(`@/content/en/${entity}/index.json`)).default
-        return data as T[]
-      } catch {
-        return []
-      }
-    }
-    return []
+function normalizeArrayPayload(payload: unknown, entity: string): unknown[] | null {
+  if (Array.isArray(payload)) return payload
+  if (!payload || typeof payload !== 'object') return null
+
+  const record = payload as Record<string, unknown>
+  const candidates = [
+    entity,
+    entity.replace(/-/g, ''),
+    entity.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()),
+  ]
+
+  if (entity.endsWith('s')) {
+    candidates.push(entity.slice(0, -1))
   }
+
+  for (const key of candidates) {
+    if (Array.isArray(record[key])) return record[key] as unknown[]
+  }
+
+  const firstArray = Object.values(record).find(Array.isArray)
+  return Array.isArray(firstArray) ? (firstArray as unknown[]) : null
+}
+
+function normalizeItem<T>(item: T, entity: string): T {
+  if (!item || typeof item !== 'object') return item
+  const record = { ...(item as Record<string, unknown>) }
+
+  if (record.status === 'active') record.status = 'published'
+  if (record.publishStatus === 'active') record.publishStatus = 'published'
+
+  if (entity === 'services') {
+    if (record.category === 'assessment') record.category = 'strategy'
+    if (record.category === 'implementation') record.category = 'build'
+    if (record.category === 'maintenance') record.category = 'support'
+
+    if (Array.isArray(record.formatOptions)) {
+      record.formatOptions = (record.formatOptions as unknown[]).map((value) =>
+        value === 'onsite' ? 'onsite-ottawa' : value
+      )
+    }
+
+    if (typeof record.pricingFrom === 'number') {
+      record.pricingFrom = `CAD ${record.pricingFrom.toLocaleString('en-CA')}`
+    }
+  }
+
+  return record as T
+}
+
+async function loadJSON<T>(locale: Locale, entity: string): Promise<T[]> {
+  const tryLoad = async (targetLocale: Locale): Promise<T[] | null> => {
+    try {
+      const raw = (await import(`@/content/${targetLocale}/${entity}/index.json`)).default
+      const normalized = normalizeArrayPayload(raw, entity)
+      if (!normalized) return null
+
+      const items = normalized.map((item) => normalizeItem<T>(item as T, entity))
+      if (targetLocale !== 'en' && items.length === 0) return null
+
+      return items
+    } catch {
+      return null
+    }
+  }
+
+  const local = await tryLoad(locale)
+  if (local) return local
+
+  if (locale !== 'en') {
+    const fallback = await tryLoad('en')
+    if (fallback) return fallback
+  }
+
+  return []
 }
 
 // ── Services ──────────────────────────────────────────────────────────────────

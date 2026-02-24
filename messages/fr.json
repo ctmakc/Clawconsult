@@ -1,0 +1,370 @@
+{
+  "nav": {
+    "services": "Services",
+    "useCases": "Use Cases",
+    "skills": "Skills Library",
+    "templates": "Templates",
+    "security": "Security",
+    "pricing": "Pricing",
+    "resources": "Resources",
+    "about": "About",
+    "training": "Training",
+    "contact": "Contact",
+    "bookDiscovery": "Book Discovery",
+    "toggleMenu": "Toggle menu"
+  },
+  "footer": {
+    "tagline": "Production-ready AI agent implementation for SMB and professional services.",
+    "company": "Company",
+    "solutions": "Solutions",
+    "knowledge": "Knowledge",
+    "legal": "Legal",
+    "about": "About Us",
+    "contact": "Contact",
+    "services": "Services",
+    "useCases": "Use Cases",
+    "templates": "Templates",
+    "skills": "Skills Library",
+    "resources": "Resources",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "cookies": "Cookie Policy",
+    "location": "Ottawa, ON, Canada · Remote Worldwide",
+    "rights": "All rights reserved.",
+    "bookCta": "Book a Discovery Session"
+  },
+  "home": {
+    "hero": {
+      "badge": "Ottawa · Remote Worldwide",
+      "title": "Autonomous AI Agents for Your Business. Done Right.",
+      "subtitle": "We implement production-ready AI agent workflows for SMB and professional services — securely, step by step, with measurable results.",
+      "cta1": "Book Discovery Session",
+      "cta2": "Explore Use Cases",
+      "trust": "OpenClaw-based implementations · Ottawa onsite available · Secure by design"
+    },
+    "whatWeDo": {
+      "title": "What We Do",
+      "subtitle": "End-to-end AI agent consulting — from strategy to live deployment and ongoing support."
+    },
+    "forWhom": {
+      "title": "Who We Work With",
+      "subtitle": "We focus on practical AI agent deployment for businesses where time and resources matter."
+    },
+    "whatYouCanAutomate": {
+      "title": "What You Can Automate",
+      "subtitle": "Real workflows for real business functions. Click any use case to explore.",
+      "viewAll": "View All Use Cases"
+    },
+    "howItWorks": {
+      "title": "How We Work",
+      "subtitle": "A structured, low-risk approach from first conversation to live agents."
+    },
+    "featuredOffers": {
+      "title": "Featured Offers",
+      "subtitle": "Productized engagements with clear scope and predictable outcomes.",
+      "viewAll": "View All Services"
+    },
+    "libraryPreview": {
+      "title": "Skills Library & Templates",
+      "subtitle": "Versioned, documented, production-tested agent building blocks.",
+      "viewSkills": "Browse Skills",
+      "viewTemplates": "Browse Templates"
+    },
+    "securityTeaser": {
+      "title": "Security & Governance Built In",
+      "subtitle": "We don't just build agents — we build them so they can be trusted.",
+      "cta": "Our Security Approach"
+    },
+    "pricingPreview": {
+      "title": "Transparent Pricing",
+      "subtitle": "Fixed-scope packages and retainers. No surprise invoices.",
+      "cta": "View Full Pricing"
+    },
+    "finalCta": {
+      "title": "Ready to Run Your First Agent?",
+      "subtitle": "Start with a 60-minute Discovery Session. We'll map your first agent workflow together.",
+      "cta": "Book Discovery Session"
+    }
+  },
+  "services": {
+    "title": "Our Services",
+    "subtitle": "From initial audit to ongoing managed support — structured engagements with clear deliverables.",
+    "filterAll": "All",
+    "filterStrategy": "Strategy & Audit",
+    "filterSetup": "Setup & Foundation",
+    "filterSecurity": "Security",
+    "filterBuild": "Agent Build",
+    "filterSupport": "Support",
+    "filterTraining": "Training",
+    "filterOnsite": "Onsite",
+    "search": "Search services…",
+    "noResults": "No services match your filters.",
+    "pricingFrom": "From",
+    "duration": "Duration",
+    "format": "Format",
+    "forWhom": "For",
+    "learnMore": "Learn More",
+    "bookThis": "Book This Service",
+    "chooseHelp": {
+      "title": "Not Sure Which Service to Start With?",
+      "subtitle": "Book a free 20-minute intro call and we'll recommend the right entry point.",
+      "cta": "Get a Recommendation"
+    }
+  },
+  "useCases": {
+    "title": "Use Case Library",
+    "subtitle": "Practical agent workflows for every business function. Each use case is deployable and production-tested.",
+    "filterAll": "All Functions",
+    "filterFounder": "Founder / CEO",
+    "filterSales": "Sales",
+    "filterOps": "Operations",
+    "filterMarketing": "Marketing",
+    "filterRecruiting": "Recruiting",
+    "filterFinance": "Finance & Admin",
+    "search": "Search use cases…",
+    "noResults": "No use cases match your filters.",
+    "complexity": "Complexity",
+    "timeline": "Timeline",
+    "persona": "Role",
+    "viewDetails": "View Workflow",
+    "discussWorkflow": "Discuss This Workflow",
+    "customCta": {
+      "title": "Need a Custom Workflow?",
+      "subtitle": "We design agent workflows tailored to your exact processes.",
+      "cta": "Book Discovery Session"
+    }
+  },
+  "skills": {
+    "title": "Skills Library",
+    "subtitle": "Versioned, documented agent capabilities. Each skill is a building block for your automation workflows.",
+    "filterAll": "All Types",
+    "search": "Search skills…",
+    "noResults": "No skills match your filters.",
+    "version": "Version",
+    "status": "Status",
+    "complexity": "Complexity",
+    "sensitivity": "Data Sensitivity",
+    "doneForYou": "Done-For-You Available",
+    "requiresApproval": "Requires Human Approval",
+    "viewDetails": "View Skill",
+    "implement": "Implement This Skill",
+    "customCta": {
+      "title": "Need a Custom Skill?",
+      "subtitle": "We build purpose-built skills for your specific workflows and data.",
+      "cta": "Request Custom Skill"
+    }
+  },
+  "templates": {
+    "title": "Agent Blueprints",
+    "subtitle": "Pre-designed agent workflow bundles. Faster to deploy, tested in production.",
+    "filterAll": "All",
+    "search": "Search blueprints…",
+    "noResults": "No templates match your filters.",
+    "timeline": "Timeline",
+    "pricingFrom": "From",
+    "complexity": "Complexity",
+    "includedSkills": "Included Skills",
+    "audience": "Built For",
+    "viewDetails": "View Blueprint",
+    "deployThis": "Deploy This Blueprint",
+    "discoveryCta": {
+      "title": "Not Sure Which Blueprint Fits?",
+      "cta": "Book Discovery Session"
+    }
+  },
+  "security": {
+    "title": "Security & Governance",
+    "subtitle": "We build AI agents that can be trusted — with clear boundaries, approvals, and auditability.",
+    "cta": "Book Security Pre-Check"
+  },
+  "pricing": {
+    "title": "Pricing",
+    "subtitle": "Transparent, scope-based pricing. Fixed packages where possible, custom quotes for complex environments.",
+    "entry": "Entry-Level",
+    "build": "Build Packages",
+    "retainers": "Retainers",
+    "cta": "Get a Custom Quote",
+    "custom": "Custom quote for complex environments",
+    "startingFrom": "Starting from"
+  },
+  "training": {
+    "title": "Training & Workshops",
+    "subtitle": "Hands-on training for your team — remote or onsite in Ottawa."
+  },
+  "about": {
+    "title": "About OpenClaw Consulting",
+    "subtitle": "We help businesses implement AI agents that actually work in production — not just in demos."
+  },
+  "resources": {
+    "title": "Resources & Insights",
+    "subtitle": "Practical guides, security best practices, and implementation strategies.",
+    "readMore": "Read Article",
+    "minRead": "min read",
+    "categories": {
+      "how-to": "How-To",
+      "troubleshooting": "Troubleshooting",
+      "strategy": "Strategy",
+      "security": "Security",
+      "case-study": "Case Study",
+      "anti-pattern": "Anti-Pattern"
+    }
+  },
+  "contact": {
+    "title": "Book a Discovery Session",
+    "subtitle": "Tell us about your business and what you want to automate. We'll map your first agent workflow together.",
+    "form": {
+      "name": "Full Name",
+      "email": "Work Email",
+      "company": "Company Name",
+      "role": "Your Role",
+      "website": "Website (optional)",
+      "country": "Country",
+      "city": "City",
+      "companySize": "Company Size",
+      "industry": "Industry",
+      "interestType": "What do you need help with?",
+      "budgetRange": "Budget Range",
+      "timeline": "Timeline",
+      "currentSituation": "Describe your current setup",
+      "goals": "What do you want to achieve?",
+      "preferredFormat": "Preferred Format",
+      "consent": "I agree to the processing of my data as described in the Privacy Policy",
+      "submit": "Send Inquiry",
+      "submitting": "Sending…",
+      "success": "Thank you! We'll be in touch within 1 business day.",
+      "error": "Something went wrong. Please try again or email us directly."
+    },
+    "interestOptions": {
+      "discovery": "Discovery / Audit",
+      "setup": "Foundation Setup",
+      "security": "Security Review",
+      "build": "Agent Build",
+      "support": "Ongoing Support",
+      "training": "Training / Workshops",
+      "onsite": "Onsite Ottawa",
+      "custom": "Custom Project"
+    },
+    "budgetOptions": {
+      "under2k": "Under CAD 2,000",
+      "2k5k": "CAD 2,000–5,000",
+      "5k10k": "CAD 5,000–10,000",
+      "10k20k": "CAD 10,000–20,000",
+      "20kplus": "CAD 20,000+",
+      "unsure": "Not sure yet"
+    },
+    "timelineOptions": {
+      "asap": "As soon as possible",
+      "1month": "Within 1 month",
+      "1to3months": "1–3 months",
+      "3plus": "3+ months",
+      "exploring": "Just exploring"
+    },
+    "formatOptions": {
+      "remote": "Remote",
+      "onsite": "Onsite (Ottawa)",
+      "hybrid": "Hybrid"
+    },
+    "companySizeOptions": {
+      "solo": "Solo / Freelancer",
+      "2to10": "2–10 employees",
+      "11to50": "11–50 employees",
+      "51to200": "51–200 employees",
+      "200plus": "200+ employees"
+    }
+  },
+  "thankYou": {
+    "title": "Thank You!",
+    "subtitle": "Your inquiry has been received. We'll be in touch within 1 business day.",
+    "next": "What happens next?",
+    "steps": [
+      "We review your inquiry and prepare relevant questions",
+      "We reach out to schedule a 60-minute Discovery Session",
+      "Together we map your first agent workflow"
+    ],
+    "backHome": "Back to Home",
+    "browseUseCases": "Browse Use Cases"
+  },
+  "common": {
+    "learnMore": "Learn More",
+    "viewAll": "View All",
+    "bookDiscovery": "Book Discovery Session",
+    "requestImplementation": "Request Implementation",
+    "discussWorkflow": "Discuss This Workflow",
+    "getQuote": "Get a Quote",
+    "remote": "Remote",
+    "onsite": "Onsite Ottawa",
+    "hybrid": "Hybrid",
+    "async": "Async",
+    "stable": "Stable",
+    "beta": "Beta",
+    "draft": "Draft",
+    "deprecated": "Deprecated",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "featured": "Featured",
+    "new": "New",
+    "requiresApproval": "Human Approval Required",
+    "doneForYou": "Done-For-You Available",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "notFound": "Page not found",
+    "backHome": "Back to Home",
+    "readMore": "Read More",
+    "relatedServices": "Related Services",
+    "relatedUseCases": "Related Use Cases",
+    "relatedSkills": "Related Skills",
+    "relatedTemplates": "Related Templates",
+    "complexity": {
+      "low": "Low Complexity",
+      "medium": "Medium Complexity",
+      "high": "High Complexity"
+    },
+    "locale": {
+      "en": "English",
+      "ru": "Русский",
+      "fr": "Français"
+    }
+  },
+  "badges": {
+    "remote": "Remote",
+    "onsiteOttawa": "Onsite Ottawa",
+    "hybrid": "Hybrid",
+    "async": "Async",
+    "stable": "Stable",
+    "beta": "Beta",
+    "deprecated": "Deprecated",
+    "featured": "Featured",
+    "L1": "Beginner",
+    "L2": "Intermediate",
+    "L3": "Advanced",
+    "public": "Public Data",
+    "internal": "Internal Data",
+    "confidential": "Confidential",
+    "restricted": "Restricted"
+  },
+  "errors": {
+    "404": {
+      "title": "Page Not Found",
+      "subtitle": "The page you're looking for doesn't exist or has been moved.",
+      "cta": "Go to Homepage"
+    }
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last Updated"
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last Updated"
+    }
+  },
+  "cookie": {
+    "message": "We use cookies to improve your experience and analyze site traffic.",
+    "accept": "Accept All",
+    "decline": "Decline",
+    "customize": "Customize",
+    "learnMore": "Learn More"
+  }
+}

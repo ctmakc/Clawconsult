@@ -3,7 +3,6 @@ import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { Clock, Calendar } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { RelatedContent } from '@/components/sections/RelatedContent'
 import { CtaSection } from '@/components/sections/CtaSection'
 import { buildMetadata, articleSchema, breadcrumbSchema } from '@/lib/seo'
@@ -93,14 +92,23 @@ export default async function ResourceDetailPage({ params }: Props) {
 
       <div className="container-site py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Article content placeholder */}
           <article className="lg:col-span-2 prose prose-slate max-w-none">
-            <p className="text-slate-600 leading-relaxed">
-              {resource.excerpt}
-            </p>
-            <p className="text-slate-500 italic mt-6 text-sm">
-              Full article content coming soon. Subscribe to our newsletter to be notified when the full article is published.
-            </p>
+            {resource.content ? (
+              <div className="whitespace-pre-wrap leading-relaxed text-slate-700">
+                {resource.content}
+              </div>
+            ) : (
+              <>
+                <p className="text-slate-600 leading-relaxed">{resource.excerpt}</p>
+                <p className="text-slate-500 italic mt-6 text-sm">
+                  {locale === 'ru'
+                    ? 'Полный текст статьи скоро будет опубликован.'
+                    : locale === 'fr'
+                      ? "Le contenu complet de l'article sera publié prochainement."
+                      : 'Full article content will be published soon.'}
+                </p>
+              </>
+            )}
           </article>
 
           {/* Sidebar */}

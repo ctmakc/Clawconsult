@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { sendLeadNotificationEmail } from '@/lib/email'
 
 // ── Validation schema ─────────────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ const ContactSchema = z.object({
   skill: z.string().optional(),
   template: z.string().optional(),
   usecase: z.string().optional(),
+  // CAPTCHA (Cloudflare Turnstile) - integration-ready
+  turnstileToken: z.string().optional(),
 })
 
 export type ContactFormData = z.infer<typeof ContactSchema>
@@ -61,7 +64,7 @@ function checkRateLimit(ip: string): boolean {
 
 // ── Webhook / notification ────────────────────────────────────────────────────
 
-async function notifyWebhook(data: ContactFormData, meta: { ip: string; userAgent: string }) {
+async function notifyWebhook(data: ContactFormData) {
   const webhookUrl = process.env.CONTACT_WEBHOOK_URL
   if (!webhookUrl) return
 
@@ -87,6 +90,31 @@ async function notifyWebhook(data: ContactFormData, meta: { ip: string; userAgen
   } catch {
     // Webhook failure should not block form submission response
     console.error('Webhook notification failed')
+  }
+}
+
+async function verifyTurnstile(token?: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY
+
+  // Integration-ready mode: if secret is not configured, allow submissions.
+  if (!secret) return true
+  if (!token) return false
+
+  try {
+    const formData = new FormData()
+    formData.set('secret', secret)
+    formData.set('response', token)
+
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) return false
+    const result = (await response.json()) as { success?: boolean }
+    return Boolean(result.success)
+  } catch {
+    return false
   }
 }
 
@@ -130,10 +158,26 @@ export async function POST(req: NextRequest) {
 
   const data = parsed.data
 
+  if (!(await verifyTurnstile(data.turnstileToken))) {
+    return NextResponse.json(
+      { error: 'CAPTCHA verification failed. Please retry.' },
+      { status: 422 }
+    )
+  }
+
   // Notify via webhook
-  await notifyWebhook(data, {
-    ip,
-    userAgent: req.headers.get('user-agent') ?? '',
+  await notifyWebhook(data)
+
+  await sendLeadNotificationEmail({
+    name: data.name,
+    email: data.email,
+    company: data.company,
+    role: data.role,
+    interestType: data.interestType,
+    budgetRange: data.budgetRange,
+    timeline: data.timeline,
+    currentSituation: data.currentSituation,
+    goals: data.goals,
   })
 
   // Log server-side (in production, replace with proper logging)

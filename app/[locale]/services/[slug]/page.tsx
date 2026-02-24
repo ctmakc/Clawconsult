@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
-import { CheckCircle2, Clock, Users, MapPin, ArrowRight } from 'lucide-react'
+import { CheckCircle2, Clock, ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { FaqSection } from '@/components/sections/FaqSection'
@@ -10,7 +10,7 @@ import { CtaSection } from '@/components/sections/CtaSection'
 import { buildMetadata, serviceSchema, breadcrumbSchema } from '@/lib/seo'
 import { absoluteUrl } from '@/lib/utils'
 import {
-  getService, getServices, getRelatedServices, getRelatedSkills,
+  getService, getServices, getRelatedSkills,
   getRelatedTemplates, getRelatedUseCases
 } from '@/lib/content'
 import type { Locale } from '@/i18n/routing'
@@ -40,10 +40,8 @@ export default async function ServiceDetailPage({ params }: Props) {
   if (!service) notFound()
 
   const t = await getTranslations({ locale, namespace: 'services' })
-  const tCommon = await getTranslations({ locale, namespace: 'common' })
 
-  const [relatedServices, relatedSkills, relatedTemplates, relatedUseCases] = await Promise.all([
-    getRelatedServices(service.relatedUseCases ?? [], locale as Locale),
+  const [relatedSkills, relatedTemplates, relatedUseCases] = await Promise.all([
     getRelatedSkills(service.relatedSkills ?? [], locale as Locale),
     getRelatedTemplates(service.relatedTemplates ?? [], locale as Locale),
     getRelatedUseCases(service.relatedUseCases ?? [], locale as Locale),

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
-import { AlertTriangle, CheckCircle2, UserCheck, Shield, ArrowRight } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, UserCheck, Shield } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RelatedContent } from '@/components/sections/RelatedContent'

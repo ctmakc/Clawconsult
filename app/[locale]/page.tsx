@@ -232,7 +232,6 @@ function SecurityTeaserSection() {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
   const tHome = await getTranslations({ locale, namespace: 'home' })
-  const tCommon = await getTranslations({ locale, namespace: 'common' })
 
   const [featuredServices, featuredUseCases, featuredSkills, templates] = await Promise.all([
     getFeaturedServices(locale as Locale),

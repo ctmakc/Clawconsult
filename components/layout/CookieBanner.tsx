@@ -27,6 +27,12 @@ export function CookieBanner() {
     setVisible(false)
   }
 
+  function customize() {
+    // MVP: store a distinct state and direct users to privacy/cookies details.
+    localStorage.setItem(COOKIE_KEY, 'customized')
+    setVisible(false)
+  }
+
   if (!visible) return null
 
   return (
@@ -54,6 +60,9 @@ export function CookieBanner() {
       <div className="mt-3 flex gap-2">
         <Button size="sm" onClick={accept} className="flex-1">
           {t('accept')}
+        </Button>
+        <Button size="sm" variant="outline" onClick={customize} className="flex-1">
+          {t('customize')}
         </Button>
         <Button size="sm" variant="outline" onClick={decline} className="flex-1">
           {t('decline')}
