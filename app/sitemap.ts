@@ -15,6 +15,7 @@ const STATIC_PAGES = [
   '/about',
   '/resources',
   '/contact',
+  '/book-discovery',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

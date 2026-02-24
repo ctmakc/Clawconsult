@@ -69,7 +69,7 @@ export function Header() {
           <div className="flex items-center gap-3">
             <LocaleSwitcher />
             <Button asChild size="sm" className="hidden sm:inline-flex">
-              <Link href="/contact">{t('bookDiscovery')}</Link>
+              <Link href="/book-discovery">{t('bookDiscovery')}</Link>
             </Button>
 
             {/* Mobile menu toggle */}
@@ -108,7 +108,7 @@ export function Header() {
             })}
             <div className="pt-2 border-t border-slate-100 mt-1">
               <Button asChild size="default" className="w-full">
-                <Link href="/contact" onClick={() => setMobileOpen(false)}>
+                <Link href="/book-discovery" onClick={() => setMobileOpen(false)}>
                   {t('bookDiscovery')}
                 </Link>
               </Button>
