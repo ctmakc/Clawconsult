@@ -1,0 +1,607 @@
+[
+  {
+    "id": "tpl-001",
+    "slug": "executive-briefing-agent",
+    "title": "Executive Briefing Agent",
+    "version": "1.2.0",
+    "summary": "A production-ready agent blueprint that compiles and delivers a personalized daily executive briefing every business morning. Aggregates news, calendar context, email priority signals, and KPI snapshots into a 5-minute structured brief delivered before the workday begins.",
+    "targetAudience": [
+      "Founders and CEOs at growth-stage companies",
+      "Operators managing multiple business units",
+      "Executive assistants looking to automate briefing preparation"
+    ],
+    "industryFit": [
+      "Professional Services",
+      "Technology",
+      "Marketing Agencies",
+      "Financial Services",
+      "Healthcare SMB"
+    ],
+    "goals": [
+      "Eliminate 30–45 minutes of morning information gathering daily",
+      "Ensure leadership never misses key developments from critical sources",
+      "Provide meeting context automatically before each calendar event",
+      "Surface KPI movements and threshold breaches proactively"
+    ],
+    "includedSkills": [
+      {
+        "skillSlug": "daily-brief-generator",
+        "order": 1,
+        "note": "Core orchestration and brief assembly"
+      },
+      {
+        "skillSlug": "research-summarizer",
+        "order": 2,
+        "note": "News and signal aggregation"
+      },
+      {
+        "skillSlug": "alert-digest",
+        "order": 3,
+        "note": "Threshold breach and priority alerts"
+      },
+      {
+        "skillSlug": "workflow-orchestrator",
+        "order": 4,
+        "note": "Scheduling and delivery coordination"
+      }
+    ],
+    "workflowStages": [
+      {
+        "stage": "Data Collection",
+        "description": "Agent queries all configured sources: news APIs, calendar, flagged emails, KPI dashboards, and monitoring alerts on the configured schedule."
+      },
+      {
+        "stage": "Synthesis",
+        "description": "Raw data is processed, ranked by priority rules, and synthesized into the brief structure: headlines, today's agenda, metric movements, and action items."
+      },
+      {
+        "stage": "Formatting",
+        "description": "Brief is formatted according to the configured template (executive summary, meeting-by-meeting breakdowns, metrics table, alert section)."
+      },
+      {
+        "stage": "Delivery",
+        "description": "Formatted brief is delivered to the configured channel (email, Slack, Notion) at the scheduled time. Delivery confirmation logged."
+      }
+    ],
+    "deploymentFormats": [
+      "remote",
+      "async"
+    ],
+    "timeline": "3–5 business days to deploy and configure",
+    "pricingFrom": "Included in Founder Agent Stack service",
+    "complexity": "low",
+    "prerequisites": [
+      "Calendar API access (Google or Microsoft)",
+      "Email read-only OAuth (Gmail or Outlook)",
+      "At least 2 news/data source API keys",
+      "KPI dashboard with API or webhook support"
+    ],
+    "deliverables": [
+      "Configured agent workflow in OpenClaw runtime",
+      "Brief template customized to your format preferences",
+      "Source configuration and priority rules documented",
+      "Delivery channel integration tested and verified",
+      "1-week tuning period with feedback integration"
+    ],
+    "guardrails": [
+      "Read-only access to all data sources — no write permissions",
+      "Email draft capability explicitly disabled",
+      "Credentials stored in vault — never in configuration files",
+      "Delivery failures trigger fallback notification, never silent failure"
+    ],
+    "successMetrics": [
+      "Brief delivered before 7:30 AM on 95%+ of business days",
+      "Executive rates brief as 'useful' or 'very useful' within 2 weeks",
+      "Morning information-gathering time reduced by measurable amount",
+      "Zero missed critical alerts from configured sources"
+    ],
+    "relatedServices": [
+      "openclaw-foundation-setup",
+      "founder-agent-stack",
+      "ai-readiness-audit"
+    ],
+    "relatedUseCases": [
+      "daily-executive-brief",
+      "board-report-automation"
+    ],
+    "featured": true,
+    "seoTitle": "Executive Briefing Agent Template | OpenClaw",
+    "seoDescription": "Deploy a production-ready executive briefing agent in 3–5 days. Automated daily brief from news, calendar, email, and KPIs — delivered every morning.",
+    "status": "published"
+  },
+  {
+    "id": "tpl-002",
+    "slug": "sales-intelligence-pack",
+    "title": "Sales Intelligence Pack",
+    "version": "1.3.0",
+    "summary": "A multi-skill agent bundle that automates the full inbound lead lifecycle: enrichment, qualification scoring, personalized follow-up drafting, and CRM population. Designed for solo consultants and small sales teams who need to respond faster without hiring.",
+    "targetAudience": [
+      "Solo consultants and freelancers with inbound lead flow",
+      "Small sales teams (1–5 reps) at SMB companies",
+      "Agencies managing client lead generation programs"
+    ],
+    "industryFit": [
+      "Consulting",
+      "Professional Services",
+      "Marketing Agencies",
+      "Technology SMB",
+      "Financial Services"
+    ],
+    "goals": [
+      "Reduce time from lead capture to first qualified outreach by 80%",
+      "Ensure every inbound lead is enriched and scored before first contact",
+      "Eliminate manual CRM data entry for new contacts",
+      "Give sales reps a personalized email draft ready for review within minutes of lead arrival"
+    ],
+    "includedSkills": [
+      {
+        "skillSlug": "lead-enrichment",
+        "order": 1,
+        "note": "Company and contact data enrichment from public sources"
+      },
+      {
+        "skillSlug": "research-summarizer",
+        "order": 2,
+        "note": "Prospect company research and buying signal detection"
+      },
+      {
+        "skillSlug": "email-drafter",
+        "order": 3,
+        "note": "Personalized first-touch email draft (human sends)"
+      },
+      {
+        "skillSlug": "meeting-notes-extractor",
+        "order": 4,
+        "note": "Post-call summary and CRM note creation"
+      },
+      {
+        "skillSlug": "crm-data-quality",
+        "order": 5,
+        "note": "Ongoing CRM data hygiene monitoring"
+      },
+      {
+        "skillSlug": "workflow-orchestrator",
+        "order": 6,
+        "note": "Trigger management and workflow sequencing"
+      }
+    ],
+    "workflowStages": [
+      {
+        "stage": "Lead Capture",
+        "description": "New lead arrives via form, email, or CRM integration. Workflow triggered automatically."
+      },
+      {
+        "stage": "Enrichment",
+        "description": "Lead Enrichment skill pulls company data, LinkedIn profile, technographics, and buying signals. Results populate CRM automatically."
+      },
+      {
+        "stage": "Qualification Scoring",
+        "description": "Enriched lead is scored against ICP criteria. Score and justification added to CRM record."
+      },
+      {
+        "stage": "Research Brief",
+        "description": "Research Summarizer builds a prospect brief including company overview, recent news, and relevant context for the sales rep."
+      },
+      {
+        "stage": "Draft Preparation",
+        "description": "Email Drafter produces a personalized first-touch email using enriched context. Draft staged in review queue."
+      },
+      {
+        "stage": "Human Review & Send",
+        "description": "Sales rep reviews brief, draft, and score. Edits as needed. Sends the email. All activity logged to CRM."
+      }
+    ],
+    "deploymentFormats": [
+      "remote",
+      "async",
+      "remote"
+    ],
+    "timeline": "5–7 business days to deploy and integrate",
+    "pricingFrom": "Included in Sales Automation Setup service",
+    "complexity": "medium",
+    "prerequisites": [
+      "CRM with API access (HubSpot, Salesforce, or Pipedrive)",
+      "Lead capture form with webhook output",
+      "Enrichment API key (Apollo, Clearbit, or equivalent)",
+      "Email client OAuth access (read + draft, no auto-send)"
+    ],
+    "deliverables": [
+      "Configured multi-skill workflow in OpenClaw runtime",
+      "CRM field mapping documentation",
+      "ICP scoring rubric configured and validated",
+      "Email tone profile set up with example drafts",
+      "Integration test with 10 sample leads",
+      "Runbook for sales team"
+    ],
+    "guardrails": [
+      "Email Drafter never sends autonomously — always staged for human review",
+      "Enrichment data sourced from compliant providers only",
+      "All lead data handled under configured privacy policy",
+      "CRM writes limited to designated fields only — no bulk record modification"
+    ],
+    "successMetrics": [
+      "Lead-to-first-contact time reduced from hours/days to under 30 minutes",
+      "CRM data completeness score improves by 40%+",
+      "Sales rep spends <5 minutes per lead on research and draft review",
+      "Response rate improves vs. pre-automation baseline"
+    ],
+    "relatedServices": [
+      "sales-automation-setup",
+      "crm-and-pipeline-automation",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "inbound-lead-qualification",
+      "sales-follow-up-automation",
+      "prospect-research-automation"
+    ],
+    "featured": true,
+    "seoTitle": "Sales Intelligence Pack Template | OpenClaw",
+    "seoDescription": "Deploy a complete inbound sales intelligence system in 5–7 days. Automated lead enrichment, scoring, research, and email drafting — human sends.",
+    "status": "published"
+  },
+  {
+    "id": "tpl-003",
+    "slug": "recruiting-ops-agent",
+    "title": "Recruiting Ops Agent",
+    "version": "1.1.0",
+    "summary": "Automates the administrative and research-heavy parts of a recruiting pipeline: job ad creation, application screening, interview scheduling coordination, and candidate brief preparation. Designed for HR leads and operators at growing SMBs who are recruiting without a full-time recruiter.",
+    "targetAudience": [
+      "HR managers and operators at 10–100 person companies",
+      "Founders managing recruiting personally",
+      "Small recruiting firms and talent agencies"
+    ],
+    "industryFit": [
+      "Technology SMB",
+      "Professional Services",
+      "Marketing Agencies",
+      "Healthcare",
+      "Financial Services"
+    ],
+    "goals": [
+      "Reduce time-to-post for new roles from days to hours",
+      "Eliminate manual application review for clearly disqualified candidates",
+      "Give hiring managers a structured brief on each shortlisted candidate before interviews",
+      "Reduce recruiter administrative time by 50%+"
+    ],
+    "includedSkills": [
+      {
+        "skillSlug": "job-ad-writer",
+        "order": 1,
+        "note": "Role brief to compliant job ad in multiple formats"
+      },
+      {
+        "skillSlug": "candidate-screener",
+        "order": 2,
+        "note": "Application scoring and ranked shortlist generation"
+      },
+      {
+        "skillSlug": "research-summarizer",
+        "order": 3,
+        "note": "Candidate background research for shortlisted applicants"
+      },
+      {
+        "skillSlug": "email-drafter",
+        "order": 4,
+        "note": "Candidate communication drafts (rejections, interview invites)"
+      },
+      {
+        "skillSlug": "workflow-orchestrator",
+        "order": 5,
+        "note": "Pipeline stage automation and notification routing"
+      }
+    ],
+    "workflowStages": [
+      {
+        "stage": "Role Brief Intake",
+        "description": "Hiring manager completes role brief form. Job Ad Writer generates compliant ad drafts for review."
+      },
+      {
+        "stage": "Application Ingestion",
+        "description": "Applications arrive via ATS. Candidate Screener batches and scores each applicant against role criteria."
+      },
+      {
+        "stage": "Shortlist Review",
+        "description": "Hiring manager reviews ranked shortlist with AI-generated justification notes. Approves advancement decisions."
+      },
+      {
+        "stage": "Candidate Research",
+        "description": "Research Summarizer prepares structured candidate brief for each shortlisted applicant before interviews."
+      },
+      {
+        "stage": "Communication Drafts",
+        "description": "Email Drafter prepares rejection drafts for disqualified candidates and interview invite drafts for advancing candidates. All staged for HR review."
+      },
+      {
+        "stage": "Pipeline Tracking",
+        "description": "ATS and workflow logs updated at each stage. Metrics tracked for time-to-fill and pipeline health."
+      }
+    ],
+    "deploymentFormats": [
+      "remote",
+      "async"
+    ],
+    "timeline": "5–8 business days to deploy and configure",
+    "pricingFrom": "Included in Recruiting Operations Automation service",
+    "complexity": "medium",
+    "prerequisites": [
+      "ATS with API access (Greenhouse, Lever, or equivalent)",
+      "Job posting accounts configured",
+      "Role brief template defined",
+      "HR review process for AI screening outputs documented"
+    ],
+    "deliverables": [
+      "Configured recruiting workflow in OpenClaw runtime",
+      "Job ad templates for 3 sample roles",
+      "Screening criteria schema for configured role types",
+      "Candidate communication templates",
+      "HR runbook with human oversight protocol",
+      "CHRC compliance advisory notes"
+    ],
+    "guardrails": [
+      "All candidate screening outputs require human review before any candidate communication",
+      "No AI-generated rejections sent without human approval",
+      "CHRC bias advisory notes included in all screening outputs",
+      "Candidate data handled under privacy policy and data retention rules"
+    ],
+    "successMetrics": [
+      "Time-to-post reduced by 60%+",
+      "HR screening time reduced from hours to <30 minutes per posting",
+      "Hiring manager satisfaction with candidate brief quality",
+      "Compliance review: zero prohibited criteria in job ads"
+    ],
+    "relatedServices": [
+      "recruiting-operations-automation",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "recruiting-pipeline-automation"
+    ],
+    "featured": false,
+    "seoTitle": "Recruiting Ops Agent Template | OpenClaw",
+    "seoDescription": "Automate your recruiting pipeline with AI — job ad writing, candidate screening, and communication drafts — with human oversight at every step.",
+    "status": "published"
+  },
+  {
+    "id": "tpl-004",
+    "slug": "finance-ops-agent",
+    "title": "Finance Ops Agent",
+    "version": "1.0.0",
+    "summary": "Automates routine finance operations for SMB: invoice processing, AP data entry, expense categorization, and monthly reporting assembly. Designed for founders and bookkeepers who spend too much time on data entry and report preparation.",
+    "targetAudience": [
+      "SMB founders managing their own bookkeeping",
+      "Bookkeepers and accountants at small firms",
+      "Operations managers at growing companies"
+    ],
+    "industryFit": [
+      "All SMB verticals",
+      "Professional Services",
+      "Consulting",
+      "Local Business",
+      "Franchises"
+    ],
+    "goals": [
+      "Eliminate manual invoice data entry into accounting software",
+      "Reduce monthly close preparation time by 50%+",
+      "Ensure AP invoices are matched to POs before posting",
+      "Automate monthly financial reporting assembly for review"
+    ],
+    "includedSkills": [
+      {
+        "skillSlug": "invoice-processor",
+        "order": 1,
+        "note": "Invoice extraction and AP entry drafting"
+      },
+      {
+        "skillSlug": "report-builder",
+        "order": 2,
+        "note": "Monthly financial report assembly"
+      },
+      {
+        "skillSlug": "data-pipeline-monitor",
+        "order": 3,
+        "note": "Accounting integration health monitoring"
+      },
+      {
+        "skillSlug": "alert-digest",
+        "order": 4,
+        "note": "Finance exception alerts (overdue invoices, anomalies)"
+      },
+      {
+        "skillSlug": "workflow-orchestrator",
+        "order": 5,
+        "note": "Monthly close schedule and approval routing"
+      }
+    ],
+    "workflowStages": [
+      {
+        "stage": "Invoice Intake",
+        "description": "Invoices arrive via email or upload. Invoice Processor extracts data and matches to PO records."
+      },
+      {
+        "stage": "AP Drafting",
+        "description": "Matched invoices create draft accounting entries staged for bookkeeper review and approval."
+      },
+      {
+        "stage": "Exception Handling",
+        "description": "Unmatched invoices and anomalies flagged for manual review. Alert Digest delivers daily exception summary."
+      },
+      {
+        "stage": "Month-End Prep",
+        "description": "Report Builder assembles financial report from accounting data at configured schedule. Draft delivered for review."
+      },
+      {
+        "stage": "Review & Post",
+        "description": "Bookkeeper or founder reviews all drafts, makes adjustments, and approves posting. Final report distributed."
+      }
+    ],
+    "deploymentFormats": [
+      "remote",
+      "async"
+    ],
+    "timeline": "5–7 business days to deploy and integrate",
+    "pricingFrom": "Included in Finance Operations Automation service",
+    "complexity": "medium",
+    "prerequisites": [
+      "Accounting software with API (QuickBooks, Xero, or Sage)",
+      "Invoice intake email or document storage configured",
+      "Chart of accounts and PO database accessible",
+      "Bookkeeper or finance lead for review approvals"
+    ],
+    "deliverables": [
+      "Configured finance workflow in OpenClaw runtime",
+      "Invoice extraction model calibrated to your invoice formats",
+      "Monthly report template configured",
+      "AP approval workflow documented",
+      "Integration test with 20 sample invoices",
+      "Bookkeeper handoff documentation"
+    ],
+    "guardrails": [
+      "No invoice is posted without human approval",
+      "All AP entries above configured threshold require additional sign-off",
+      "Accounting system access limited to draft creation — no direct posting without human action",
+      "Audit log maintained for all agent actions"
+    ],
+    "successMetrics": [
+      "Invoice processing time reduced from hours to minutes",
+      "AP data entry errors eliminated for matched invoices",
+      "Monthly close time reduced by measurable hours",
+      "Bookkeeper satisfaction with draft quality"
+    ],
+    "relatedServices": [
+      "finance-operations-automation",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "ap-invoice-automation",
+      "finance-reporting-automation"
+    ],
+    "featured": false,
+    "seoTitle": "Finance Ops Agent Template | OpenClaw",
+    "seoDescription": "Automate invoice processing, AP entry, and monthly financial reporting with AI — human approval required before any accounting entries are posted.",
+    "status": "published"
+  },
+  {
+    "id": "tpl-005",
+    "slug": "marketing-content-agent",
+    "title": "Marketing Content Agent",
+    "version": "1.0.0",
+    "summary": "Automates the weekly content production workflow for marketing teams and solo marketers: topic research, social post drafting, content calendar management, and performance data collection. Reduces content creation time while maintaining consistent brand voice.",
+    "targetAudience": [
+      "Solo marketers and content creators",
+      "Marketing managers at SMB companies",
+      "Digital agencies managing multiple client accounts"
+    ],
+    "industryFit": [
+      "Marketing Agencies",
+      "Professional Services",
+      "Technology SMB",
+      "Local Business",
+      "Consulting"
+    ],
+    "goals": [
+      "Reduce weekly content production time by 60%+",
+      "Maintain consistent posting schedule without manual calendar management",
+      "Ensure all content is reviewed and approved before publication",
+      "Build a content pipeline that stays 2 weeks ahead of schedule"
+    ],
+    "includedSkills": [
+      {
+        "skillSlug": "research-summarizer",
+        "order": 1,
+        "note": "Topic research and trend identification"
+      },
+      {
+        "skillSlug": "social-content-scheduler",
+        "order": 2,
+        "note": "Post drafting and scheduling queue management"
+      },
+      {
+        "skillSlug": "email-drafter",
+        "order": 3,
+        "note": "Newsletter and email campaign drafting"
+      },
+      {
+        "skillSlug": "alert-digest",
+        "order": 4,
+        "note": "Content performance monitoring and reporting"
+      },
+      {
+        "skillSlug": "workflow-orchestrator",
+        "order": 5,
+        "note": "Weekly content cycle orchestration"
+      }
+    ],
+    "workflowStages": [
+      {
+        "stage": "Topic Discovery",
+        "description": "Research Summarizer identifies trending topics, competitor content, and relevant industry developments each week."
+      },
+      {
+        "stage": "Content Planning",
+        "description": "Topics mapped to content calendar slots. Marketer reviews and approves topic plan before drafting begins."
+      },
+      {
+        "stage": "Draft Creation",
+        "description": "Social Content Scheduler drafts posts for each approved topic. Email Drafter prepares newsletter draft if scheduled."
+      },
+      {
+        "stage": "Review & Approval",
+        "description": "All drafts staged in approval queue. Marketer reviews, edits, and approves each piece before it enters scheduling."
+      },
+      {
+        "stage": "Scheduling & Publication",
+        "description": "Approved content scheduled via platform APIs. Publication confirmation logged. Performance tracking begins."
+      },
+      {
+        "stage": "Performance Digest",
+        "description": "Alert Digest delivers weekly performance summary. Insights fed back into next week's topic planning."
+      }
+    ],
+    "deploymentFormats": [
+      "remote",
+      "async"
+    ],
+    "timeline": "3–5 business days to deploy and configure",
+    "pricingFrom": "Included in Marketing Automation Setup service",
+    "complexity": "low",
+    "prerequisites": [
+      "Social platform API access (LinkedIn, and optionally others)",
+      "Brand voice guidelines document",
+      "Content calendar template defined",
+      "Marketing review process established"
+    ],
+    "deliverables": [
+      "Configured marketing content workflow in OpenClaw runtime",
+      "Brand voice profile configured from your examples",
+      "Content calendar template integrated",
+      "Approval queue workflow set up",
+      "Integration test with 2 weeks of content",
+      "Marketer runbook"
+    ],
+    "guardrails": [
+      "No content published without explicit human approval",
+      "Brand voice guidelines enforced — drafts flagged if guidelines violated",
+      "Platform API credentials rotated on configured schedule",
+      "Content archive maintained for all published and rejected drafts"
+    ],
+    "successMetrics": [
+      "Weekly content production time reduced by 60%+",
+      "Posting consistency: scheduled posts published on time 95%+",
+      "Marketer reviews and approves content in <2 hours per week",
+      "Content pipeline stays 2+ weeks ahead of schedule"
+    ],
+    "relatedServices": [
+      "marketing-automation-setup",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "social-media-content-automation",
+      "marketing-content-production"
+    ],
+    "featured": true,
+    "seoTitle": "Marketing Content Agent Template | OpenClaw",
+    "seoDescription": "Automate your weekly content production with AI — topic research, post drafting, and scheduling — with human approval before every publication.",
+    "status": "published"
+  }
+]

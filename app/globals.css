@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased text-slate-800 bg-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-slate-900;
+  }
+}
+
+@layer utilities {
+  .animate-accordion-down {
+    animation: accordion-down 0.2s ease-out;
+  }
+
+  .animate-accordion-up {
+    animation: accordion-up 0.2s ease-out;
+  }
+}
+
+@keyframes accordion-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
+/* Prose overrides for MDX content */
+.prose h1, .prose h2, .prose h3 {
+  @apply text-slate-900;
+}
+
+.prose a {
+  @apply text-blue-600 hover:text-blue-700;
+}
+
+.prose code {
+  @apply bg-slate-100 text-slate-800 rounded px-1 py-0.5 text-sm;
+}
+
+.prose pre {
+  @apply bg-slate-900 text-slate-100 rounded-lg;
+}
+
+/* Container utility */
+.container-site {
+  @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+}

@@ -1,0 +1,862 @@
+[
+  {
+    "id": "uc-001",
+    "slug": "daily-executive-brief",
+    "title": "Daily Executive Brief",
+    "summary": "An AI agent compiles a personalized morning briefing for the founder or CEO each business day — drawing from news feeds, calendar, email priority signals, and key metrics. The brief lands before the workday begins, so leadership starts every morning with full situational awareness in under 5 minutes.",
+    "functionCategory": "founder",
+    "rolePersona": "CEO / Founder",
+    "painPoints": [
+      "Spending 30–60 minutes each morning reading emails, news, and dashboards before feeling oriented",
+      "Missing important developments because relevant information is scattered across too many sources",
+      "Arriving at first meetings without context on the day's priorities or overnight changes"
+    ],
+    "solutionConcept": "An orchestrated agent runs each morning before business hours, pulling from configured news sources, the executive's calendar, flagged emails, and connected KPI dashboards. It synthesizes this into a structured brief — headlines, priority actions, today's meetings with context, and key metric movement — delivered to email or a messaging channel.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent triggers at configured time (e.g., 6:30 AM ET) and queries all connected data sources"},
+      {"step": 2, "action": "News and market signals are filtered by configured topics, competitors, and keywords"},
+      {"step": 3, "action": "Calendar events are enriched with context from CRM, email history, and relevant documents"},
+      {"step": 4, "action": "Key metrics are pulled from connected dashboards and compared to prior period"},
+      {"step": 5, "action": "Structured brief is formatted and delivered to the executive's preferred channel (email, Slack, or Notion)"}
+    ],
+    "expectedImpact": [
+      "Save 30–45 minutes of morning orientation time daily",
+      "Eliminate missed developments from key sources — 100% coverage of configured feeds",
+      "Arrive at every meeting with relevant context, reducing preparation time by 20 minutes per meeting"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 days",
+    "humanApprovalPoints": [
+      "Initial configuration of news sources, keywords, and metric thresholds reviewed and approved by executive",
+      "First two weeks of briefs reviewed daily and feedback given to tune relevance and format"
+    ],
+    "securityNotes": [
+      "Agent access to email should use read-only OAuth scopes — no send or delete permissions",
+      "API keys for news and data sources stored in credential vault, not in agent configuration files"
+    ],
+    "recommendedServices": ["ai-readiness-audit", "openclaw-foundation-setup", "founder-agent-stack"],
+    "recommendedSkills": ["daily-brief-generator", "research-summarizer", "alert-digest"],
+    "recommendedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Daily Executive Brief AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate your morning brief with an AI agent that synthesizes news, calendar, email signals, and KPIs into a 5-minute daily executive summary. Save 30–45 minutes daily."
+  },
+  {
+    "id": "uc-002",
+    "slug": "board-report-automation",
+    "title": "Board Report Automation",
+    "summary": "An agent assembles the monthly or quarterly board report by pulling financial data, KPIs, project status updates, and strategic milestones from connected sources, then generating a formatted draft for founder review. The founder reviews and edits the draft rather than building the document from scratch, reducing board prep time from days to hours.",
+    "functionCategory": "founder",
+    "rolePersona": "CEO / Founder",
+    "painPoints": [
+      "Board report preparation takes 1–2 full days of the founder's time each cycle",
+      "Data is scattered across accounting software, spreadsheets, project tools, and email — requiring manual assembly",
+      "Last-minute data gathering creates errors and stress before every board meeting"
+    ],
+    "solutionConcept": "An agent triggered before each board cycle queries all configured data sources, extracts key metrics and project updates, compares to targets and prior periods, and generates a structured board report draft in the company's standard template. The founder reviews, adds commentary, and approves — converting a 2-day task into a 2-hour review.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent is triggered 5 days before the board meeting date, querying the reporting schedule"},
+      {"step": 2, "action": "Financial data extracted from accounting system and compared to budget and prior quarter"},
+      {"step": 3, "action": "Project and operational metrics pulled from project management tools and KPI dashboards"},
+      {"step": 4, "action": "Structured draft generated using company board template with extracted data, charts, and variance commentary"},
+      {"step": 5, "action": "Draft delivered to founder with source citations and a list of data points requiring human verification or commentary"}
+    ],
+    "expectedImpact": [
+      "Reduce board report preparation time from 12–16 hours to 2–4 hours",
+      "Eliminate manual data assembly errors by sourcing directly from systems of record",
+      "Deliver board materials 2 days earlier each cycle, reducing board member prep time"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Founder reviews and edits the full draft before any board distribution",
+      "Strategic commentary and forward-looking statements are written by the founder, not generated by the agent"
+    ],
+    "securityNotes": [
+      "Financial data access requires read-only credentials — agent must not have write access to accounting systems",
+      "Board report drafts should be stored in access-controlled workspace, not general team storage"
+    ],
+    "recommendedServices": ["workflow-discovery", "openclaw-foundation-setup", "founder-agent-stack"],
+    "recommendedSkills": ["report-formatter", "structured-extraction", "daily-brief-generator"],
+    "recommendedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Board Report Automation AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate board report preparation with an AI agent that assembles financial data, KPIs, and project updates into a structured draft. Cut board prep from days to hours."
+  },
+  {
+    "id": "uc-003",
+    "slug": "kpi-dashboard-digest",
+    "title": "KPI Dashboard Digest",
+    "summary": "An agent runs on a configurable schedule (daily, weekly, or on-demand) to pull metrics from connected dashboards and data sources, identify significant movements or anomalies, and deliver a narrative summary with alerts for metrics outside defined thresholds. Leadership gets the signal without having to log into multiple tools.",
+    "functionCategory": "founder",
+    "rolePersona": "CEO / Founder",
+    "painPoints": [
+      "Key metrics live across 4–6 different tools — checking all of them daily is time-consuming and often skipped",
+      "Significant metric movements go unnoticed until the weekly meeting because no one is watching continuously",
+      "Team members build different views of the data, leading to misaligned decisions"
+    ],
+    "solutionConcept": "An agent connects to all configured data sources on a schedule, extracts current metric values, compares them to targets and prior periods, flags anomalies and threshold breaches, and delivers a narrative digest with the most important signals. Alert rules are configured for metrics that require immediate attention.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs on configured schedule and queries all connected data sources (analytics, CRM, finance, ops)"},
+      {"step": 2, "action": "Current values extracted and compared to targets, prior period, and configured alert thresholds"},
+      {"step": 3, "action": "Anomalies and significant movements identified using delta analysis"},
+      {"step": 4, "action": "Narrative digest generated with top signals, alerts, and trend context for each metric category"},
+      {"step": 5, "action": "Digest delivered to configured recipients via email or Slack, with alert escalations for threshold breaches"}
+    ],
+    "expectedImpact": [
+      "Eliminate daily dashboard-checking routine — save 20 minutes per person per day",
+      "Catch metric anomalies within hours instead of discovering them in weekly reviews",
+      "Create shared metric awareness across leadership without requiring tool access for all"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 days",
+    "humanApprovalPoints": [
+      "Alert thresholds and metric definitions reviewed and approved before agent goes live",
+      "First month of digests reviewed weekly to validate metric interpretation accuracy"
+    ],
+    "securityNotes": [
+      "All data source connections should use read-only API credentials with minimum required scope",
+      "Digest delivery channels should be access-controlled to prevent metric data leakage to unauthorized recipients"
+    ],
+    "recommendedServices": ["ai-readiness-audit", "openclaw-foundation-setup", "founder-agent-stack"],
+    "recommendedSkills": ["alert-digest", "report-formatter", "daily-brief-generator"],
+    "recommendedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "KPI Dashboard Digest AI Agent | OpenClaw Consulting",
+    "seoDescription": "Get automated KPI digests that pull from all your dashboards, flag anomalies, and deliver narrative summaries on your schedule. Stop checking tools manually."
+  },
+  {
+    "id": "uc-004",
+    "slug": "vendor-research-agent",
+    "title": "Vendor Research Agent",
+    "summary": "When evaluating a new vendor, tool, or service provider, an agent conducts structured research across the web, review sites, and company databases — producing a comparison brief with pricing, reviews, feature analysis, and red flags for the founder to review. Vendor due diligence that took half a day is reduced to a 15-minute review.",
+    "functionCategory": "founder",
+    "rolePersona": "CEO / Founder",
+    "painPoints": [
+      "Vendor evaluation is repetitive research work that pulls founders away from higher-value decisions",
+      "It's hard to ensure comprehensive coverage — important reviews or red flags are often missed",
+      "Comparison across multiple vendors is tedious to do in a structured way under time pressure"
+    ],
+    "solutionConcept": "Given a vendor category and evaluation criteria, the agent runs structured web research, pulls pricing and feature data from vendor websites and review platforms, synthesizes sentiment from reviews, and checks for regulatory or reputational red flags. Output is a structured comparison brief the founder can use for the final decision.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Founder submits vendor research request with category, use case, must-have criteria, and list of candidates"},
+      {"step": 2, "action": "Agent researches each vendor: website, pricing pages, review sites (G2, Capterra, Trustpilot), and news"},
+      {"step": 3, "action": "Feature and pricing data extracted and normalized into comparison table"},
+      {"step": 4, "action": "Review sentiment analyzed and red flags identified (BBB complaints, security incidents, leadership changes)"},
+      {"step": 5, "action": "Structured comparison brief delivered with scoring against the founder's stated criteria and recommended shortlist"}
+    ],
+    "expectedImpact": [
+      "Reduce vendor evaluation time from 4–6 hours to under 30 minutes of human review",
+      "Improve research coverage — agent checks sources a human would typically skip",
+      "Make faster vendor decisions with structured criteria scoring rather than gut feel"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "2–3 days",
+    "humanApprovalPoints": [
+      "Founder reviews the comparison brief and makes the final vendor selection decision",
+      "Any vendor with missing pricing data flagged for founder to obtain directly before decision"
+    ],
+    "securityNotes": [
+      "Web research tools should be configured with rate limiting to avoid IP blocking by target sites",
+      "Vendor research data should not include confidential internal pricing or negotiation context in agent prompts"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "founder-agent-stack"],
+    "recommendedSkills": ["web-research-agent", "research-summarizer", "structured-extraction"],
+    "recommendedTemplates": ["founder-agent-stack"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Vendor Research AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate vendor due diligence with an AI research agent that compares pricing, features, reviews, and red flags. Reduce vendor evaluation from hours to a 15-minute review."
+  },
+  {
+    "id": "uc-005",
+    "slug": "lead-enrichment-pipeline",
+    "title": "Lead Enrichment Pipeline",
+    "summary": "When a new lead enters the CRM — from a form submission, LinkedIn, or sales team entry — an agent automatically enriches the record with company data, contact details, firmographic information, recent news, and a relevance score. Sales reps start every conversation with full context instead of spending 20 minutes researching each prospect.",
+    "functionCategory": "sales",
+    "rolePersona": "Sales Rep / Account Executive",
+    "painPoints": [
+      "Sales reps spend 20–30 minutes manually researching each new prospect before outreach",
+      "CRM records are incomplete — missing company size, industry, tech stack, and recent news that would personalize outreach",
+      "Inconsistent research quality means some reps start with full context while others fly blind"
+    ],
+    "solutionConcept": "An agent triggered by new CRM entries queries company intelligence sources, LinkedIn, news APIs, and web research tools to enrich each lead record automatically. The enriched data — company overview, relevant contacts, recent news, firmographics, and a fit score — is written back to the CRM so every rep starts with consistent, current context.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "New lead created in CRM triggers agent via webhook or scheduled scan"},
+      {"step": 2, "action": "Agent identifies company from email domain or company name and queries firmographic databases"},
+      {"step": 3, "action": "Web research run for recent company news, funding events, leadership changes, and relevant announcements"},
+      {"step": 4, "action": "Contact-level enrichment: LinkedIn profile, title confirmation, and any public professional information"},
+      {"step": 5, "action": "Enriched data and fit score written back to CRM fields, and rep notified with a plain-language context summary"}
+    ],
+    "expectedImpact": [
+      "Save each sales rep 20–30 minutes of research per new lead",
+      "Increase personalization quality across all outreach — not just high-priority accounts",
+      "Improve lead qualification accuracy with consistent firmographic scoring criteria"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Fit scoring criteria and firmographic thresholds reviewed and approved by sales leadership before go-live",
+      "Sales rep reviews enriched record before outreach — agent data is context, not a replacement for human judgment"
+    ],
+    "securityNotes": [
+      "Third-party enrichment API keys must be stored in credential vault with access limited to the enrichment agent",
+      "Ensure PIPEDA compliance when collecting and storing contact-level personal information in CRM"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "setup-security-baseline"],
+    "recommendedSkills": ["lead-enrichment", "web-research-agent", "crm-update-assistant"],
+    "recommendedTemplates": ["sales-research-agent"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Lead Enrichment Pipeline AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automatically enrich every new CRM lead with company data, firmographics, news, and fit scores. OpenClaw builds lead enrichment pipelines that save sales reps 30 min per prospect."
+  },
+  {
+    "id": "uc-006",
+    "slug": "follow-up-sequence-agent",
+    "title": "Follow-Up Sequence Agent",
+    "summary": "An agent monitors the CRM and email for deals and contacts that require follow-up, drafts personalized follow-up messages based on the last interaction and enriched contact context, and queues them for sales rep review and send. No deal goes cold because a follow-up slipped through the cracks.",
+    "functionCategory": "sales",
+    "rolePersona": "Sales Rep / Account Executive",
+    "painPoints": [
+      "Follow-up cadence is inconsistent — busy periods cause deals to go cold because emails weren't sent on time",
+      "Personalizing follow-ups at scale is time-consuming, so most reps use generic templates that underperform",
+      "Tracking which contacts need follow-up requires manual CRM hygiene that is rarely maintained"
+    ],
+    "solutionConcept": "An agent monitors CRM deal stages and email threads for contacts that are overdue for follow-up based on configured cadence rules. For each overdue contact, it researches recent activity, drafts a personalized follow-up email, and queues it in a human-review inbox. The rep approves and sends — or edits and sends — rather than writing from scratch.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs daily scan of CRM for deals and contacts overdue for follow-up based on stage rules and last contact date"},
+      {"step": 2, "action": "For each overdue contact, agent pulls recent email thread summary, CRM notes, and any new enrichment data"},
+      {"step": 3, "action": "Personalized follow-up email drafted referencing last interaction, any relevant news about the company, and a clear CTA"},
+      {"step": 4, "action": "Draft queued in sales rep's review inbox with the triggering context (days since contact, last message summary)"},
+      {"step": 5, "action": "Sales rep reviews, edits if needed, approves, and sends — or dismisses with a note on why (deal lost, not the right time)"}
+    ],
+    "expectedImpact": [
+      "Eliminate cold deals from missed follow-ups — 100% of configured contacts receive timely outreach",
+      "Save 45–60 minutes per day on follow-up drafting for a rep managing 30+ active contacts",
+      "Increase reply rates from personalized follow-ups vs. generic templates"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Every drafted follow-up reviewed and approved by sales rep before sending — agent never sends autonomously",
+      "Cadence rules and follow-up logic reviewed by sales leadership before agent activation"
+    ],
+    "securityNotes": [
+      "Email integration must use OAuth with send-only scope for the review-and-send queue — agent does not have access to full inbox",
+      "Draft storage should be access-controlled so follow-up drafts are only visible to the assigned rep and their manager"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "openclaw-foundation-setup"],
+    "recommendedSkills": ["follow-up-drafter", "crm-update-assistant", "research-summarizer"],
+    "recommendedTemplates": ["sales-research-agent"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Follow-Up Sequence AI Agent | OpenClaw Consulting",
+    "seoDescription": "Never let a deal go cold. OpenClaw's follow-up agent monitors your CRM, drafts personalized follow-ups, and queues them for rep review. Save 45–60 min of drafting daily."
+  },
+  {
+    "id": "uc-007",
+    "slug": "proposal-research-pack",
+    "title": "Proposal Research Pack",
+    "summary": "When a sales rep begins working on a proposal, an agent compiles a comprehensive research pack — prospect company background, stakeholder profiles, competitive landscape, relevant case studies from the company's own library, and talking points tailored to the prospect's likely priorities. The rep writes a better proposal, faster.",
+    "functionCategory": "sales",
+    "rolePersona": "Sales Rep / Account Executive",
+    "painPoints": [
+      "Proposal preparation requires hours of research across company websites, LinkedIn, news, and internal resources",
+      "Reps often miss relevant internal case studies or success stories that would strengthen the proposal",
+      "Competitive positioning is rarely updated — reps don't have time to research the prospect's alternatives before each proposal"
+    ],
+    "solutionConcept": "Triggered by a proposal request in the CRM or a Slack command, an agent researches the prospect company and key stakeholders, pulls relevant case studies from the internal knowledge base, assesses competitive alternatives the prospect is likely evaluating, and assembles a structured research pack the rep uses to write the proposal.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Rep triggers proposal research via CRM field update or Slack command, providing company name and deal context"},
+      {"step": 2, "action": "Agent researches prospect: company overview, recent news, leadership team, stated priorities, and industry context"},
+      {"step": 3, "action": "Stakeholder profiles built from LinkedIn and public sources for named contacts in the deal"},
+      {"step": 4, "action": "Internal knowledge base searched for relevant case studies, similar client outcomes, and product fit notes"},
+      {"step": 5, "action": "Research pack delivered as a structured document with sections for company context, stakeholders, competitive notes, and suggested talking points"}
+    ],
+    "expectedImpact": [
+      "Reduce proposal research time from 3–5 hours to under 30 minutes of document review",
+      "Increase use of internal case studies in proposals — reps find 2x more relevant references with agent search",
+      "Improve proposal win rates by ensuring competitive context is included in every proposal"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Rep reviews the research pack and validates key claims before incorporating into the proposal",
+      "Competitive intelligence section flagged for rep verification — agent research may not reflect the latest competitor moves"
+    ],
+    "securityNotes": [
+      "Internal knowledge base containing client case studies must have access controls — agent queries it but cannot write or share documents externally",
+      "Prospect research data should not be stored beyond the proposal cycle — configure retention policies"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "openclaw-foundation-setup"],
+    "recommendedSkills": ["web-research-agent", "research-summarizer", "structured-extraction"],
+    "recommendedTemplates": ["sales-research-agent"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Proposal Research Pack AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate proposal research with an AI agent that builds prospect profiles, finds relevant case studies, and maps competitive context. Cut proposal prep from hours to minutes."
+  },
+  {
+    "id": "uc-008",
+    "slug": "competitor-monitoring-agent",
+    "title": "Competitor Monitoring Agent",
+    "summary": "An agent continuously monitors configured competitors across their websites, press releases, job postings, social channels, and review sites — surfacing meaningful changes and delivering a weekly competitive intelligence digest to sales and product teams. Stay ahead of market moves without dedicated competitive intelligence headcount.",
+    "functionCategory": "sales",
+    "rolePersona": "Sales Manager / VP Sales",
+    "painPoints": [
+      "Competitive intelligence is ad hoc — the team only learns about competitor moves when customers mention them",
+      "Monitoring even 3–5 competitors manually requires hours per week that no one has",
+      "Product and sales teams are working from outdated competitive information, hurting positioning and deal outcomes"
+    ],
+    "solutionConcept": "An agent runs daily monitoring jobs across each configured competitor, detecting changes to pricing pages, new product announcements, job posting patterns, review site activity, and press releases. Significant changes trigger immediate alerts; a weekly digest summarizes all activity with strategic implications flagged for sales and product teams.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs daily scans of competitor websites, job boards, news sources, and review platforms"},
+      {"step": 2, "action": "Changes detected against prior state — pricing changes, new features, new markets, leadership changes"},
+      {"step": 3, "action": "High-significance changes (pricing changes, major announcements) trigger immediate Slack alerts to configured recipients"},
+      {"step": 4, "action": "All activity accumulated for weekly digest — categorized by competitor and significance level"},
+      {"step": 5, "action": "Weekly competitive digest delivered every Monday with summaries, strategic implications, and recommended talking point updates"}
+    ],
+    "expectedImpact": [
+      "Eliminate 3–5 hours per week of manual competitive research across the sales team",
+      "Catch competitor pricing or product changes within 24 hours instead of weeks",
+      "Enable sales team to proactively address competitive threats in active deals"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Competitor list, monitoring sources, and significance thresholds reviewed with sales leadership before go-live",
+      "Strategic implications in the weekly digest reviewed by sales leadership before distribution to the broader team"
+    ],
+    "securityNotes": [
+      "Web scraping of competitor sites must respect robots.txt and rate limits — agent should use ethical scraping practices",
+      "Competitive intelligence should be stored in access-controlled systems — not shared in open Slack channels"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "managed-agentops"],
+    "recommendedSkills": ["competitor-monitor", "web-research-agent", "alert-digest"],
+    "recommendedTemplates": ["sales-research-agent"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Competitor Monitoring AI Agent | OpenClaw Consulting",
+    "seoDescription": "Monitor your competitors 24/7 with an AI agent that tracks website changes, pricing, job postings, and announcements. Get weekly competitive intelligence digests automatically."
+  },
+  {
+    "id": "uc-009",
+    "slug": "sop-checklist-runner",
+    "title": "SOP Checklist Runner",
+    "summary": "An agent walks team members through standard operating procedures step by step, tracks completion of each checklist item, escalates blockers, and logs outcomes to a shared record. Operational consistency improves dramatically when the agent ensures no step is skipped and every run is documented.",
+    "functionCategory": "ops",
+    "rolePersona": "Operations Manager",
+    "painPoints": [
+      "SOPs exist in documents but aren't followed consistently — steps are skipped under pressure or when personnel change",
+      "There is no reliable audit trail showing which SOP steps were completed and by whom",
+      "Escalation paths for blocked steps are unclear, causing delays and inconsistent resolution"
+    ],
+    "solutionConcept": "An agent presents SOP checklists to the responsible team member in sequence, prompts for completion confirmation at each step, accepts evidence attachments where required, escalates blocked steps to the designated approver, and writes a completion log to a shared record system. The SOP becomes a live, tracked process rather than a static document.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "SOP run triggered by schedule, event, or manual initiation by the responsible team member"},
+      {"step": 2, "action": "Agent presents the first checklist item with instructions, required inputs, and any relevant reference documents"},
+      {"step": 3, "action": "Team member confirms completion or flags a blocker — agent records the response with timestamp"},
+      {"step": 4, "action": "Blocked items escalated to configured approver via Slack or email, with context and SOP reference"},
+      {"step": 5, "action": "On completion, agent writes a run log to the shared record system with all confirmations, timestamps, and any deviations noted"}
+    ],
+    "expectedImpact": [
+      "Achieve near-100% SOP adherence across runs — every step is prompted and logged",
+      "Reduce audit preparation time by 80% — all completion records are structured and searchable",
+      "Cut resolution time for blocked SOP steps by 60% through immediate escalation routing"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "SOP content and step definitions reviewed and approved by operations lead before agent activation",
+      "Escalation recipients and authority matrix reviewed with management before go-live"
+    ],
+    "securityNotes": [
+      "SOP completion logs containing operational or compliance data should be stored in access-controlled systems with retention policies",
+      "If SOPs involve sensitive data handling steps, evidence attachments must be stored with appropriate access controls"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "team-enablement-training"],
+    "recommendedSkills": ["sop-checklist-runner", "alert-digest", "report-formatter"],
+    "recommendedTemplates": ["operations-summary-agent"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "SOP Checklist Runner AI Agent | OpenClaw Consulting",
+    "seoDescription": "Ensure every SOP is followed consistently with an AI agent that guides team members step by step, tracks completion, escalates blockers, and logs every run automatically."
+  },
+  {
+    "id": "uc-010",
+    "slug": "meeting-prep-pack",
+    "title": "Meeting Prep Pack",
+    "summary": "An agent generates a contextual preparation pack for each calendar meeting — pulling attendee backgrounds, recent email and CRM history, relevant documents, and action items from prior meetings. Participants arrive prepared and meetings start with shared context rather than 10 minutes of catch-up.",
+    "functionCategory": "ops",
+    "rolePersona": "Operations Manager / Executive Assistant",
+    "painPoints": [
+      "Meeting participants frequently arrive unprepared, turning the first 10 minutes of every meeting into a catch-up",
+      "Researching each attendee and reviewing prior meeting context manually takes 20–30 minutes per meeting",
+      "Action items from prior meetings are often not reviewed before the follow-up meeting, causing repetition"
+    ],
+    "solutionConcept": "An agent runs 30–60 minutes before each calendar meeting, identifies attendees, pulls their professional profiles and any CRM or email history, retrieves notes and action items from prior meetings with the same participants, finds relevant internal documents, and delivers a structured prep pack to the meeting organizer and any opted-in attendees.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent scans calendar 60 minutes before each meeting and identifies attendees"},
+      {"step": 2, "action": "Attendee profiles built from CRM records, LinkedIn, and email history for external contacts"},
+      {"step": 3, "action": "Prior meeting notes and open action items retrieved from meeting notes system for recurring attendees"},
+      {"step": 4, "action": "Relevant internal documents identified from knowledge base based on meeting title and participants"},
+      {"step": 5, "action": "Prep pack delivered to meeting organizer (and opted-in attendees) via email or Slack 30 minutes before the meeting"}
+    ],
+    "expectedImpact": [
+      "Reduce per-meeting preparation time by 20 minutes for the meeting organizer",
+      "Reduce wasted meeting time from lack of context by 5–10 minutes per meeting",
+      "Improve action item follow-through rate by surfacing prior items before every meeting"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 days",
+    "humanApprovalPoints": [
+      "Meeting organizer reviews prep pack content for accuracy before sharing with other attendees",
+      "External contact research reviewed by participant to ensure no inaccurate claims are carried into the meeting"
+    ],
+    "securityNotes": [
+      "Calendar integration must use read-only scope — agent reads events but cannot create, modify, or delete",
+      "Prep packs containing CRM or email data about external contacts must not be sent to those same external contacts"
+    ],
+    "recommendedServices": ["openclaw-foundation-setup", "founder-agent-stack", "team-enablement-training"],
+    "recommendedSkills": ["meeting-prep-pack", "research-summarizer", "web-research-agent"],
+    "recommendedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Meeting Prep Pack AI Agent | OpenClaw Consulting",
+    "seoDescription": "Generate automatic meeting prep packs with attendee profiles, prior meeting context, and relevant documents. Arrive prepared to every meeting without the manual research."
+  },
+  {
+    "id": "uc-011",
+    "slug": "vendor-invoice-processing",
+    "title": "Vendor Invoice Processing",
+    "summary": "An agent monitors the accounts payable inbox, extracts structured data from incoming vendor invoices (PDF and email formats), validates amounts against POs and contracts, flags discrepancies, and routes approved invoices to the payment queue. Finance admin time on invoice processing drops by 70%.",
+    "functionCategory": "ops",
+    "rolePersona": "Finance Admin / Office Manager",
+    "painPoints": [
+      "Invoice processing is manual, repetitive, and error-prone — team members re-key data from PDFs into accounting systems",
+      "Discrepancies between invoices and POs are caught late or missed entirely, causing overpayments",
+      "The AP inbox is a bottleneck — invoices pile up during busy periods and vendors escalate for late payment"
+    ],
+    "solutionConcept": "An agent monitors the AP inbox, identifies incoming vendor invoices, extracts key data fields using document parsing, matches invoice amounts against the PO or contract register, flags discrepancies or missing PO references for human review, and routes clean invoices to the configured payment approval workflow. Exception handling is routed to the finance admin rather than requiring manual processing of every invoice.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent monitors AP email inbox and identifies new vendor invoice emails and attachments"},
+      {"step": 2, "action": "Invoice document parsed to extract: vendor, invoice number, date, line items, amounts, and PO reference"},
+      {"step": 3, "action": "Extracted data matched against PO register and contract database — amounts and vendor details validated"},
+      {"step": 4, "action": "Matched invoices routed to payment approval workflow in accounting system; mismatches flagged for finance admin review"},
+      {"step": 5, "action": "Processing log updated with all invoices received, their status, and any exceptions requiring human action"}
+    ],
+    "expectedImpact": [
+      "Reduce manual invoice data entry by 70–80% for clean, matched invoices",
+      "Cut discrepancy detection time from days to hours with automated PO matching",
+      "Reduce late payment incidents by processing AP inbox continuously rather than in manual batches"
+    ],
+    "implementationComplexity": "high",
+    "timelineEstimate": "2–3 weeks",
+    "humanApprovalPoints": [
+      "Finance admin reviews all flagged exceptions before any payment action is taken",
+      "Payment approval for all invoices above configured threshold requires human authorization — agent routes, does not approve"
+    ],
+    "securityNotes": [
+      "AP email inbox access must use restricted credentials — agent reads and labels but cannot delete or reply without human approval",
+      "Financial data extracted from invoices must be stored in access-controlled systems compliant with accounting data retention requirements"
+    ],
+    "recommendedServices": ["security-pre-check", "setup-security-baseline", "first-agent-launch"],
+    "recommendedSkills": ["document-parser", "invoice-data-extractor", "structured-extraction"],
+    "recommendedTemplates": ["operations-summary-agent"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Vendor Invoice Processing AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate AP inbox monitoring, invoice data extraction, and PO matching with an AI agent. Reduce manual invoice processing by 70% and catch discrepancies automatically."
+  },
+  {
+    "id": "uc-012",
+    "slug": "project-status-digest",
+    "title": "Project Status Digest",
+    "summary": "An agent aggregates project status across all configured project management tools, identifies tasks overdue or at risk, surfaces blockers, and compiles a weekly project digest for operations or leadership. Teams get a cross-tool view of project health without requiring manual status reports from project leads.",
+    "functionCategory": "ops",
+    "rolePersona": "Operations Manager / Project Lead",
+    "painPoints": [
+      "Project status is fragmented across multiple tools — getting a full picture requires logging into Asana, Jira, Notion, and email",
+      "Overdue tasks and at-risk milestones aren't surfaced until the weekly meeting, by which point recovery is harder",
+      "Status report preparation is time-consuming for project leads and distracts from actual project work"
+    ],
+    "solutionConcept": "An agent connects to all configured project management tools on a weekly schedule, extracts task status, milestone progress, overdue items, and flagged blockers, compares to project plans and deadlines, and compiles a structured digest for operations leadership. Project leads are notified of items the digest has flagged so they can provide context before distribution.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs weekly (typically Friday) and queries all connected project management tools"},
+      {"step": 2, "action": "Task and milestone status extracted and compared to planned completion dates — overdue and at-risk items identified"},
+      {"step": 3, "action": "Blockers and escalation flags pulled from task comments and status fields"},
+      {"step": 4, "action": "Project leads notified of flagged items via Slack and given 2 hours to add context or corrections before digest is finalized"},
+      {"step": 5, "action": "Finalized weekly digest distributed to operations and leadership with a summary, traffic-light status per project, and action items"}
+    ],
+    "expectedImpact": [
+      "Eliminate 2–3 hours of weekly status report preparation per project lead",
+      "Surface overdue tasks and blockers 5 days earlier on average by identifying them at task level rather than waiting for meeting updates",
+      "Improve cross-project visibility for leadership without requiring additional reporting overhead"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Project leads review and validate flagged items before the digest is distributed to leadership",
+      "Operations manager reviews the final digest before sending to executive leadership"
+    ],
+    "securityNotes": [
+      "Project management tool integrations should use scoped read-only API tokens, not full admin credentials",
+      "If projects contain client-confidential details, digest distribution should be restricted to internal recipients only"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "managed-agentops"],
+    "recommendedSkills": ["report-formatter", "alert-digest", "structured-extraction"],
+    "recommendedTemplates": ["operations-summary-agent"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Project Status Digest AI Agent | OpenClaw Consulting",
+    "seoDescription": "Get an automated weekly project digest aggregating status across all your tools. Surface overdue tasks, blockers, and at-risk milestones before the weekly meeting."
+  },
+  {
+    "id": "uc-013",
+    "slug": "content-research-agent",
+    "title": "Content Research Agent",
+    "summary": "A marketing team gives an agent a content brief or topic, and it returns a comprehensive research pack — covering competitor content, search intent signals, relevant statistics, expert sources, and key angle suggestions. Content creators start writing with a full desk of research rather than a blank page.",
+    "functionCategory": "marketing",
+    "rolePersona": "Content Marketer / Marketing Manager",
+    "painPoints": [
+      "Content research takes 2–4 hours per article or piece — time that pulls writers away from writing",
+      "Research quality is inconsistent — some team members go deep while others write from memory",
+      "Competitor content analysis is rarely done thoroughly because it's too time-consuming to do for every piece"
+    ],
+    "solutionConcept": "Given a topic, target keyword, and content type, an agent researches competitor content coverage, identifies information gaps and differentiation opportunities, pulls relevant statistics and expert quotes from authoritative sources, maps search intent signals, and delivers a structured research brief the writer uses to create the content.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Marketing team submits content brief: topic, target keyword, content type, target audience, and length"},
+      {"step": 2, "action": "Agent analyzes top-ranking content for the target keyword and identifies structural patterns and coverage gaps"},
+      {"step": 3, "action": "Research run for supporting statistics, recent studies, expert perspectives, and authoritative sources"},
+      {"step": 4, "action": "Competitor content compared across depth, freshness, angle, and identified differentiation opportunities"},
+      {"step": 5, "action": "Structured research pack delivered with: recommended outline, supporting sources, key statistics, and differentiation angles"}
+    ],
+    "expectedImpact": [
+      "Reduce content research time from 3–4 hours to under 30 minutes of brief review per piece",
+      "Increase average content depth score by ensuring all pieces are backed by current sources",
+      "Improve organic performance by consistently identifying and closing competitor content gaps"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 days",
+    "humanApprovalPoints": [
+      "Writer reviews the research brief and selects which sources and angles to use — agent provides options, not directives",
+      "Statistics and claims reviewed for accuracy by writer before including in published content"
+    ],
+    "securityNotes": [
+      "Search API keys for research tools should be stored in the credential vault and rotated quarterly",
+      "Research packs should be stored in the team content workspace, not in personal folders, to enable knowledge sharing"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "agent-workflow-sprint"],
+    "recommendedSkills": ["web-research-agent", "research-summarizer", "content-brief-generator"],
+    "recommendedTemplates": ["marketing-content-ops"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Content Research AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate content research with an AI agent that analyzes competitors, finds statistics, maps search intent, and builds research briefs. Start writing with a full desk of research."
+  },
+  {
+    "id": "uc-014",
+    "slug": "social-listening-digest",
+    "title": "Social Listening Digest",
+    "summary": "An agent monitors configured social channels, forums, and review sites for brand mentions, competitor references, and trending topics in the company's niche — delivering a daily or weekly digest to the marketing team with sentiment analysis and recommended response priorities.",
+    "functionCategory": "marketing",
+    "rolePersona": "Social Media Manager / Marketing Manager",
+    "painPoints": [
+      "Brand mentions and customer conversations are missed because monitoring tools generate too much noise or are checked infrequently",
+      "The team finds out about negative reviews or brand crises hours or days late, long after they should have responded",
+      "Trend and conversation data exists but isn't synthesized into actionable insights for content and campaign planning"
+    ],
+    "solutionConcept": "An agent continuously monitors configured social channels, forums, Reddit, review sites, and news sources for brand mentions, competitor activity, and niche topics. It applies sentiment analysis, prioritizes items requiring response, and delivers a structured digest — separating urgent items (negative reviews, crisis signals) from strategic insights (trending topics, competitor mentions).",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs continuous monitoring of configured sources, collecting mentions and relevant conversations"},
+      {"step": 2, "action": "Sentiment analysis applied to categorize mentions as positive, neutral, or negative"},
+      {"step": 3, "action": "High-priority items (negative reviews, crisis keywords, urgent customer questions) trigger immediate Slack alert to social team"},
+      {"step": 4, "action": "All activity aggregated into daily/weekly digest with categorization, sentiment summary, and volume trends"},
+      {"step": 5, "action": "Strategic insights section identifies trending topics and competitor themes relevant to content planning"}
+    ],
+    "expectedImpact": [
+      "Reduce average response time to negative mentions from 24 hours to under 2 hours with immediate alerts",
+      "Save 3–4 hours per week of manual social monitoring across the marketing team",
+      "Surface 5–10 content and campaign insights per month from trend data the team wouldn't have caught manually"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Social team reviews all recommended responses before posting — agent identifies and drafts, human approves and posts",
+      "Crisis-flagged items escalated to marketing manager for response coordination before any action is taken"
+    ],
+    "securityNotes": [
+      "Social platform API tokens must be scoped to read and search only — no post or delete permissions granted to the agent",
+      "Brand mention data stored for trend analysis should have defined retention periods and access controls"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "managed-agentops"],
+    "recommendedSkills": ["competitor-monitor", "alert-digest", "research-summarizer"],
+    "recommendedTemplates": ["marketing-content-ops"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Social Listening Digest AI Agent | OpenClaw Consulting",
+    "seoDescription": "Monitor brand mentions, competitor activity, and niche trends across social channels and review sites with an AI digest agent. Never miss a critical mention again."
+  },
+  {
+    "id": "uc-015",
+    "slug": "seo-content-brief",
+    "title": "SEO Content Brief Generator",
+    "summary": "A marketing team member inputs a target keyword or topic, and an agent generates a comprehensive SEO content brief — including recommended structure, required semantic terms, optimal content depth, internal link opportunities, and competitor content analysis. Writers produce higher-ranking content with less iteration.",
+    "functionCategory": "marketing",
+    "rolePersona": "SEO Manager / Content Marketer",
+    "painPoints": [
+      "SEO briefs are time-consuming to create well — most take 2–3 hours using a combination of SEO tools and manual analysis",
+      "Writers without SEO expertise produce content that misses important semantic terms and structural signals that affect ranking",
+      "Internal linking opportunities are identified inconsistently — some content is well-connected while other pieces are orphaned"
+    ],
+    "solutionConcept": "An agent takes a target keyword and generates a full SEO content brief by analyzing SERP structure, competitor content, semantic term requirements, search intent signals, and the company's existing content for internal linking opportunities. The brief gives writers everything they need to produce well-optimized content without requiring them to be SEO experts.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "SEO manager submits keyword and optional context (content type, target audience, business angle)"},
+      {"step": 2, "action": "Agent analyzes top-ranking pages for the keyword: structure, word count, H-tag patterns, and content depth"},
+      {"step": 3, "action": "Semantic analysis identifies required and recommended terms based on top-ranking content analysis"},
+      {"step": 4, "action": "Internal link opportunities identified from the company's existing content library"},
+      {"step": 5, "action": "Full SEO brief delivered with: recommended structure, target word count, semantic term list, internal links, and competitor content notes"}
+    ],
+    "expectedImpact": [
+      "Reduce SEO brief creation time from 2–3 hours to under 20 minutes",
+      "Improve content ranking performance by ensuring semantic completeness from first draft",
+      "Increase internal linking rate by 3x by surfacing opportunities that are currently missed"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "SEO manager reviews the brief before passing to writer — validating keyword alignment and business angle",
+      "Writer uses brief as guidance, not strict directives — editorial judgment remains with the human author"
+    ],
+    "securityNotes": [
+      "SEO tool API credentials must be stored in the credential vault and rotated per provider requirements",
+      "Access to existing content library for internal link analysis should be read-only"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "agent-workflow-sprint"],
+    "recommendedSkills": ["content-brief-generator", "web-research-agent", "research-summarizer"],
+    "recommendedTemplates": ["marketing-content-ops"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "SEO Content Brief Generator AI Agent | OpenClaw Consulting",
+    "seoDescription": "Generate comprehensive SEO content briefs automatically — with SERP analysis, semantic terms, internal link opportunities, and competitor content gaps. Built by OpenClaw."
+  },
+  {
+    "id": "uc-016",
+    "slug": "campaign-performance-report",
+    "title": "Campaign Performance Report",
+    "summary": "An agent pulls performance data from all configured ad platforms, email tools, and analytics systems, normalizes it into comparable metrics, identifies performance anomalies and top insights, and generates a structured campaign report with narrative summary. Marketing teams get consistent, comprehensive reporting without the weekly spreadsheet ritual.",
+    "functionCategory": "marketing",
+    "rolePersona": "Marketing Manager / Performance Marketer",
+    "painPoints": [
+      "Campaign reporting requires manually pulling data from Google Ads, Meta, LinkedIn, and email tools — taking 3–4 hours each week",
+      "Different platforms report metrics differently, making cross-channel comparison difficult and error-prone",
+      "By the time reports are ready, the week's optimization window has passed"
+    ],
+    "solutionConcept": "An agent connects to all configured advertising and analytics platforms via API, pulls performance data on a weekly schedule, normalizes metrics into consistent definitions, identifies top and bottom performers, surface anomalies and trends, and generates a structured campaign performance report with narrative insights and recommended actions.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs weekly and queries all configured platforms: Google Ads, Meta, LinkedIn, email tool, and analytics"},
+      {"step": 2, "action": "Raw data normalized into consistent metric definitions (impressions, clicks, conversions, CPA, ROAS)"},
+      {"step": 3, "action": "Performance compared to prior period and configured targets — significant variances identified"},
+      {"step": 4, "action": "Top and bottom performing campaigns, ad sets, and creative identified with supporting context"},
+      {"step": 5, "action": "Structured report with narrative summary, performance tables, and recommended optimizations delivered to marketing team"}
+    ],
+    "expectedImpact": [
+      "Save 3–4 hours per week of manual data pulling and report building",
+      "Catch performance anomalies within 24 hours instead of discovering them in the weekly report",
+      "Standardize reporting definitions across channels — eliminate metric disagreements in team reviews"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Marketing manager reviews the narrative insights section before the report is distributed to leadership or clients",
+      "Recommended optimizations reviewed and approved by the performance marketer before implementation"
+    ],
+    "securityNotes": [
+      "Ad platform API credentials must have read-only reporting access — no campaign modification permissions granted to the agent",
+      "Campaign performance data containing client spend information should be stored in access-controlled reporting workspace"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "managed-agentops"],
+    "recommendedSkills": ["report-formatter", "structured-extraction", "alert-digest"],
+    "recommendedTemplates": ["marketing-content-ops"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Campaign Performance Report AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate cross-channel campaign reporting with an AI agent that pulls from all ad platforms, normalizes metrics, and delivers weekly narrative performance reports."
+  },
+  {
+    "id": "uc-017",
+    "slug": "candidate-sourcing-assistant",
+    "title": "Candidate Sourcing Assistant",
+    "summary": "When a new role opens, an agent takes the job description and searches configured sourcing channels — LinkedIn, GitHub, portfolio sites, and talent databases — to identify and qualify a shortlist of candidates. Recruiters start conversations with pre-researched candidates rather than spending days on initial sourcing.",
+    "functionCategory": "recruiting",
+    "rolePersona": "Recruiter / HR Manager",
+    "painPoints": [
+      "Initial candidate sourcing for a new role takes 8–15 hours of recruiter time before a qualified shortlist is ready",
+      "Sourcing quality varies significantly between recruiters — some find strong candidates others miss",
+      "Maintaining and working multiple sourcing channels simultaneously is difficult to do consistently"
+    ],
+    "solutionConcept": "Given a job description and role requirements, an agent searches configured sourcing channels for candidates matching the skill profile, reviews available public professional information, applies the role's qualification criteria to score and rank candidates, and delivers a shortlist with profiles and match rationale for recruiter review.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Recruiter submits role requirements: JD, must-have skills, nice-to-haves, location, and seniority level"},
+      {"step": 2, "action": "Agent searches configured sourcing channels for candidates matching the skill and experience profile"},
+      {"step": 3, "action": "Each candidate profile researched for relevant experience, portfolio signals, and any public professional context"},
+      {"step": 4, "action": "Candidates scored against the role's qualification criteria and ranked by match quality"},
+      {"step": 5, "action": "Shortlist of 10–20 ranked candidates delivered to recruiter with profiles, match rationale, and suggested outreach context"}
+    ],
+    "expectedImpact": [
+      "Reduce initial sourcing time from 10–15 hours to 2–3 hours of recruiter review per role",
+      "Increase sourcing coverage — agent searches channels systematically that would be searched ad hoc by a human",
+      "Improve shortlist quality consistency across all roles and all recruiters"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Recruiter reviews all shortlisted candidates before any outreach — agent identifies candidates, human decides who to contact",
+      "Qualification scoring criteria reviewed and approved by hiring manager before agent is deployed for a role"
+    ],
+    "securityNotes": [
+      "Candidate research must use publicly available professional information only — no scraping of private or protected profiles",
+      "Candidate data collected during sourcing must comply with PIPEDA requirements and be deleted if the candidate is not progressed"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch", "setup-security-baseline"],
+    "recommendedSkills": ["web-research-agent", "research-summarizer", "structured-extraction"],
+    "recommendedTemplates": ["sales-research-agent"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Candidate Sourcing Assistant AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate initial candidate sourcing with an AI agent that searches multiple channels, scores candidates against role criteria, and delivers a qualified shortlist for recruiter review."
+  },
+  {
+    "id": "uc-018",
+    "slug": "job-description-generator",
+    "title": "Job Description Generator",
+    "summary": "An agent takes a role title, key responsibilities, required skills, and a few inputs about company culture to generate a complete, well-structured job description — including inclusive language review and salary range benchmarking context. What previously took 2–3 hours of writing and review is done in under 30 minutes.",
+    "functionCategory": "recruiting",
+    "rolePersona": "HR Manager / People Operations Lead",
+    "painPoints": [
+      "Writing job descriptions from scratch for each new role is time-consuming and leads to inconsistent quality across postings",
+      "Many JDs are inadvertently exclusionary — using language that deters qualified candidates from underrepresented groups",
+      "Salary range benchmarking requires separate research that is often skipped, leading to misaligned expectations with candidates"
+    ],
+    "solutionConcept": "An agent takes structured role inputs, drafts a complete job description using a configurable company template, runs inclusive language analysis to flag potentially exclusionary terms, queries salary benchmarking sources for relevant range context, and delivers a ready-to-review draft with an inclusion report and market context.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "HR manager inputs role title, team, key responsibilities, required and preferred skills, and any culture notes"},
+      {"step": 2, "action": "Agent generates a full JD draft using company template, calibrating tone and structure to the role level"},
+      {"step": 3, "action": "Inclusive language analysis run on the draft — exclusionary terms flagged with suggested alternatives"},
+      {"step": 4, "action": "Market salary benchmarking queries run for the role title and location — range context provided for HR review"},
+      {"step": 5, "action": "Complete draft with inclusion report and salary context delivered to HR manager for review and approval before posting"}
+    ],
+    "expectedImpact": [
+      "Reduce JD creation time from 2–3 hours to under 30 minutes of review and approval",
+      "Improve JD inclusion quality across all postings with consistent language review",
+      "Accelerate hiring timelines by making JDs ready to post faster after role is approved"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 days",
+    "humanApprovalPoints": [
+      "HR manager and hiring manager review and approve the JD before it is posted to any channel",
+      "Salary range is reviewed by HR and finance before being included in any posted JD"
+    ],
+    "securityNotes": [
+      "Internal compensation data used for benchmarking context must not be exposed to the model in raw form — use anonymized ranges",
+      "JD drafts should be stored in the HR workspace with restricted access until posting approval is complete"
+    ],
+    "recommendedServices": ["workflow-discovery", "first-agent-launch"],
+    "recommendedSkills": ["content-brief-generator", "research-summarizer"],
+    "recommendedTemplates": ["founder-agent-stack"],
+    "featured": false,
+    "status": "published",
+    "seoTitle": "Job Description Generator AI Agent | OpenClaw Consulting",
+    "seoDescription": "Generate complete, inclusive job descriptions in under 30 minutes with an AI agent that writes, flags exclusionary language, and provides salary benchmarking context."
+  },
+  {
+    "id": "uc-019",
+    "slug": "expense-report-processor",
+    "title": "Expense Report Processor",
+    "summary": "An agent monitors the expense submissions inbox, extracts structured data from submitted receipts and expense reports, validates line items against the company expense policy, flags violations and missing information, and routes compliant expense reports to the approval queue. Finance admin spends time on exceptions, not data entry.",
+    "functionCategory": "finance-admin",
+    "rolePersona": "Finance Admin / Controller",
+    "painPoints": [
+      "Expense report processing is pure manual data entry — extracting data from receipts and entering it into the accounting system",
+      "Policy compliance checks are inconsistently applied — some violations are caught, others slip through to payment",
+      "Month-end expense report backlog creates accounting delays and employee frustration when reimbursements are slow"
+    ],
+    "solutionConcept": "An agent monitors the expense submission channel (email, form, or expense tool), extracts line item data from submitted receipts and forms, validates each line against the configured expense policy, flags violations and missing documentation, and routes compliant reports to the payment approval workflow automatically. The finance admin reviews only exceptions.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Employee submits expense report via configured channel (email with receipts or expense submission form)"},
+      {"step": 2, "action": "Agent extracts structured data from each receipt and form: date, vendor, amount, category, and project code"},
+      {"step": 3, "action": "Each line validated against company expense policy: category limits, required receipt thresholds, approval requirements"},
+      {"step": 4, "action": "Policy violations and missing documentation flagged and employee notified with specific correction requests"},
+      {"step": 5, "action": "Compliant reports automatically routed to manager approval queue in accounting system; exceptions held for finance admin review"}
+    ],
+    "expectedImpact": [
+      "Reduce expense report processing time per submission from 20 minutes to under 3 minutes for compliant reports",
+      "Achieve consistent policy enforcement across all submissions regardless of who reviews",
+      "Cut month-end expense backlog by 60% by processing submissions continuously rather than in batches"
+    ],
+    "implementationComplexity": "high",
+    "timelineEstimate": "2–3 weeks",
+    "humanApprovalPoints": [
+      "Manager approval of all expense reports required before payment — agent routes, does not approve payment",
+      "Finance admin reviews all policy exception flags and makes final determination on borderline cases"
+    ],
+    "securityNotes": [
+      "Receipt images and financial data must be stored in access-controlled systems with appropriate retention and deletion policies",
+      "Agent access to accounting systems must be limited to write-to-queue operations only — no access to payment processing"
+    ],
+    "recommendedServices": ["security-pre-check", "setup-security-baseline", "first-agent-launch"],
+    "recommendedSkills": ["invoice-data-extractor", "document-parser", "structured-extraction"],
+    "recommendedTemplates": ["operations-summary-agent"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Expense Report Processor AI Agent | OpenClaw Consulting",
+    "seoDescription": "Automate expense report processing with an AI agent that extracts receipt data, validates policy compliance, and routes approved reports — eliminating manual data entry."
+  },
+  {
+    "id": "uc-020",
+    "slug": "client-invoice-tracker",
+    "title": "Client Invoice Tracker",
+    "summary": "An agent monitors accounts receivable status across all client invoices, identifies overdue payments, drafts and sends (with approval) payment reminder sequences, and delivers a weekly AR status digest to the finance team and founder. No overdue invoice goes unnoticed, and follow-up is consistent without requiring manual tracking.",
+    "functionCategory": "finance-admin",
+    "rolePersona": "Finance Admin / Founder",
+    "painPoints": [
+      "Overdue invoices are identified late because AR tracking is manual and falls behind during busy periods",
+      "Follow-up on late payments is inconsistent — some clients receive prompt reminders while others are ignored for weeks",
+      "Finance and leadership lack a real-time view of outstanding AR that they can check without pulling reports manually"
+    ],
+    "solutionConcept": "An agent connects to the accounting system to monitor invoice status, identifies invoices at or past due date, drafts payment reminder emails appropriate to the number of days overdue, queues them for finance admin or founder approval and send, and compiles a weekly AR status digest showing total outstanding, aged buckets, and client-level detail.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Agent runs daily and queries accounting system for all open invoices and their aging status"},
+      {"step": 2, "action": "Invoices crossing configured aging thresholds (e.g., 7, 14, 30 days past due) trigger the reminder drafting workflow"},
+      {"step": 3, "action": "Payment reminder email drafted with appropriate tone for the aging stage — gentle at 7 days, firm at 30"},
+      {"step": 4, "action": "Draft queued for finance admin or founder review and approval before sending"},
+      {"step": 5, "action": "Weekly AR digest compiled with total outstanding by aging bucket, client-level detail, and any accounts requiring escalation"}
+    ],
+    "expectedImpact": [
+      "Reduce average days sales outstanding (DSO) by catching and following up on overdue invoices 7–10 days earlier",
+      "Eliminate missed payment reminders — 100% of overdue invoices receive configured follow-up sequence",
+      "Save 3–4 hours per week of manual AR tracking and reminder drafting"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Finance admin or founder approves all payment reminder emails before they are sent to clients",
+      "Escalation to formal collections or legal action always requires explicit human decision — agent identifies, human decides"
+    ],
+    "securityNotes": [
+      "Accounting system integration must use read-only credentials for data queries — write access limited to status update fields only",
+      "Client payment data and AR details must not be stored in general-access systems — restrict to finance team workspace"
+    ],
+    "recommendedServices": ["security-pre-check", "setup-security-baseline", "first-agent-launch"],
+    "recommendedSkills": ["invoice-data-extractor", "follow-up-drafter", "report-formatter"],
+    "recommendedTemplates": ["operations-summary-agent", "founder-agent-stack"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Client Invoice Tracker AI Agent | OpenClaw Consulting",
+    "seoDescription": "Track outstanding invoices and automate payment reminders with an AI agent that monitors AR aging, drafts follow-ups for approval, and delivers weekly AR status digests."
+  }
+]

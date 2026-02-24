@@ -1,0 +1,1010 @@
+[
+  {
+    "id": "svc-001",
+    "slug": "ai-readiness-audit",
+    "title": "AI & Agent Readiness Audit",
+    "shortDescription": "A structured assessment of your organization's data, workflows, tooling, and team readiness for AI agent adoption. Delivers a prioritized roadmap with clear next steps.",
+    "category": "strategy",
+    "audience": ["SMB founders and CEOs", "Operations leads considering AI adoption", "CTOs evaluating agent infrastructure"],
+    "problemStatement": "Most organizations jump into AI tooling without understanding where agents will actually save time versus create new problems. Without a readiness assessment, teams often implement agents in the wrong workflows, creating technical debt, security gaps, and disappointed stakeholders. A structured audit surfaces the highest-value opportunities and the blockers standing in your way.",
+    "outcomes": [
+      "Clear understanding of which workflows are agent-ready today",
+      "Identification of data, tooling, and access gaps that must be resolved first",
+      "A prioritized implementation roadmap ranked by impact and feasibility",
+      "Confidence to present an AI strategy to leadership or investors"
+    ],
+    "scopeItems": [
+      "Review of existing tools, data sources, and integration points",
+      "Workflow mapping across up to 5 core business functions",
+      "Team capability and AI literacy assessment",
+      "Security and data handling posture review",
+      "Vendor and platform landscape evaluation relevant to your stack"
+    ],
+    "deliverables": [
+      "AI Readiness Scorecard (PDF) with per-category ratings",
+      "Workflow opportunity matrix ranked by ROI and complexity",
+      "Gap analysis report covering data, security, and tooling",
+      "30/60/90-day prioritized implementation roadmap"
+    ],
+    "processSteps": [
+      {
+        "title": "Pre-Audit Intake",
+        "description": "You complete a structured intake questionnaire covering your tech stack, team size, current workflows, and pain points. We review it before the session to maximize time on-call."
+      },
+      {
+        "title": "Discovery Session",
+        "description": "A focused 3-hour working session with your leadership or operations team. We walk through your workflows, data environment, and strategic goals using our structured audit framework."
+      },
+      {
+        "title": "Analysis & Scoring",
+        "description": "Our team analyzes findings against the OpenClaw Readiness Framework, scoring your organization across six dimensions and mapping opportunities to your specific context."
+      },
+      {
+        "title": "Readout & Roadmap Delivery",
+        "description": "We present findings in a 90-minute readout session, walk through the roadmap, answer questions, and align on recommended next steps."
+      }
+    ],
+    "durationText": "1–2 days",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 1,200",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "Access to at least one operations or process owner for the discovery session",
+      "Basic list of current software tools and data sources used by the team",
+      "Completed pre-audit intake questionnaire (sent upon booking)"
+    ],
+    "exclusions": [
+      "Implementation of any agent or automation (covered by build services)",
+      "Deep technical security penetration testing (covered by Security Pre-Check)",
+      "Custom integrations or API development"
+    ],
+    "faq": [
+      {
+        "question": "Do we need a technical co-founder or CTO present?",
+        "answer": "No. The audit is designed to work with business owners and operations leads. If you have a technical person available, their input is valuable but not required."
+      },
+      {
+        "question": "What if we already have some AI tools in use?",
+        "answer": "That's common and actually helpful. We'll assess how your existing tools fit into a broader agent strategy and identify gaps or redundancies."
+      },
+      {
+        "question": "How quickly will we receive the deliverables after the session?",
+        "answer": "The scorecard and gap analysis are delivered within 2 business days of the discovery session. The roadmap document follows within 1 additional business day."
+      }
+    ],
+    "relatedUseCases": ["daily-executive-brief", "kpi-dashboard-digest", "vendor-research-agent"],
+    "relatedSkills": ["research-summarizer", "daily-brief-generator"],
+    "relatedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "ctaPrimary": "Book Your Audit",
+    "ctaSecondary": "See Sample Scorecard",
+    "featured": true,
+    "orderIndex": 1,
+    "status": "published",
+    "seoTitle": "AI & Agent Readiness Audit | OpenClaw Consulting Ottawa",
+    "seoDescription": "Assess your organization's readiness for AI agents with OpenClaw's structured audit. Get a prioritized roadmap, gap analysis, and readiness scorecard in 1–2 days."
+  },
+  {
+    "id": "svc-002",
+    "slug": "workflow-discovery",
+    "title": "Workflow Discovery Session",
+    "shortDescription": "A focused half-day working session that maps one or two of your core workflows in detail and identifies the best agent automation opportunities within them.",
+    "category": "strategy",
+    "audience": ["Operations managers scoping a specific automation", "Founders evaluating a single workflow before committing to a build", "Team leads preparing for an agent sprint"],
+    "problemStatement": "Before building any agent, you need a clear picture of the exact workflow it will operate in — including edge cases, approval points, data sources, and handoffs. Teams that skip this step build agents that fail in production because the workflow was more complex than anticipated. A discovery session prevents costly rework.",
+    "outcomes": [
+      "A fully documented workflow map with decision points, data flows, and handoffs",
+      "Identification of the 2–3 highest-leverage automation opportunities within the workflow",
+      "A clear scope definition that can feed directly into a build engagement",
+      "Shared understanding between stakeholders on what the agent will and won't do"
+    ],
+    "scopeItems": [
+      "In-depth mapping of 1–2 specific business workflows",
+      "Identification of all data inputs, outputs, and sources used in the workflow",
+      "Documentation of manual steps, decision points, and approval requirements",
+      "Review of existing tools and integrations involved in the workflow",
+      "Prioritization of automation opportunities by impact and feasibility"
+    ],
+    "deliverables": [
+      "Visual workflow map (Miro or Lucidchart format) with annotated automation opportunities",
+      "Workflow narrative document with edge cases and exception handling notes",
+      "Automation opportunity brief with feasibility ratings",
+      "Recommended next steps and suggested service path"
+    ],
+    "processSteps": [
+      {
+        "title": "Pre-Session Prep",
+        "description": "We send a short pre-work form asking you to describe the workflow and list the tools involved. This lets us come prepared with relevant questions and framework."
+      },
+      {
+        "title": "Workflow Walkthrough",
+        "description": "In the first two hours, you walk us through the workflow step by step. We document, ask clarifying questions, and identify where data flows, decisions happen, and humans intervene."
+      },
+      {
+        "title": "Opportunity Mapping",
+        "description": "In the final 1.5 hours, we map automation opportunities, discuss feasibility, and rate each opportunity by impact and implementation complexity."
+      },
+      {
+        "title": "Summary & Next Steps",
+        "description": "We close with a verbal summary of findings and recommended next steps, followed by written deliverables within one business day."
+      }
+    ],
+    "durationText": "Half-day",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 600",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "A specific workflow in mind that you want to map (not a general AI exploration)",
+      "The person who owns or runs the workflow available for the full session",
+      "Access to relevant tools or systems for screen-share walkthrough if needed"
+    ],
+    "exclusions": [
+      "Mapping of more than 2 workflows (additional sessions can be booked)",
+      "Technical implementation or agent configuration",
+      "Integration design or API specification"
+    ],
+    "faq": [
+      {
+        "question": "How is this different from the AI Readiness Audit?",
+        "answer": "The Readiness Audit covers your whole organization across multiple functions. The Workflow Discovery Session goes deep on one or two specific workflows and produces a build-ready scope document."
+      },
+      {
+        "question": "Can we use this session to scope a build engagement?",
+        "answer": "Yes — this is one of the most common uses. The workflow map and automation brief we produce can be handed directly to our build team or your own developers."
+      },
+      {
+        "question": "What if our workflow changes frequently?",
+        "answer": "We document the workflow as it exists today and note known variants. We also flag which parts of the workflow should be parameterized in any agent design to accommodate future changes."
+      }
+    ],
+    "relatedUseCases": ["sop-checklist-runner", "meeting-prep-pack", "project-status-digest"],
+    "relatedSkills": ["sop-checklist-runner", "meeting-prep-pack"],
+    "relatedTemplates": ["operations-summary-agent"],
+    "ctaPrimary": "Book Discovery Session",
+    "ctaSecondary": "Learn About Our Process",
+    "featured": false,
+    "orderIndex": 2,
+    "status": "published",
+    "seoTitle": "Workflow Discovery Session | AI Automation Scoping | OpenClaw Consulting",
+    "seoDescription": "Map your workflow and identify the best AI agent automation opportunities in a focused half-day session with OpenClaw Consulting. Build-ready scope document included."
+  },
+  {
+    "id": "svc-003",
+    "slug": "security-pre-check",
+    "title": "Security Pre-Check",
+    "shortDescription": "A one-day review of your security posture before deploying any AI agent, covering credential handling, data access permissions, and API exposure risks.",
+    "category": "security",
+    "audience": ["Founders preparing to deploy their first agent with access to business data", "Operations managers concerned about data leakage risks", "IT leads evaluating agent security before organizational rollout"],
+    "problemStatement": "AI agents require broad access to data, APIs, and communication tools — making them a significant attack surface if deployed without proper controls. Many SMBs deploy agents without reviewing credential management, data minimization practices, or what happens when an agent behaves unexpectedly. A security pre-check catches these gaps before they become incidents.",
+    "outcomes": [
+      "Clear inventory of all data and system access the planned agent will require",
+      "Identification of credential, permission, and data exposure risks",
+      "Specific remediation actions ranked by severity before agent deployment",
+      "A security baseline documentation set that satisfies basic compliance requirements"
+    ],
+    "scopeItems": [
+      "Review of planned agent architecture and data access requirements",
+      "Assessment of credential storage and API key management practices",
+      "Data minimization and access scoping review",
+      "Evaluation of agent output channels and data leakage risks",
+      "Review of incident response and agent shutdown procedures"
+    ],
+    "deliverables": [
+      "Security Pre-Check Report with risk ratings for each finding",
+      "Credential and access inventory checklist",
+      "Remediation priority list with recommended actions",
+      "Agent security policy template pre-filled for your use case"
+    ],
+    "processSteps": [
+      {
+        "title": "Architecture Intake",
+        "description": "You share your planned agent design, the tools it will connect to, and what data it will access. We review this before the assessment session."
+      },
+      {
+        "title": "Technical Review Session",
+        "description": "A 3-hour working session where we walk through your current security controls, credential management approach, and agent configuration in detail."
+      },
+      {
+        "title": "Risk Analysis",
+        "description": "We analyze findings against our agent security checklist and assign severity ratings to each identified risk."
+      },
+      {
+        "title": "Report Delivery",
+        "description": "We deliver the full security report with remediation steps and a pre-filled agent security policy template within one business day of the review session."
+      }
+    ],
+    "durationText": "1 day",
+    "formatOptions": ["remote", "onsite-ottawa"],
+    "pricingFrom": "CAD 800",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "A defined agent design or scope document to review (even a rough one)",
+      "Access to your current credential and API key management setup for review",
+      "The person responsible for your technical infrastructure available for the session"
+    ],
+    "exclusions": [
+      "Penetration testing or active vulnerability scanning",
+      "Remediation implementation (our team can quote this separately)",
+      "Compliance certification or audit sign-off"
+    ],
+    "faq": [
+      {
+        "question": "Do you need access to our systems to run this check?",
+        "answer": "No active system access is required. The review is documentation and discussion-based. You share what you're comfortable sharing, and we advise on what we see."
+      },
+      {
+        "question": "Is this required before working with OpenClaw on a build engagement?",
+        "answer": "It's strongly recommended but not mandatory. We include a lighter security review in all build engagements, but clients with existing data sensitivity requirements benefit from the standalone pre-check."
+      },
+      {
+        "question": "What regulations or standards does this check against?",
+        "answer": "We assess against our OpenClaw Agent Security Baseline, which references NIST AI RMF, PIPEDA data handling principles, and common SMB security best practices."
+      }
+    ],
+    "relatedUseCases": ["lead-enrichment-pipeline", "expense-report-processor", "client-invoice-tracker"],
+    "relatedSkills": ["document-parser", "invoice-data-extractor", "crm-update-assistant"],
+    "relatedTemplates": ["founder-agent-stack"],
+    "ctaPrimary": "Book Security Pre-Check",
+    "ctaSecondary": "View Security Checklist",
+    "featured": false,
+    "orderIndex": 3,
+    "status": "published",
+    "seoTitle": "AI Agent Security Pre-Check | OpenClaw Consulting Ottawa",
+    "seoDescription": "Review your AI agent's security posture before deployment. OpenClaw's Security Pre-Check covers credential handling, data access, and API risks for SMBs."
+  },
+  {
+    "id": "svc-004",
+    "slug": "openclaw-foundation-setup",
+    "title": "OpenClaw Foundation Setup",
+    "shortDescription": "End-to-end configuration of your core AI agent infrastructure: model access, orchestration layer, knowledge base, and secure credential management — ready to run your first agent.",
+    "category": "setup",
+    "audience": ["Founders and SMBs setting up AI agent infrastructure for the first time", "Operations teams that have chosen a platform and need expert configuration", "Companies that completed an AI Readiness Audit and are ready to build"],
+    "problemStatement": "Choosing the right AI agent infrastructure and configuring it correctly takes weeks of trial and error for most teams. Mistakes at the foundation level — wrong model selection, poor credential architecture, fragile integrations — propagate into every agent you build on top. A proper foundation setup saves months of rework and creates a platform you can build on confidently.",
+    "outcomes": [
+      "A fully configured, secure AI agent infrastructure ready for first agent deployment",
+      "Documented architecture with runbooks so your team can maintain and extend it",
+      "Validated integrations with your existing tools and data sources",
+      "A tested sandbox environment for safe agent development and iteration"
+    ],
+    "scopeItems": [
+      "AI model access configuration (OpenAI, Anthropic, or other agreed provider)",
+      "Agent orchestration framework setup (n8n, Make, LangChain, or agreed platform)",
+      "Secure credential vault configuration with environment separation",
+      "Knowledge base and document store setup with initial ingestion",
+      "Monitoring and logging configuration for agent activity tracking"
+    ],
+    "deliverables": [
+      "Fully configured and tested agent infrastructure environment",
+      "Architecture documentation with component diagram and data flow maps",
+      "Credential management runbook and access control policy",
+      "Onboarding guide for your team to deploy their first agent"
+    ],
+    "processSteps": [
+      {
+        "title": "Platform Selection & Planning",
+        "description": "We review your stack, budget, and use case requirements to finalize the platform choices and architecture plan before any configuration begins."
+      },
+      {
+        "title": "Core Infrastructure Setup",
+        "description": "We configure the orchestration layer, model connections, and credential vault. All connections are tested with sample workflows before proceeding."
+      },
+      {
+        "title": "Knowledge Base & Integrations",
+        "description": "We set up your knowledge base, ingest initial documents, and configure integrations with your existing tools (CRM, email, calendar, storage)."
+      },
+      {
+        "title": "Testing, Documentation & Handover",
+        "description": "We run end-to-end tests, document the architecture, and walk your team through the setup in a handover session so they can operate it independently."
+      }
+    ],
+    "durationText": "2–3 days",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 2,400",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "Completed AI Readiness Audit or equivalent scope clarity on platform choices",
+      "Admin access to your cloud or hosting environment for configuration",
+      "Agreed list of tools and data sources to integrate in scope"
+    ],
+    "exclusions": [
+      "Custom agent logic or workflow building (covered by build services)",
+      "Ongoing infrastructure maintenance (covered by Managed AgentOps)",
+      "Data migration from legacy systems not on the agreed integration list"
+    ],
+    "faq": [
+      {
+        "question": "Which AI platforms and orchestration tools do you support?",
+        "answer": "We work with OpenAI, Anthropic, and open-source models. For orchestration, we support n8n, Make, LangChain, and custom Python setups. We'll recommend the best fit based on your needs."
+      },
+      {
+        "question": "Can we self-host, or is this cloud-based?",
+        "answer": "Both options are supported. We configure cloud-hosted setups by default for speed and simplicity, but can set up self-hosted or hybrid architectures for clients with data residency requirements."
+      },
+      {
+        "question": "What happens if we need to change platforms later?",
+        "answer": "We document everything to make migration easier. We also design integrations with abstraction layers where possible to reduce vendor lock-in."
+      }
+    ],
+    "relatedUseCases": ["daily-executive-brief", "sop-checklist-runner", "meeting-prep-pack"],
+    "relatedSkills": ["daily-brief-generator", "sop-checklist-runner", "meeting-prep-pack"],
+    "relatedTemplates": ["executive-briefing-agent", "operations-summary-agent", "founder-agent-stack"],
+    "ctaPrimary": "Start Foundation Setup",
+    "ctaSecondary": "View Architecture Options",
+    "featured": true,
+    "orderIndex": 4,
+    "status": "published",
+    "seoTitle": "AI Agent Foundation Setup | OpenClaw Consulting Ottawa",
+    "seoDescription": "Get your AI agent infrastructure configured correctly from day one. OpenClaw's Foundation Setup covers orchestration, model access, knowledge bases, and secure credentials."
+  },
+  {
+    "id": "svc-005",
+    "slug": "setup-security-baseline",
+    "title": "Setup + Security Baseline Bundle",
+    "shortDescription": "Combines the OpenClaw Foundation Setup with a comprehensive security baseline configuration — the recommended starting point for organizations with any data sensitivity requirements.",
+    "category": "setup",
+    "audience": ["Organizations handling client data, financial data, or regulated information", "Founders who want to get setup right the first time without separate engagements", "Teams preparing for enterprise client relationships that will require security documentation"],
+    "problemStatement": "Most organizations realize they need better security controls only after deploying agents that already have broad data access. Retrofitting security onto an existing agent infrastructure is significantly harder and more disruptive than building it in from the start. This bundle ensures your foundation and security posture are addressed together in a single, coordinated engagement.",
+    "outcomes": [
+      "A secure, fully configured AI agent infrastructure with documented controls",
+      "Role-based access controls and data minimization policies in place from day one",
+      "A security baseline report suitable for sharing with enterprise clients or auditors",
+      "Your team trained on secure agent operation practices before deploying any live agents"
+    ],
+    "scopeItems": [
+      "Everything in OpenClaw Foundation Setup",
+      "Security baseline configuration including RBAC, audit logging, and data minimization",
+      "Incident response runbook tailored to your agent infrastructure",
+      "Agent behavior monitoring and alerting configuration",
+      "Security documentation package for internal governance and client-facing use"
+    ],
+    "deliverables": [
+      "Fully configured secure agent infrastructure with all Foundation Setup deliverables",
+      "Security Baseline Report with control inventory and risk acceptance sign-off",
+      "Incident response runbook and agent shutdown procedures",
+      "Security policy documentation set (internal + client-facing summary)"
+    ],
+    "processSteps": [
+      {
+        "title": "Combined Intake & Planning",
+        "description": "A single planning session covers both infrastructure and security requirements, reducing overlap and ensuring the architecture is designed with security from the ground up."
+      },
+      {
+        "title": "Secure Infrastructure Build",
+        "description": "We configure the full agent infrastructure with security controls applied at each layer — not bolted on afterward."
+      },
+      {
+        "title": "Security Baseline Configuration",
+        "description": "We implement RBAC, audit logging, data minimization rules, and monitoring alerts, then validate each control against our security checklist."
+      },
+      {
+        "title": "Documentation, Testing & Handover",
+        "description": "Full documentation of infrastructure and security controls, end-to-end testing, and a joint handover session covering both operational and security runbooks."
+      }
+    ],
+    "durationText": "3–4 days",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 3,200",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "Completed AI Readiness Audit or equivalent clarity on use cases and platform choices",
+      "Admin access to cloud or hosting environment and identity/access management system",
+      "List of data sources, integrations, and user roles in scope"
+    ],
+    "exclusions": [
+      "Custom agent workflow development (covered by build services)",
+      "Ongoing security monitoring (covered by Managed AgentOps or Quarterly Security Review)",
+      "Third-party penetration testing or formal compliance certification"
+    ],
+    "faq": [
+      {
+        "question": "Is the bundle cheaper than booking Foundation Setup and Security Pre-Check separately?",
+        "answer": "Yes. The bundle saves approximately CAD 400 compared to booking the two services separately, and the integrated approach saves an additional day of elapsed time."
+      },
+      {
+        "question": "Does the security baseline satisfy PIPEDA requirements?",
+        "answer": "The baseline aligns with PIPEDA principles around data minimization, access controls, and breach response. It doesn't constitute a formal PIPEDA compliance audit, but documents your controls in a way that supports compliance."
+      },
+      {
+        "question": "What monitoring tools do you configure?",
+        "answer": "We configure monitoring appropriate to your stack — this may include agent-level logging, platform audit trails, and alerting via your existing tools (Slack, PagerDuty, or similar)."
+      }
+    ],
+    "relatedUseCases": ["lead-enrichment-pipeline", "expense-report-processor", "client-invoice-tracker"],
+    "relatedSkills": ["crm-update-assistant", "invoice-data-extractor", "document-parser"],
+    "relatedTemplates": ["founder-agent-stack", "sales-research-agent"],
+    "ctaPrimary": "Book the Bundle",
+    "ctaSecondary": "Compare Setup Options",
+    "featured": false,
+    "orderIndex": 5,
+    "status": "published",
+    "seoTitle": "AI Setup + Security Baseline Bundle | OpenClaw Consulting",
+    "seoDescription": "Get your AI agent infrastructure and security baseline configured together. OpenClaw's bundle is the recommended start for any organization handling sensitive data."
+  },
+  {
+    "id": "svc-006",
+    "slug": "first-agent-launch",
+    "title": "First Agent Launch",
+    "shortDescription": "We design, build, test, and deploy your organization's first production AI agent — from workflow design through live operation — with training for your team on how to manage it.",
+    "category": "build",
+    "audience": ["Organizations ready to deploy their first real AI agent into a live workflow", "Founders who have completed setup and want expert-built first automation", "Operations teams launching a pilot agent to demonstrate ROI before scaling"],
+    "problemStatement": "Building your first agent is the hardest one — not because of technical complexity, but because of all the design decisions that have to be made right: scope, approval points, failure handling, monitoring, and change management. Organizations that rush the first agent often end up with something that works in demo but fails in production, damaging team confidence in AI investment.",
+    "outcomes": [
+      "A production-ready AI agent running in your live workflow environment",
+      "Your team trained and confident to monitor, adjust, and extend the agent",
+      "Documented agent design that can be used as a template for future agents",
+      "A clear measurement framework to track ROI from day one"
+    ],
+    "scopeItems": [
+      "Agent design: scope definition, workflow mapping, approval points, and failure handling",
+      "Full agent build and configuration on your existing infrastructure",
+      "Integration with up to 3 external tools or data sources",
+      "Testing across normal operation, edge cases, and failure scenarios",
+      "Team training session and handover documentation"
+    ],
+    "deliverables": [
+      "Production-deployed AI agent with monitoring and alerting configured",
+      "Agent design document with logic flow, approval points, and exception handling",
+      "Testing report covering all validated scenarios",
+      "Team training guide and agent management runbook"
+    ],
+    "processSteps": [
+      {
+        "title": "Agent Design Workshop",
+        "description": "A focused working session to finalize the agent's scope, workflow logic, data sources, approval requirements, and success metrics before any code is written."
+      },
+      {
+        "title": "Build & Integration",
+        "description": "We build the agent, configure all integrations, and set up the monitoring and alerting layer. You have visibility into progress throughout."
+      },
+      {
+        "title": "Testing & Refinement",
+        "description": "We run structured tests covering normal operation, edge cases, and failure scenarios. We iterate based on test results before moving to production."
+      },
+      {
+        "title": "Launch & Training",
+        "description": "We deploy the agent to production, run it in monitored operation for the first 48 hours, then deliver team training and full handover documentation."
+      }
+    ],
+    "durationText": "1–2 weeks",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 4,500",
+    "pricingModel": "range",
+    "prerequisites": [
+      "Completed OpenClaw Foundation Setup or equivalent agent infrastructure in place",
+      "Agreed agent scope from Workflow Discovery Session or equivalent",
+      "Required API access and credentials for all tools the agent will integrate with"
+    ],
+    "exclusions": [
+      "Infrastructure setup (covered by Foundation Setup or Setup + Security Bundle)",
+      "More than 3 external tool integrations (additional integrations priced separately)",
+      "Ongoing agent maintenance and monitoring (covered by Managed AgentOps)"
+    ],
+    "faq": [
+      {
+        "question": "What kinds of agents have you built before?",
+        "answer": "We've built research and summarization agents, lead enrichment pipelines, daily briefing generators, SOP automation agents, and document processing workflows. See our use cases for detailed examples."
+      },
+      {
+        "question": "What if the scope changes mid-build?",
+        "answer": "Minor scope adjustments are accommodated within the engagement. Significant scope changes require a brief re-scoping conversation and may affect timeline and pricing."
+      },
+      {
+        "question": "Do you guarantee the agent will work?",
+        "answer": "We guarantee delivery of a tested, documented agent that performs as specified. AI agent outputs can vary, so we design in human approval points and monitoring from the start."
+      }
+    ],
+    "relatedUseCases": ["daily-executive-brief", "lead-enrichment-pipeline", "sop-checklist-runner", "content-research-agent"],
+    "relatedSkills": ["research-summarizer", "lead-enrichment", "sop-checklist-runner", "daily-brief-generator"],
+    "relatedTemplates": ["executive-briefing-agent", "sales-research-agent", "operations-summary-agent"],
+    "ctaPrimary": "Launch Your First Agent",
+    "ctaSecondary": "View Agent Examples",
+    "featured": true,
+    "orderIndex": 6,
+    "status": "published",
+    "seoTitle": "First AI Agent Launch Service | OpenClaw Consulting Ottawa",
+    "seoDescription": "Deploy your first production AI agent with OpenClaw. We design, build, test, and launch your agent in 1–2 weeks, with team training and full handover documentation."
+  },
+  {
+    "id": "svc-007",
+    "slug": "agent-workflow-sprint",
+    "title": "Agent Workflow Sprint",
+    "shortDescription": "A dedicated 2–3 week build sprint to design and deploy multiple interconnected agents across a business function, delivering a complete automated workflow rather than a single agent.",
+    "category": "build",
+    "audience": ["Organizations scaling from one agent to a multi-agent workflow", "Operations and marketing teams automating an end-to-end process", "Companies with a defined roadmap ready to execute at speed"],
+    "problemStatement": "After deploying a first agent, most organizations see the real value comes from connecting multiple agents into a workflow — where the output of one feeds the input of another. Building multi-agent workflows requires careful orchestration design, robust error handling, and coordination across systems that a single agent build doesn't prepare you for.",
+    "outcomes": [
+      "A fully operational multi-agent workflow automating an end-to-end business process",
+      "Documented orchestration logic that your team can extend and debug",
+      "Measurable reduction in manual effort for the targeted workflow",
+      "A playbook for your next sprint based on lessons learned"
+    ],
+    "scopeItems": [
+      "Design of a multi-agent workflow covering 3–6 interconnected automation steps",
+      "Build and configuration of all agents in the workflow on your infrastructure",
+      "Orchestration layer setup including error handling and retry logic",
+      "Integration with up to 5 external tools or data sources",
+      "End-to-end testing, performance validation, and production deployment"
+    ],
+    "deliverables": [
+      "Production-deployed multi-agent workflow with full monitoring",
+      "Orchestration design document with agent interaction diagrams",
+      "Testing and validation report",
+      "Sprint retrospective and next-sprint recommendations"
+    ],
+    "processSteps": [
+      {
+        "title": "Sprint Planning Workshop",
+        "description": "A half-day session to finalize workflow scope, agent decomposition, integration requirements, and sprint success criteria."
+      },
+      {
+        "title": "Sprint Build",
+        "description": "Two weeks of focused development with daily progress updates. We build in stages, testing each agent before connecting it to the broader workflow."
+      },
+      {
+        "title": "Integration Testing",
+        "description": "Full end-to-end testing of the connected workflow, including failure scenarios, edge cases, and performance under realistic load."
+      },
+      {
+        "title": "Deployment & Retrospective",
+        "description": "Production deployment with monitored launch, followed by a sprint retrospective to capture lessons learned and identify the next highest-value workflow to tackle."
+      }
+    ],
+    "durationText": "2–3 weeks",
+    "formatOptions": ["remote", "hybrid"],
+    "pricingFrom": "CAD 6,000",
+    "pricingModel": "range",
+    "prerequisites": [
+      "At least one agent already running in production, or completed First Agent Launch",
+      "Defined workflow scope from a Workflow Discovery Session or equivalent",
+      "All required API access and credentials for in-scope tools and data sources"
+    ],
+    "exclusions": [
+      "Infrastructure setup or changes to the underlying agent platform",
+      "More than 5 external tool integrations (additional integrations priced separately)",
+      "Ongoing post-sprint maintenance (covered by Managed AgentOps)"
+    ],
+    "faq": [
+      {
+        "question": "How is a sprint different from booking multiple First Agent Launches?",
+        "answer": "A sprint builds agents as an interconnected system from the start, with shared orchestration, error handling, and monitoring. Individual agent builds don't have the integration design layer that makes multi-agent workflows reliable."
+      },
+      {
+        "question": "Can we run multiple sprints in sequence?",
+        "answer": "Yes — many clients run quarterly sprints to progressively automate their operations. Each sprint builds on the previous one's infrastructure and learnings."
+      },
+      {
+        "question": "What if we discover mid-sprint that a tool we planned to integrate isn't ready?",
+        "answer": "We de-scope the affected integration and either replace it with an alternative or carry it to the next sprint. We document the decision so nothing is lost."
+      }
+    ],
+    "relatedUseCases": ["lead-enrichment-pipeline", "content-research-agent", "sop-checklist-runner", "project-status-digest"],
+    "relatedSkills": ["lead-enrichment", "web-research-agent", "sop-checklist-runner", "report-formatter"],
+    "relatedTemplates": ["sales-research-agent", "marketing-content-ops", "operations-summary-agent"],
+    "ctaPrimary": "Plan Your Sprint",
+    "ctaSecondary": "View Sprint Case Studies",
+    "featured": false,
+    "orderIndex": 7,
+    "status": "published",
+    "seoTitle": "AI Agent Workflow Sprint | Multi-Agent Build Service | OpenClaw",
+    "seoDescription": "Build a complete multi-agent workflow in 2–3 weeks with OpenClaw's Agent Workflow Sprint. Automate end-to-end business processes with expert orchestration design."
+  },
+  {
+    "id": "svc-008",
+    "slug": "founder-agent-stack",
+    "title": "Founder Agent Stack Setup",
+    "shortDescription": "A curated, pre-designed set of agents built specifically for solo founders and small leadership teams — covering daily briefings, research, follow-ups, and task tracking in one week.",
+    "category": "build",
+    "audience": ["Solo founders and bootstrapped startup CEOs", "Small executive teams at 2–10 person companies", "Founders post-funding who need to multiply their personal productivity immediately"],
+    "problemStatement": "Founders waste 2–4 hours daily on tasks an AI agent could handle — reading newsletters, researching prospects, following up on emails, preparing for meetings. But most founders don't have the time or technical capacity to design and build an agent stack themselves. The Founder Agent Stack gives you the leverage of a personal operations team without the headcount.",
+    "outcomes": [
+      "3–5 production-ready agents handling your highest-friction daily tasks",
+      "A consistent morning brief that surfaces what matters before you start your day",
+      "Automated research and follow-up workflows that run while you focus on high-leverage work",
+      "A personal agent stack you can extend as your needs evolve"
+    ],
+    "scopeItems": [
+      "Daily Executive Brief agent: news, priorities, and calendar context delivered each morning",
+      "Lead research and enrichment agent for prospect and partner research",
+      "Follow-up sequence agent for email threads requiring action",
+      "Meeting prep pack agent generating context before each calendar event",
+      "Weekly digest and KPI summary agent pulling from your key data sources"
+    ],
+    "deliverables": [
+      "5 configured, tested, and deployed agents with monitoring enabled",
+      "Personal agent stack documentation with customization guide",
+      "Onboarding session covering how to configure and update each agent",
+      "30-day check-in call to review performance and tune based on real usage"
+    ],
+    "processSteps": [
+      {
+        "title": "Founder Intake Session",
+        "description": "A focused 90-minute session to understand your specific workflow, the tools you use daily, and the tasks you most want to automate."
+      },
+      {
+        "title": "Stack Configuration",
+        "description": "We configure and connect all five agents to your tools — calendar, email, CRM, news feeds, and data sources — within your existing infrastructure or a new foundation if needed."
+      },
+      {
+        "title": "Tuning & Testing",
+        "description": "Each agent runs in draft mode for 48 hours while we tune outputs based on your real data. You review and give feedback before anything goes live."
+      },
+      {
+        "title": "Handover & Training",
+        "description": "We walk you through each agent, explain how to update prompts, change sources, and extend the stack. Full documentation is provided."
+      }
+    ],
+    "durationText": "1 week",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 3,800",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "Access to your primary work tools: email, calendar, CRM or contact list, and any key data sources",
+      "OpenClaw Foundation Setup completed, or equivalent agent infrastructure in place",
+      "Clarity on which 3–5 daily tasks are highest-friction and highest-value to automate"
+    ],
+    "exclusions": [
+      "Custom agent builds outside the standard 5-agent stack (available as add-ons)",
+      "Infrastructure setup if not already in place (can be bundled)",
+      "Ongoing monitoring and maintenance (covered by Managed AgentOps)"
+    ],
+    "faq": [
+      {
+        "question": "Can I pick which agents I want in my stack?",
+        "answer": "Yes. The five agents listed are our recommended defaults, but we customize the stack based on your intake session. You can swap or modify any of the default agents."
+      },
+      {
+        "question": "What if I'm already using some AI tools like ChatGPT or Notion AI?",
+        "answer": "We design your stack to complement existing tools, not replace them. We'll map what you already use and build agents that fill the gaps or improve the workflows where existing tools fall short."
+      },
+      {
+        "question": "Is this the same as the Founder Agent Stack template?",
+        "answer": "The template is a pre-built design pattern. This service is the hands-on implementation of that template customized to your specific tools and workflows."
+      }
+    ],
+    "relatedUseCases": ["daily-executive-brief", "board-report-automation", "kpi-dashboard-digest", "meeting-prep-pack"],
+    "relatedSkills": ["daily-brief-generator", "research-summarizer", "follow-up-drafter", "meeting-prep-pack"],
+    "relatedTemplates": ["founder-agent-stack", "executive-briefing-agent"],
+    "ctaPrimary": "Set Up My Agent Stack",
+    "ctaSecondary": "See What's Included",
+    "featured": true,
+    "orderIndex": 8,
+    "status": "published",
+    "seoTitle": "Founder Agent Stack Setup | Personal AI Productivity | OpenClaw",
+    "seoDescription": "Get 5 production-ready AI agents handling your daily briefing, research, follow-ups, and meeting prep. OpenClaw builds your Founder Agent Stack in one week."
+  },
+  {
+    "id": "svc-009",
+    "slug": "team-enablement-training",
+    "title": "Team Enablement Training",
+    "shortDescription": "A structured full-day training program that equips your team to work effectively alongside AI agents — covering prompt literacy, workflow integration, quality review, and safe operation.",
+    "category": "training",
+    "audience": ["Operations and admin teams inheriting agent-assisted workflows", "Marketing and sales teams beginning to use AI research and drafting agents", "Managers responsible for overseeing AI agent outputs in their function"],
+    "problemStatement": "Deploying agents without training the humans who work alongside them is one of the most common implementation failures. Teams that don't understand how to review agent outputs, catch errors, provide good inputs, or know when to override the agent create serious quality and risk problems. Training transforms agents from unpredictable tools into trusted workflow partners.",
+    "outcomes": [
+      "Team members confident and competent in their role in agent-assisted workflows",
+      "Clear protocols for reviewing, approving, and escalating agent outputs",
+      "Shared vocabulary and practices for working with AI across the team",
+      "A team-specific quick reference guide for ongoing use"
+    ],
+    "scopeItems": [
+      "AI agent fundamentals: how agents work, what they can and cannot do reliably",
+      "Prompt literacy: how to give good inputs and evaluate outputs",
+      "Workflow integration: how each team member's role changes with agent assistance",
+      "Quality review practices and common failure patterns to watch for",
+      "Safe operation: data handling, privacy, and when to escalate"
+    ],
+    "deliverables": [
+      "Full-day training delivery (up to 12 participants)",
+      "Team-specific quick reference card for each agent in use",
+      "Slides and session recording for future onboarding",
+      "30-day follow-up Q&A session (60 minutes)"
+    ],
+    "processSteps": [
+      {
+        "title": "Pre-Training Assessment",
+        "description": "We survey team members on their current AI familiarity and gather context on the specific agents they'll be working with to customize the training."
+      },
+      {
+        "title": "Morning Session: Foundations",
+        "description": "How AI agents work, capability boundaries, common misconceptions, and the team's specific agent implementations and workflows."
+      },
+      {
+        "title": "Afternoon Session: Hands-On Practice",
+        "description": "Interactive exercises using your actual agents and workflows. Teams practice reviewing outputs, catching errors, improving inputs, and handling edge cases."
+      },
+      {
+        "title": "Protocols & Reference Guide",
+        "description": "We co-create team protocols for agent interaction and deliver a customized quick reference guide at session close."
+      }
+    ],
+    "durationText": "1 day",
+    "formatOptions": ["remote", "onsite-ottawa", "hybrid"],
+    "pricingFrom": "CAD 1,500",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "At least one agent deployed and accessible for hands-on exercises",
+      "Team members identified and confirmed for the training day",
+      "Pre-training assessment survey completed by all participants"
+    ],
+    "exclusions": [
+      "Training for more than 12 participants (additional cohorts priced separately)",
+      "Custom course development for highly specialized industry contexts",
+      "Ongoing training or refresher sessions (can be quoted separately)"
+    ],
+    "faq": [
+      {
+        "question": "Does the training assume technical background?",
+        "answer": "No. The training is designed for business users — no coding or technical knowledge required. We cover what matters for effective and safe day-to-day use."
+      },
+      {
+        "question": "Can we run this before agents are deployed?",
+        "answer": "We recommend running training concurrent with or after first agent deployment so participants can work with real examples. Pre-deployment, we can offer a shorter orientation session instead."
+      },
+      {
+        "question": "Is the training customized to our specific agents?",
+        "answer": "Yes. The pre-training assessment and pre-work review let us customize examples, scenarios, and the reference guide to your actual deployed agents."
+      }
+    ],
+    "relatedUseCases": ["sop-checklist-runner", "meeting-prep-pack", "content-research-agent"],
+    "relatedSkills": ["sop-checklist-runner", "meeting-prep-pack", "research-summarizer"],
+    "relatedTemplates": ["operations-summary-agent", "executive-briefing-agent"],
+    "ctaPrimary": "Book Team Training",
+    "ctaSecondary": "View Training Outline",
+    "featured": false,
+    "orderIndex": 9,
+    "status": "published",
+    "seoTitle": "AI Team Enablement Training | OpenClaw Consulting Ottawa",
+    "seoDescription": "Equip your team to work confidently alongside AI agents. OpenClaw's full-day training covers prompt literacy, output review, safe operation, and workflow integration."
+  },
+  {
+    "id": "svc-010",
+    "slug": "onsite-ottawa-setup-day",
+    "title": "Onsite Ottawa Setup Day",
+    "shortDescription": "A full day of hands-on, on-location setup and configuration at your Ottawa office — ideal for teams that prefer in-person collaboration during critical infrastructure work.",
+    "category": "onsite",
+    "audience": ["Ottawa-based organizations that prefer in-person technical collaboration", "Teams setting up infrastructure with sensitive on-premises systems or data", "Leaders who want to get their whole team involved in the setup day"],
+    "problemStatement": "Some organizations have valid reasons to want AI agent setup done in person: sensitive systems that shouldn't be accessed remotely, teams that learn better hands-on, or leadership that wants to be present during critical infrastructure decisions. The Onsite Ottawa Setup Day brings our full setup capability to your location.",
+    "outcomes": [
+      "Agent infrastructure configured and validated on-site with your team's direct involvement",
+      "Your team trained and confident in the setup before we leave",
+      "Any on-premises integration challenges resolved in real-time",
+      "A stronger working relationship built through in-person collaboration"
+    ],
+    "scopeItems": [
+      "Full Foundation Setup scope delivered on-site at your Ottawa location",
+      "In-person walkthrough of all configuration decisions with your team",
+      "On-premises integration and network configuration if applicable",
+      "Live troubleshooting of any environment-specific issues encountered",
+      "End-of-day walkthrough and Q&A with all stakeholders present"
+    ],
+    "deliverables": [
+      "Fully configured agent infrastructure validated on-site",
+      "Same documentation deliverables as Foundation Setup",
+      "On-site session notes and decision log",
+      "Follow-up remote check-in within 5 business days"
+    ],
+    "processSteps": [
+      {
+        "title": "Pre-Visit Planning",
+        "description": "We align on the agenda, confirm access requirements, and send a setup checklist to complete before our visit so the day is as productive as possible."
+      },
+      {
+        "title": "Morning: Infrastructure Setup",
+        "description": "We arrive at your office and work through infrastructure configuration with your team, explaining each step and making decisions together."
+      },
+      {
+        "title": "Afternoon: Integrations & Testing",
+        "description": "We configure integrations, run tests, and address any environment-specific challenges that come up. Your team shadows throughout."
+      },
+      {
+        "title": "End-of-Day Walkthrough",
+        "description": "We do a full walkthrough of everything configured, answer questions from any team members present, and leave with a clear set of follow-up actions."
+      }
+    ],
+    "durationText": "1 day onsite",
+    "formatOptions": ["onsite-ottawa"],
+    "pricingFrom": "CAD 2,200",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "Location within Ottawa (Gatineau side can be accommodated; travel outside Ottawa quoted separately)",
+      "Workspace with reliable internet, necessary system access, and space for the OpenClaw consultant",
+      "Key decision-makers available for at least the morning and end-of-day sessions"
+    ],
+    "exclusions": [
+      "Travel outside Ottawa (quoted separately based on location)",
+      "Hardware procurement or physical infrastructure work",
+      "More than one full day of on-site time (additional days quoted separately)"
+    ],
+    "faq": [
+      {
+        "question": "Do you serve Gatineau as well as Ottawa?",
+        "answer": "Yes, the Gatineau side of the National Capital Region is included at no additional travel cost. Other locations within 1 hour of Ottawa are available with a travel fee."
+      },
+      {
+        "question": "What if we need both setup and training in the same day?",
+        "answer": "One full day is typically focused on setup or training alone. If you want both, we recommend booking a two-day engagement: day one for setup, day two for training."
+      },
+      {
+        "question": "Can we record the session for future reference?",
+        "answer": "With team consent, you're welcome to record the session. We also provide written session notes and a decision log regardless."
+      }
+    ],
+    "relatedUseCases": ["sop-checklist-runner", "meeting-prep-pack", "daily-executive-brief"],
+    "relatedSkills": ["sop-checklist-runner", "meeting-prep-pack", "daily-brief-generator"],
+    "relatedTemplates": ["operations-summary-agent", "executive-briefing-agent"],
+    "ctaPrimary": "Book Onsite Day",
+    "ctaSecondary": "Check Ottawa Availability",
+    "featured": false,
+    "orderIndex": 10,
+    "status": "published",
+    "seoTitle": "Onsite AI Agent Setup Day Ottawa | OpenClaw Consulting",
+    "seoDescription": "Get your AI agent infrastructure set up in person at your Ottawa office. OpenClaw's Onsite Setup Day delivers full Foundation Setup with hands-on team involvement."
+  },
+  {
+    "id": "svc-011",
+    "slug": "quarterly-security-review",
+    "title": "Quarterly Agent Security Review",
+    "shortDescription": "A recurring half-day security review of your live agent infrastructure — assessing new risks, validating controls, and updating your security documentation every quarter.",
+    "category": "security",
+    "audience": ["Organizations with live agents handling sensitive or client data", "Companies that completed the Security Pre-Check and want ongoing assurance", "Teams with regulatory or enterprise client security requirements"],
+    "problemStatement": "Agent security is not a one-time event — your agent stack evolves, new integrations are added, model behaviors change, and the threat landscape shifts. Without periodic review, controls that worked at launch drift out of alignment with your current configuration. Quarterly reviews keep your security posture current without the overhead of a full audit each time.",
+    "outcomes": [
+      "Confirmed security posture across your current agent infrastructure",
+      "Identification and remediation guidance for any new or drifted risks",
+      "Updated security documentation reflecting current configuration",
+      "Peace of mind for leadership and any enterprise clients who require it"
+    ],
+    "scopeItems": [
+      "Review of any changes to agent configuration, integrations, or data access since last review",
+      "Validation of credential and access controls against current best practices",
+      "Assessment of new model or platform vulnerabilities relevant to your stack",
+      "Review of agent activity logs for anomalies or policy violations",
+      "Update of security documentation and risk register"
+    ],
+    "deliverables": [
+      "Quarterly Security Review Report with delta from last review",
+      "Updated risk register with any new findings",
+      "Remediation action list with severity ratings and recommended timelines",
+      "Updated agent security policy documentation"
+    ],
+    "processSteps": [
+      {
+        "title": "Change Log Review",
+        "description": "You provide a summary of changes since the last review. We review this against our security checklist to identify areas needing attention."
+      },
+      {
+        "title": "Technical Review Session",
+        "description": "A focused 2-hour session reviewing current configuration, logs, and controls against our security framework."
+      },
+      {
+        "title": "Analysis & Reporting",
+        "description": "We analyze findings, update the risk register, and prepare the quarterly report with any new remediation recommendations."
+      },
+      {
+        "title": "Report Delivery & Discussion",
+        "description": "We deliver the report and discuss findings in a 30-minute call, ensuring your team understands any actions required."
+      }
+    ],
+    "durationText": "Half-day",
+    "formatOptions": ["remote", "async"],
+    "pricingFrom": "CAD 900",
+    "pricingModel": "fixed",
+    "prerequisites": [
+      "Completed initial Security Pre-Check or equivalent baseline security assessment",
+      "Agent activity logs accessible for review",
+      "Summary of configuration changes since the last review"
+    ],
+    "exclusions": [
+      "Remediation of identified issues (can be quoted separately)",
+      "Full security audit or compliance certification",
+      "Review of agent infrastructure not previously assessed by OpenClaw"
+    ],
+    "faq": [
+      {
+        "question": "Can we start quarterly reviews without having done the Security Pre-Check?",
+        "answer": "We recommend completing the Security Pre-Check first to establish a baseline. If you have your own baseline documentation, we can review it and align our framework before the first quarterly review."
+      },
+      {
+        "question": "Is the quarterly review available as part of Managed AgentOps?",
+        "answer": "Yes — the Managed AgentOps retainer includes a quarterly security review as part of the monthly engagement. Standalone quarterly reviews are for organizations who want security oversight without the full retainer."
+      },
+      {
+        "question": "How quickly can you turn around the report if we have a client deadline?",
+        "answer": "Standard turnaround is 2 business days after the review session. Expedited 24-hour turnaround is available on request."
+      }
+    ],
+    "relatedUseCases": ["expense-report-processor", "client-invoice-tracker", "lead-enrichment-pipeline"],
+    "relatedSkills": ["invoice-data-extractor", "crm-update-assistant", "document-parser"],
+    "relatedTemplates": ["founder-agent-stack"],
+    "ctaPrimary": "Schedule Q1 Review",
+    "ctaSecondary": "Compare Security Options",
+    "featured": false,
+    "orderIndex": 11,
+    "status": "published",
+    "seoTitle": "Quarterly AI Agent Security Review | OpenClaw Consulting",
+    "seoDescription": "Keep your AI agent security posture current with OpenClaw's Quarterly Security Review. Validate controls, identify new risks, and update documentation every quarter."
+  },
+  {
+    "id": "svc-012",
+    "slug": "managed-agentops",
+    "title": "Managed AgentOps (Monthly Retainer)",
+    "shortDescription": "Ongoing management, monitoring, optimization, and support for your live agent infrastructure — so your agents keep performing reliably as your business evolves.",
+    "category": "support",
+    "audience": ["Organizations with multiple agents running in production", "Teams without dedicated internal AI/ML operations capability", "Companies that want expert oversight without hiring a full-time AI operations role"],
+    "problemStatement": "Agents running in production require continuous attention: model updates change behavior, integrations break, workflows evolve, and new use cases emerge. Without dedicated operations support, organizations either let their agents drift into unreliability or divert internal talent to maintenance instead of building. Managed AgentOps gives you expert operations coverage without the overhead of a full-time hire.",
+    "outcomes": [
+      "Reliably operating agents with proactive monitoring and rapid incident response",
+      "Continuous improvement of agent performance based on real usage data",
+      "Monthly reporting on agent activity, performance, and ROI metrics",
+      "An agentops partner who grows your stack as your business scales"
+    ],
+    "scopeItems": [
+      "Proactive monitoring of all production agents with alerting and incident response",
+      "Monthly performance review and optimization of agent prompts, logic, and integrations",
+      "Up to 4 hours of agent modifications, tuning, or new configuration per month",
+      "Quarterly security review included in retainer",
+      "Priority access to OpenClaw consultants for new builds and strategy sessions"
+    ],
+    "deliverables": [
+      "Monthly AgentOps Report with performance metrics, incidents, and improvements made",
+      "Incident reports for any agent failures or anomalies",
+      "Quarterly security review report",
+      "Annual agent stack review with recommendations for the coming year"
+    ],
+    "processSteps": [
+      {
+        "title": "Onboarding & Handover",
+        "description": "We take a full inventory of your agent stack, establish monitoring, and document the current state before beginning the retainer."
+      },
+      {
+        "title": "Ongoing Monitoring",
+        "description": "Continuous monitoring of agent activity, performance metrics, and integration health. We proactively catch and resolve issues before they impact your workflows."
+      },
+      {
+        "title": "Monthly Optimization Cycle",
+        "description": "Each month we review performance data, identify improvement opportunities, implement changes within the monthly hours allocation, and report to you."
+      },
+      {
+        "title": "Quarterly & Annual Reviews",
+        "description": "Quarterly security review plus an annual stack review assessing the full portfolio of agents against your evolving business needs."
+      }
+    ],
+    "durationText": "Ongoing",
+    "formatOptions": ["remote", "async"],
+    "pricingFrom": "CAD 2,800/mo",
+    "pricingModel": "retainer",
+    "prerequisites": [
+      "At least 2 agents running in production before starting the retainer",
+      "Agent infrastructure set up by OpenClaw or with equivalent documentation provided",
+      "Designated internal point of contact for monthly reviews and escalations"
+    ],
+    "exclusions": [
+      "New agent builds beyond the monthly hours allocation (billed at standard rates)",
+      "Infrastructure hosting costs (billed directly to client from providers)",
+      "Third-party tool costs or API usage fees"
+    ],
+    "faq": [
+      {
+        "question": "Is there a minimum contract term?",
+        "answer": "The minimum commitment is 3 months to allow enough time for the monitoring baseline to be established and meaningful optimizations to be made. Month-to-month is available after the initial term."
+      },
+      {
+        "question": "What happens if we need more than 4 hours of modifications in a month?",
+        "answer": "Additional hours are billed at our standard hourly rate of CAD 175/hr. We notify you before exceeding the allocation and get approval first."
+      },
+      {
+        "question": "What does 'incident response' mean in practice?",
+        "answer": "If a monitored agent fails, produces anomalous output, or an integration breaks, we investigate and resolve within 4 business hours during business days. Critical incidents receive same-day response."
+      }
+    ],
+    "relatedUseCases": ["daily-executive-brief", "lead-enrichment-pipeline", "sop-checklist-runner", "content-research-agent"],
+    "relatedSkills": ["daily-brief-generator", "lead-enrichment", "sop-checklist-runner", "alert-digest"],
+    "relatedTemplates": ["founder-agent-stack", "sales-research-agent", "operations-summary-agent"],
+    "ctaPrimary": "Start Managed AgentOps",
+    "ctaSecondary": "View What's Covered",
+    "featured": true,
+    "orderIndex": 12,
+    "status": "published",
+    "seoTitle": "Managed AI AgentOps Monthly Retainer | OpenClaw Consulting",
+    "seoDescription": "Keep your AI agents running reliably with OpenClaw's Managed AgentOps retainer. Proactive monitoring, monthly optimization, quarterly security reviews, and expert support."
+  }
+]

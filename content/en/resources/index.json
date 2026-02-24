@@ -1,0 +1,138 @@
+[
+  {
+    "slug": "ai-readiness-checklist-smb",
+    "title": "The SMB AI Readiness Checklist: 25 Questions Before You Deploy an Agent",
+    "excerpt": "Before you invest in AI agent deployment, you need to know where you actually stand. This practical checklist walks through data readiness, workflow clarity, security posture, team capacity, and governance requirements — the five dimensions that determine whether your first agent will be a success or an expensive lesson.",
+    "category": "how-to",
+    "tags": [
+      "readiness",
+      "checklist",
+      "smb",
+      "getting-started",
+      "foundations"
+    ],
+    "author": "OpenClaw Consulting Team",
+    "publishDate": "2026-01-15",
+    "updatedDate": "2026-02-01",
+    "readTime": 8,
+    "relatedServices": [
+      "ai-readiness-audit",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "daily-executive-brief"
+    ],
+    "seoTitle": "SMB AI Readiness Checklist: 25 Questions Before Deploying AI Agents | OpenClaw",
+    "seoDescription": "Use this 25-question checklist to assess your organization's readiness for AI agent deployment across data, workflows, security, team capacity, and governance.",
+    "status": "published"
+  },
+  {
+    "slug": "agent-security-mistakes",
+    "title": "5 Security Mistakes Companies Make When Deploying AI Agents (And How to Avoid Them)",
+    "excerpt": "Most AI agent failures aren't caused by bad models — they're caused by bad security architecture. Over-privileged credentials, secrets in config files, no audit logging, and missing approval gates are the four horsemen of the enterprise AI disaster. This article breaks down each mistake with real patterns we see in the field and the specific controls that prevent them.",
+    "category": "security",
+    "tags": [
+      "security",
+      "credentials",
+      "audit-logging",
+      "least-privilege",
+      "governance"
+    ],
+    "author": "OpenClaw Consulting Team",
+    "publishDate": "2026-01-22",
+    "readTime": 10,
+    "relatedServices": [
+      "ai-security-governance",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "security-compliance-monitoring"
+    ],
+    "seoTitle": "5 AI Agent Security Mistakes and How to Avoid Them | OpenClaw",
+    "seoDescription": "Learn the 5 most common security mistakes in AI agent deployments — over-privileged credentials, secrets in configs, missing audit logs — and how to fix them.",
+    "status": "published"
+  },
+  {
+    "slug": "measuring-roi-ai-agents",
+    "title": "How to Measure ROI on AI Agent Deployments: A Practical Framework for SMB",
+    "excerpt": "Everyone talks about AI ROI but nobody tells you how to actually measure it. This framework covers the three categories of AI agent value (time savings, error reduction, opportunity capture), how to establish baselines before deployment, what metrics to track in the first 90 days, and how to build the business case for the next investment phase.",
+    "category": "strategy",
+    "tags": [
+      "roi",
+      "measurement",
+      "business-case",
+      "metrics",
+      "strategy"
+    ],
+    "author": "OpenClaw Consulting Team",
+    "publishDate": "2026-02-03",
+    "readTime": 12,
+    "relatedServices": [
+      "ai-readiness-audit",
+      "founder-agent-stack"
+    ],
+    "relatedUseCases": [
+      "daily-executive-brief",
+      "board-report-automation"
+    ],
+    "seoTitle": "How to Measure ROI on AI Agent Deployments for SMB | OpenClaw",
+    "seoDescription": "A practical ROI measurement framework for SMB AI agent deployments — baselines, 90-day metrics, and how to build the business case for continued investment.",
+    "status": "published"
+  },
+  {
+    "slug": "incremental-ai-adoption-playbook",
+    "title": "The Incremental AI Adoption Playbook: Start Small, Scale Safely",
+    "excerpt": "The companies that fail at AI adoption try to do too much too fast. The ones that succeed start with one workflow, prove value, and expand deliberately. This playbook describes the incremental approach we use with every client: Pilot → Prove → Expand → Embed. Each phase has specific success criteria and decision gates before moving forward.",
+    "category": "strategy",
+    "tags": [
+      "adoption",
+      "incremental",
+      "playbook",
+      "change-management",
+      "smb"
+    ],
+    "author": "OpenClaw Consulting Team",
+    "publishDate": "2026-02-10",
+    "readTime": 9,
+    "relatedServices": [
+      "ai-readiness-audit",
+      "openclaw-foundation-setup",
+      "founder-agent-stack"
+    ],
+    "relatedUseCases": [
+      "daily-executive-brief",
+      "inbound-lead-qualification"
+    ],
+    "seoTitle": "The Incremental AI Adoption Playbook for SMB | OpenClaw",
+    "seoDescription": "Learn the Pilot → Prove → Expand → Embed framework for safe, incremental AI adoption. Avoid the most common AI deployment failure modes.",
+    "status": "published"
+  },
+  {
+    "slug": "human-in-the-loop-design",
+    "title": "Designing Human-in-the-Loop AI Workflows: Where Automation Ends and Human Judgment Begins",
+    "excerpt": "The most important design decision in any AI agent deployment isn't the model — it's where you put the human approval gates. This article covers the framework we use to identify high-stakes decision points, how to design approval workflows that don't become bottlenecks, and the specific patterns for different business contexts (finance, sales, HR, and ops).",
+    "category": "how-to",
+    "tags": [
+      "human-in-the-loop",
+      "approval-gates",
+      "governance",
+      "design",
+      "workflow"
+    ],
+    "author": "OpenClaw Consulting Team",
+    "publishDate": "2026-02-17",
+    "readTime": 11,
+    "relatedServices": [
+      "ai-security-governance",
+      "openclaw-foundation-setup"
+    ],
+    "relatedUseCases": [
+      "recruiting-pipeline-automation",
+      "ap-invoice-automation",
+      "sales-follow-up-automation"
+    ],
+    "seoTitle": "Designing Human-in-the-Loop AI Workflows | OpenClaw",
+    "seoDescription": "Learn how to design effective human approval gates in AI agent workflows — where automation ends, where human judgment must take over, and how to avoid bottlenecks.",
+    "status": "published"
+  }
+]

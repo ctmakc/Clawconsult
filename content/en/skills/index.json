@@ -1,0 +1,834 @@
+[
+  {
+    "id": "sk-001",
+    "slug": "daily-brief-generator",
+    "name": "Daily Brief Generator",
+    "version": "1.2.0",
+    "status": "stable",
+    "shortDescription": "Compiles a personalized morning briefing from news feeds, calendar, email signals, and KPI dashboards into a structured executive summary delivered before the workday begins.",
+    "capabilityType": "reporting",
+    "tags": [
+      "executive",
+      "briefing",
+      "news",
+      "calendar",
+      "kpi",
+      "morning-routine"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "calendar-api-access",
+      "email-read-only-oauth",
+      "news-api-key"
+    ],
+    "inputs": [
+      "news_feed_urls",
+      "calendar_id",
+      "email_labels_to_monitor",
+      "kpi_dashboard_endpoint",
+      "delivery_time",
+      "recipient_channel"
+    ],
+    "outputs": [
+      "formatted_brief_html",
+      "brief_plain_text",
+      "delivery_confirmation"
+    ],
+    "compatibleTemplates": [
+      "executive-briefing-agent",
+      "founder-agent-stack"
+    ],
+    "useCases": [
+      "daily-executive-brief",
+      "founder-daily-operations"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "News source coverage limited to configured RSS/API feeds — does not perform open web browsing",
+      "Calendar enrichment requires CRM integration; without it, meeting context is basic",
+      "Does not summarize email content — only detects flagged labels and counts"
+    ],
+    "changelogSummary": "v1.2.0: Added KPI delta comparison vs prior period. v1.1.0: Slack and Notion delivery targets. v1.0.0: Initial release with email delivery.",
+    "documentationSnippet": "Configure `delivery_time` in cron format (e.g., `30 6 * * 1-5` for 6:30 AM weekdays). Set `recipient_channel` to `email`, `slack`, or `notion`.",
+    "doneForYouAvailable": true,
+    "featured": true,
+    "seoTitle": "Daily Brief Generator Skill | OpenClaw AI Agents",
+    "seoDescription": "Automate executive morning briefings with the Daily Brief Generator skill — compiles news, calendar, and KPIs into a 5-minute structured summary.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-002",
+    "slug": "research-summarizer",
+    "name": "Research Summarizer",
+    "version": "1.3.1",
+    "status": "stable",
+    "shortDescription": "Queries multiple sources (web search, internal documents, databases) on a given topic and synthesizes findings into a structured research report with citations, key findings, and recommended actions.",
+    "capabilityType": "research",
+    "tags": [
+      "research",
+      "summarization",
+      "web-search",
+      "documents",
+      "citations"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "search-api-key",
+      "document-storage-access"
+    ],
+    "inputs": [
+      "research_query",
+      "source_list",
+      "depth_level",
+      "output_format",
+      "max_sources"
+    ],
+    "outputs": [
+      "research_report_md",
+      "citations_list",
+      "key_findings_array",
+      "confidence_score"
+    ],
+    "compatibleTemplates": [
+      "sales-intelligence-pack",
+      "competitive-intelligence-agent"
+    ],
+    "useCases": [
+      "competitive-landscape-monitoring",
+      "prospect-research-automation",
+      "daily-executive-brief"
+    ],
+    "dataSensitivityLevel": "internal",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Web search depth limited to top 10 results per query by default",
+      "Cannot access paywalled content without configured credentials",
+      "Synthesis quality depends on source quality — garbage in, garbage out"
+    ],
+    "changelogSummary": "v1.3.1: Fixed citation deduplication bug. v1.3.0: Added confidence scoring. v1.2.0: Internal document search integration.",
+    "documentationSnippet": "Set `depth_level` to `surface` (3 sources), `standard` (10 sources), or `deep` (25+ sources). Deep mode significantly increases execution time.",
+    "doneForYouAvailable": true,
+    "featured": true,
+    "seoTitle": "Research Summarizer Skill | OpenClaw AI Agents",
+    "seoDescription": "Automate research tasks with the Research Summarizer skill — queries multiple sources and synthesizes findings into structured reports with citations.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-003",
+    "slug": "lead-enrichment",
+    "name": "Lead Enrichment",
+    "version": "2.0.0",
+    "status": "stable",
+    "shortDescription": "Enriches incoming leads with company data, LinkedIn profiles, technographic information, and buying signals from public sources, populating CRM fields automatically before the first sales touchpoint.",
+    "capabilityType": "enrichment",
+    "tags": [
+      "lead",
+      "enrichment",
+      "crm",
+      "sales",
+      "linkedin",
+      "company-data"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "crm-api-access",
+      "enrichment-api-key"
+    ],
+    "inputs": [
+      "lead_email",
+      "lead_name",
+      "company_domain",
+      "crm_record_id"
+    ],
+    "outputs": [
+      "enriched_contact_object",
+      "company_profile",
+      "technographic_data",
+      "buying_signals",
+      "crm_update_confirmation"
+    ],
+    "compatibleTemplates": [
+      "sales-intelligence-pack",
+      "inbound-lead-handler"
+    ],
+    "useCases": [
+      "inbound-lead-qualification",
+      "prospect-research-automation"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Enrichment data accuracy depends on third-party provider freshness",
+      "LinkedIn data subject to platform rate limits and terms of service",
+      "Some SMB companies have limited publicly available data"
+    ],
+    "changelogSummary": "v2.0.0: Redesigned output schema for CRM compatibility. v1.5.0: Added technographic data source. v1.0.0: Initial release.",
+    "documentationSnippet": "Pass `company_domain` for best enrichment results. If unavailable, the skill will attempt domain inference from `lead_email`.",
+    "doneForYouAvailable": true,
+    "featured": false,
+    "seoTitle": "Lead Enrichment Skill | OpenClaw AI Agents",
+    "seoDescription": "Automatically enrich incoming leads with company data, technographics, and buying signals before the first sales touch.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-004",
+    "slug": "email-drafter",
+    "name": "Email Drafter",
+    "version": "1.1.0",
+    "status": "stable",
+    "shortDescription": "Drafts personalized outbound emails or follow-ups using contact context, deal stage, and configured tone guidelines. Outputs draft for human review before sending — never sends autonomously.",
+    "capabilityType": "drafting",
+    "tags": [
+      "email",
+      "drafting",
+      "outbound",
+      "personalization",
+      "sales",
+      "follow-up"
+    ],
+    "complexity": "L1",
+    "prerequisites": [
+      "crm-api-access"
+    ],
+    "inputs": [
+      "recipient_context",
+      "email_purpose",
+      "tone_profile",
+      "previous_correspondence_summary",
+      "call_to_action"
+    ],
+    "outputs": [
+      "email_draft_html",
+      "email_draft_plain",
+      "suggested_subject_lines"
+    ],
+    "compatibleTemplates": [
+      "sales-intelligence-pack",
+      "inbound-lead-handler"
+    ],
+    "useCases": [
+      "inbound-lead-qualification",
+      "sales-follow-up-automation"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "Does not send email autonomously — always requires human approval and send action",
+      "Tone calibration requires at least 5 example emails in the tone profile",
+      "Cannot access attachments or external documents without explicit configuration"
+    ],
+    "changelogSummary": "v1.1.0: Added multi-subject-line suggestions. v1.0.0: Initial release.",
+    "documentationSnippet": "Always set `requiresHumanApproval: true` in your workflow config when using this skill. Email drafts are staged in a review queue, never auto-sent.",
+    "doneForYouAvailable": true,
+    "featured": false,
+    "seoTitle": "Email Drafter Skill | OpenClaw AI Agents",
+    "seoDescription": "Draft personalized sales emails and follow-ups with AI — always with human review before sending. Integrated with your CRM context.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-005",
+    "slug": "contract-parser",
+    "name": "Contract Parser",
+    "version": "1.4.0",
+    "status": "stable",
+    "shortDescription": "Extracts key clauses, dates, parties, obligations, and risk flags from contract documents (PDF, DOCX) and outputs structured data for review, comparison, or CRM population.",
+    "capabilityType": "extraction",
+    "tags": [
+      "contracts",
+      "legal",
+      "extraction",
+      "parsing",
+      "risk",
+      "compliance"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "document-storage-access"
+    ],
+    "inputs": [
+      "contract_file_path",
+      "extraction_schema",
+      "risk_flag_keywords",
+      "output_format"
+    ],
+    "outputs": [
+      "extracted_clauses_json",
+      "key_dates_array",
+      "parties_list",
+      "risk_flags_array",
+      "summary_text"
+    ],
+    "compatibleTemplates": [
+      "legal-ops-assistant",
+      "vendor-management-agent"
+    ],
+    "useCases": [
+      "contract-review-acceleration",
+      "vendor-contract-monitoring"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "Accuracy degrades on scanned PDFs without OCR pre-processing",
+      "Complex multi-party contracts with cross-references require manual review of extracted data",
+      "Not a substitute for legal counsel — outputs are for triage and organization only"
+    ],
+    "changelogSummary": "v1.4.0: Added risk flag keyword configuration. v1.3.0: DOCX support. v1.2.0: Improved date extraction accuracy.",
+    "documentationSnippet": "Use `extraction_schema` to specify which clause types to target. Default schema covers dates, parties, payment terms, termination, and IP ownership.",
+    "doneForYouAvailable": true,
+    "featured": false,
+    "seoTitle": "Contract Parser Skill | OpenClaw AI Agents",
+    "seoDescription": "Extract key clauses, dates, and risk flags from contracts automatically. Structured output for review — not a replacement for legal counsel.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-006",
+    "slug": "invoice-processor",
+    "name": "Invoice Processor",
+    "version": "1.2.0",
+    "status": "stable",
+    "shortDescription": "Extracts invoice data (vendor, amount, due date, line items) from PDF/image files, validates against PO records, and creates draft entries in your accounting system for human approval.",
+    "capabilityType": "extraction",
+    "tags": [
+      "invoices",
+      "finance",
+      "accounting",
+      "extraction",
+      "ap-automation"
+    ],
+    "complexity": "L1",
+    "prerequisites": [
+      "accounting-system-api-access",
+      "document-storage-access"
+    ],
+    "inputs": [
+      "invoice_file_path",
+      "po_database_endpoint",
+      "accounting_system_credentials",
+      "approval_threshold_cad"
+    ],
+    "outputs": [
+      "extracted_invoice_data",
+      "po_match_result",
+      "accounting_draft_entry_id",
+      "approval_queue_item"
+    ],
+    "compatibleTemplates": [
+      "finance-ops-agent",
+      "vendor-management-agent"
+    ],
+    "useCases": [
+      "ap-invoice-automation",
+      "vendor-contract-monitoring"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "OCR accuracy varies with invoice formatting quality",
+      "PO matching requires structured PO database; ad-hoc POs require manual mapping",
+      "Multi-currency invoices require configured exchange rate source"
+    ],
+    "changelogSummary": "v1.2.0: Added configurable approval threshold. v1.1.0: PO matching logic improved. v1.0.0: Initial release.",
+    "documentationSnippet": "Set `approval_threshold_cad` to define the invoice amount above which all entries go to human approval queue regardless of PO match.",
+    "doneForYouAvailable": true,
+    "featured": false,
+    "seoTitle": "Invoice Processor Skill | OpenClaw AI Agents",
+    "seoDescription": "Automate invoice data extraction and AP processing with AI — always with human approval before posting to your accounting system.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-007",
+    "slug": "alert-digest",
+    "name": "Alert Digest",
+    "version": "1.0.1",
+    "status": "stable",
+    "shortDescription": "Aggregates alerts and notifications from multiple monitoring sources (uptime, security, analytics, CRM triggers) and delivers a prioritized digest on a configured schedule, reducing notification fatigue.",
+    "capabilityType": "monitoring",
+    "tags": [
+      "alerts",
+      "monitoring",
+      "digest",
+      "notifications",
+      "ops"
+    ],
+    "complexity": "L1",
+    "prerequisites": [
+      "monitoring-webhook-endpoints"
+    ],
+    "inputs": [
+      "alert_sources_config",
+      "priority_rules",
+      "digest_schedule",
+      "delivery_channel",
+      "suppression_rules"
+    ],
+    "outputs": [
+      "prioritized_alert_digest",
+      "suppressed_alerts_log",
+      "delivery_confirmation"
+    ],
+    "compatibleTemplates": [
+      "ops-monitoring-agent",
+      "executive-briefing-agent"
+    ],
+    "useCases": [
+      "daily-executive-brief",
+      "it-ops-monitoring"
+    ],
+    "dataSensitivityLevel": "internal",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Does not auto-remediate issues — digest is informational only",
+      "Priority scoring is rule-based; ML-based prioritization not yet available",
+      "Requires webhook endpoints from source systems; pull-based polling not supported in v1"
+    ],
+    "changelogSummary": "v1.0.1: Fixed duplicate alert deduplication. v1.0.0: Initial release.",
+    "documentationSnippet": "Configure `suppression_rules` to prevent repeat alerts from the same source within a time window (e.g., `{source: 'uptime-monitor', suppress_minutes: 60}`).",
+    "doneForYouAvailable": false,
+    "featured": false,
+    "seoTitle": "Alert Digest Skill | OpenClaw AI Agents",
+    "seoDescription": "Reduce alert fatigue with the Alert Digest skill — aggregates and prioritizes notifications from all your monitoring tools into a single scheduled digest.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-008",
+    "slug": "meeting-notes-extractor",
+    "name": "Meeting Notes Extractor",
+    "version": "1.3.0",
+    "status": "stable",
+    "shortDescription": "Processes meeting transcripts or recordings and extracts action items, decisions, follow-ups, and key discussion points into a structured summary. Integrates with calendar and CRM to push updates automatically.",
+    "capabilityType": "extraction",
+    "tags": [
+      "meetings",
+      "transcripts",
+      "action-items",
+      "crm",
+      "productivity"
+    ],
+    "complexity": "L1",
+    "prerequisites": [
+      "transcript-source-access",
+      "crm-api-access"
+    ],
+    "inputs": [
+      "transcript_text_or_url",
+      "meeting_participants",
+      "crm_deal_id",
+      "output_destination"
+    ],
+    "outputs": [
+      "meeting_summary_md",
+      "action_items_array",
+      "decisions_list",
+      "crm_note_id"
+    ],
+    "compatibleTemplates": [
+      "sales-intelligence-pack",
+      "ops-monitoring-agent"
+    ],
+    "useCases": [
+      "sales-follow-up-automation",
+      "project-status-reporting"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Accuracy depends on transcript quality — noisy audio transcripts reduce precision",
+      "Speaker identification requires labeled transcript input",
+      "Action item detection is heuristic-based; edge cases may require human review"
+    ],
+    "changelogSummary": "v1.3.0: CRM integration for automatic note posting. v1.2.0: Multi-participant speaker labeling. v1.0.0: Initial release.",
+    "documentationSnippet": "Pass `output_destination: 'crm'` to automatically post the summary as a CRM note linked to `crm_deal_id`. Requires CRM API credentials.",
+    "doneForYouAvailable": true,
+    "featured": true,
+    "seoTitle": "Meeting Notes Extractor Skill | OpenClaw AI Agents",
+    "seoDescription": "Extract action items, decisions, and follow-ups from meeting transcripts automatically. Push results to CRM and task managers.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-009",
+    "slug": "job-ad-writer",
+    "name": "Job Ad Writer",
+    "version": "1.1.0",
+    "status": "stable",
+    "shortDescription": "Generates structured, compliant job advertisements from role briefs. Applies inclusive language guidelines, Canadian employment law compliance checks, and outputs multi-channel formats (ATS, LinkedIn, website).",
+    "capabilityType": "drafting",
+    "tags": [
+      "recruiting",
+      "hr",
+      "job-ads",
+      "compliance",
+      "inclusive-language"
+    ],
+    "complexity": "L1",
+    "prerequisites": [],
+    "inputs": [
+      "role_brief",
+      "company_profile",
+      "tone_guidelines",
+      "compliance_jurisdiction",
+      "output_formats"
+    ],
+    "outputs": [
+      "job_ad_ats_format",
+      "job_ad_linkedin_format",
+      "job_ad_website_html",
+      "compliance_check_report"
+    ],
+    "compatibleTemplates": [
+      "recruiting-ops-agent"
+    ],
+    "useCases": [
+      "recruiting-pipeline-automation"
+    ],
+    "dataSensitivityLevel": "internal",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "Compliance checks are informational — not a substitute for HR legal review",
+      "Inclusive language scoring is guideline-based, not certified",
+      "Salary range requirements vary by province; manual verification recommended"
+    ],
+    "changelogSummary": "v1.1.0: Added provincial compliance notes for ON/BC/QC. v1.0.0: Initial release.",
+    "documentationSnippet": "Set `compliance_jurisdiction` to `canada-federal`, `ontario`, `british-columbia`, or `quebec` for jurisdiction-specific compliance notes.",
+    "doneForYouAvailable": false,
+    "featured": false,
+    "seoTitle": "Job Ad Writer Skill | OpenClaw AI Agents",
+    "seoDescription": "Generate compliant, inclusive job advertisements from role briefs automatically — with Canadian employment law checks and multi-channel output.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-010",
+    "slug": "report-builder",
+    "name": "Report Builder",
+    "version": "2.1.0",
+    "status": "stable",
+    "shortDescription": "Assembles structured reports (operational, financial, project status) from multiple data sources on a configured schedule. Produces formatted output in PDF, Markdown, or HTML with charts and tables.",
+    "capabilityType": "reporting",
+    "tags": [
+      "reporting",
+      "dashboards",
+      "scheduling",
+      "pdf",
+      "operations"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "data-source-api-access",
+      "report-template-config"
+    ],
+    "inputs": [
+      "report_template_id",
+      "data_sources_config",
+      "date_range",
+      "output_format",
+      "delivery_targets"
+    ],
+    "outputs": [
+      "report_pdf",
+      "report_html",
+      "report_data_json",
+      "delivery_confirmations"
+    ],
+    "compatibleTemplates": [
+      "executive-briefing-agent",
+      "finance-ops-agent",
+      "ops-monitoring-agent"
+    ],
+    "useCases": [
+      "board-report-automation",
+      "project-status-reporting",
+      "finance-reporting-automation"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Chart types limited to bar, line, pie, and table — custom visualizations require template customization",
+      "Large datasets (>100k rows) may require paginated data source queries",
+      "PDF rendering requires configured headless browser environment"
+    ],
+    "changelogSummary": "v2.1.0: Added chart rendering support. v2.0.0: Multi-source data assembly. v1.0.0: Initial markdown-only report generation.",
+    "documentationSnippet": "Create a `report_template_id` in your config directory using the Report Builder template format. See `/docs/templates/report-builder.md` for schema.",
+    "doneForYouAvailable": true,
+    "featured": true,
+    "seoTitle": "Report Builder Skill | OpenClaw AI Agents",
+    "seoDescription": "Automatically assemble operational, financial, and project reports from multiple data sources on schedule — PDF, HTML, and Markdown output.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-011",
+    "slug": "candidate-screener",
+    "name": "Candidate Screener",
+    "version": "1.2.0",
+    "status": "stable",
+    "shortDescription": "Reviews incoming applications against role requirements, scores candidates on configured criteria, and produces a ranked shortlist with justification notes for the hiring manager to review.",
+    "capabilityType": "extraction",
+    "tags": [
+      "recruiting",
+      "screening",
+      "candidates",
+      "ranking",
+      "hr"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "ats-api-access",
+      "role-requirements-doc"
+    ],
+    "inputs": [
+      "application_batch",
+      "role_requirements_schema",
+      "scoring_weights",
+      "disqualifying_criteria",
+      "shortlist_size"
+    ],
+    "outputs": [
+      "ranked_shortlist",
+      "per_candidate_scores",
+      "disqualified_list_with_reasons",
+      "screening_summary"
+    ],
+    "compatibleTemplates": [
+      "recruiting-ops-agent"
+    ],
+    "useCases": [
+      "recruiting-pipeline-automation"
+    ],
+    "dataSensitivityLevel": "restricted",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "All AI screening outputs must be reviewed by a human before candidate notifications",
+      "Does not have access to real-time LinkedIn profiles — uses application data only",
+      "Bias mitigation features are advisory; responsible use requires human oversight per CHRC guidelines"
+    ],
+    "changelogSummary": "v1.2.0: Added CHRC bias advisory notes. v1.1.0: ATS integration improvements. v1.0.0: Initial release.",
+    "documentationSnippet": "Always configure `requiresHumanApproval: true` for this skill. Canadian Human Rights Commission guidelines apply to automated screening tools.",
+    "doneForYouAvailable": true,
+    "featured": false,
+    "seoTitle": "Candidate Screener Skill | OpenClaw AI Agents",
+    "seoDescription": "Screen and rank job applicants automatically against role requirements — with human review required before any candidate communications.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-012",
+    "slug": "data-pipeline-monitor",
+    "name": "Data Pipeline Monitor",
+    "version": "1.0.0",
+    "status": "beta",
+    "shortDescription": "Monitors scheduled data pipelines and integrations for failures, delays, and data quality anomalies. Sends structured alerts with diagnostic context when issues are detected.",
+    "capabilityType": "monitoring",
+    "tags": [
+      "monitoring",
+      "data-pipelines",
+      "integrations",
+      "anomaly-detection",
+      "ops"
+    ],
+    "complexity": "L2",
+    "prerequisites": [
+      "pipeline-monitoring-access",
+      "alert-channel-config"
+    ],
+    "inputs": [
+      "pipeline_configs",
+      "health_check_endpoints",
+      "quality_thresholds",
+      "alert_recipients",
+      "check_interval_minutes"
+    ],
+    "outputs": [
+      "health_status_report",
+      "anomaly_alerts_array",
+      "pipeline_metrics_json"
+    ],
+    "compatibleTemplates": [
+      "ops-monitoring-agent"
+    ],
+    "useCases": [
+      "it-ops-monitoring",
+      "finance-reporting-automation"
+    ],
+    "dataSensitivityLevel": "internal",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Beta: anomaly detection thresholds require tuning for each pipeline during initial deployment",
+      "Does not auto-remediate pipeline failures — alert and diagnostic output only",
+      "Supports REST API health checks only; gRPC and custom protocols require custom adapters"
+    ],
+    "changelogSummary": "v1.0.0: Initial beta release with REST health checks and anomaly alerting.",
+    "documentationSnippet": "Configure `quality_thresholds` per pipeline (e.g., `{row_count_min: 100, null_rate_max: 0.05}`). Thresholds outside range trigger alerts.",
+    "doneForYouAvailable": false,
+    "featured": false,
+    "seoTitle": "Data Pipeline Monitor Skill | OpenClaw AI Agents",
+    "seoDescription": "Monitor data pipelines and integrations for failures and anomalies. Structured alerts with diagnostic context — no auto-remediation.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-013",
+    "slug": "social-content-scheduler",
+    "name": "Social Content Scheduler",
+    "version": "1.1.0",
+    "status": "stable",
+    "shortDescription": "Generates a weekly social media content calendar from a topic brief, drafts posts for LinkedIn and other channels, and stages them for human approval before scheduling publication.",
+    "capabilityType": "drafting",
+    "tags": [
+      "social-media",
+      "content",
+      "linkedin",
+      "scheduling",
+      "marketing"
+    ],
+    "complexity": "L1",
+    "prerequisites": [
+      "social-platform-api-access"
+    ],
+    "inputs": [
+      "topic_brief",
+      "brand_voice_guidelines",
+      "content_calendar_template",
+      "posting_schedule",
+      "platforms"
+    ],
+    "outputs": [
+      "content_calendar_md",
+      "post_drafts_array",
+      "approval_queue_items",
+      "scheduled_posts_after_approval"
+    ],
+    "compatibleTemplates": [
+      "marketing-content-agent"
+    ],
+    "useCases": [
+      "social-media-content-automation",
+      "marketing-content-production"
+    ],
+    "dataSensitivityLevel": "public",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "All posts staged for human approval — never published autonomously",
+      "Image generation not included; requires separate image asset workflow",
+      "Platform API rate limits may delay scheduling after approval"
+    ],
+    "changelogSummary": "v1.1.0: Added LinkedIn-specific formatting. v1.0.0: Initial release.",
+    "documentationSnippet": "Pass `brand_voice_guidelines` as a structured document with tone adjectives, prohibited terms, and example posts. Quality improves significantly with good examples.",
+    "doneForYouAvailable": true,
+    "featured": false,
+    "seoTitle": "Social Content Scheduler Skill | OpenClaw AI Agents",
+    "seoDescription": "Generate and schedule social media content with AI — drafts LinkedIn posts from topic briefs with human approval before any publication.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-014",
+    "slug": "crm-data-quality",
+    "name": "CRM Data Quality",
+    "version": "1.0.0",
+    "status": "stable",
+    "shortDescription": "Scans CRM records for missing fields, duplicate contacts, stale deals, and data inconsistencies. Produces a prioritized cleanup report and optionally applies auto-corrections to low-risk issues.",
+    "capabilityType": "monitoring",
+    "tags": [
+      "crm",
+      "data-quality",
+      "deduplication",
+      "sales",
+      "ops"
+    ],
+    "complexity": "L1",
+    "prerequisites": [
+      "crm-api-access"
+    ],
+    "inputs": [
+      "crm_api_credentials",
+      "scan_scope",
+      "quality_rules",
+      "auto_fix_rules",
+      "report_recipients"
+    ],
+    "outputs": [
+      "quality_report_pdf",
+      "issues_list_json",
+      "auto_fix_log",
+      "dedup_candidates_list"
+    ],
+    "compatibleTemplates": [
+      "sales-intelligence-pack",
+      "inbound-lead-handler"
+    ],
+    "useCases": [
+      "crm-data-hygiene-automation"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": true,
+    "knownLimitations": [
+      "Auto-corrections limited to clearly safe changes (e.g., phone number formatting) — merges and deletes always require human approval",
+      "Deduplication suggestions require human review before merge",
+      "Scan performance depends on CRM API rate limits"
+    ],
+    "changelogSummary": "v1.0.0: Initial release with HubSpot and Salesforce support.",
+    "documentationSnippet": "Set `auto_fix_rules` to specify which low-risk corrections can be applied without approval (e.g., `format_phone: true`, `capitalize_names: true`). Merges are never auto-applied.",
+    "doneForYouAvailable": false,
+    "featured": false,
+    "seoTitle": "CRM Data Quality Skill | OpenClaw AI Agents",
+    "seoDescription": "Automatically scan and clean CRM data — fix missing fields, deduplicate contacts, and flag stale deals with a prioritized cleanup report.",
+    "publishStatus": "published"
+  },
+  {
+    "id": "sk-015",
+    "slug": "workflow-orchestrator",
+    "name": "Workflow Orchestrator",
+    "version": "1.5.0",
+    "status": "stable",
+    "shortDescription": "Coordinates multi-step agent workflows by managing task sequencing, conditional branching, error handling, and human approval gates. Acts as the conductor for complex multi-skill automations.",
+    "capabilityType": "orchestration",
+    "tags": [
+      "orchestration",
+      "workflow",
+      "multi-agent",
+      "conditional-logic",
+      "error-handling"
+    ],
+    "complexity": "L3",
+    "prerequisites": [
+      "openclaw-runtime-access",
+      "configured-skill-set"
+    ],
+    "inputs": [
+      "workflow_definition_yaml",
+      "trigger_config",
+      "context_variables",
+      "approval_gate_config",
+      "error_handling_policy"
+    ],
+    "outputs": [
+      "workflow_execution_log",
+      "step_outputs_map",
+      "approval_queue_items",
+      "final_workflow_result"
+    ],
+    "compatibleTemplates": [
+      "executive-briefing-agent",
+      "sales-intelligence-pack",
+      "recruiting-ops-agent",
+      "finance-ops-agent",
+      "marketing-content-agent"
+    ],
+    "useCases": [
+      "daily-executive-brief",
+      "recruiting-pipeline-automation",
+      "sales-follow-up-automation"
+    ],
+    "dataSensitivityLevel": "confidential",
+    "requiresHumanApproval": false,
+    "knownLimitations": [
+      "Complex workflows with >20 steps require thorough testing before production deployment",
+      "Circular dependency detection is available but does not cover all edge cases",
+      "Parallel branch execution limited to 5 concurrent branches in standard tier"
+    ],
+    "changelogSummary": "v1.5.0: Added conditional branching and parallel execution. v1.2.0: Human approval gate support. v1.0.0: Sequential workflow execution.",
+    "documentationSnippet": "Define your workflow in YAML using the OpenClaw Workflow Schema. Use `approval_gate` step type to insert human review points. See `/docs/workflow-schema.md`.",
+    "doneForYouAvailable": true,
+    "featured": true,
+    "seoTitle": "Workflow Orchestrator Skill | OpenClaw AI Agents",
+    "seoDescription": "Coordinate complex multi-step AI agent workflows with conditional branching, error handling, and human approval gates built in.",
+    "publishStatus": "published"
+  }
+]
