@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 
 const COOKIE_KEY = 'oc_cookie_consent'
+const CONSENT_EVENT = 'oc-cookie-consent-change'
+
+function setConsent(value: 'accepted' | 'declined' | 'customized') {
+  localStorage.setItem(COOKIE_KEY, value)
+  window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: { value } }))
+}
 
 export function CookieBanner() {
   const t = useTranslations('cookie')
@@ -18,18 +24,18 @@ export function CookieBanner() {
   }, [])
 
   function accept() {
-    localStorage.setItem(COOKIE_KEY, 'accepted')
+    setConsent('accepted')
     setVisible(false)
   }
 
   function decline() {
-    localStorage.setItem(COOKIE_KEY, 'declined')
+    setConsent('declined')
     setVisible(false)
   }
 
   function customize() {
     // MVP: store a distinct state and direct users to privacy/cookies details.
-    localStorage.setItem(COOKIE_KEY, 'customized')
+    setConsent('customized')
     setVisible(false)
   }
 

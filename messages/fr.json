@@ -249,6 +249,26 @@
       "title": "Need a Custom Skill?",
       "subtitle": "We build purpose-built skills for your specific workflows and data.",
       "cta": "Request Custom Skill"
+    },
+    "detail": {
+      "home": "Home",
+      "skills": "Skills Library",
+      "doneForYou": "Done-For-You Available",
+      "requiresApproval": "Requires Human Approval",
+      "inputsTitle": "Inputs Required",
+      "outputsTitle": "Outputs Produced",
+      "prerequisitesTitle": "Prerequisites",
+      "limitationsTitle": "Known Limitations",
+      "changelogTitle": "Changelog",
+      "documentationTitle": "Documentation",
+      "detailsTitle": "Skill Details",
+      "typeLabel": "Type",
+      "complexityLabel": "Complexity",
+      "sensitivityLabel": "Data Sensitivity",
+      "statusLabel": "Status",
+      "ctaTitle": "Need This Skill Implemented?",
+      "ctaSubtitle": "We handle the setup, configuration, and testing end-to-end.",
+      "browseCta": "Browse Skills Library"
     }
   },
   "templates": {
@@ -267,6 +287,30 @@
     "discoveryCta": {
       "title": "Not Sure Which Blueprint Fits?",
       "cta": "Book Discovery Session"
+    },
+    "detail": {
+      "home": "Home",
+      "templates": "Templates",
+      "allBlueprints": "All Blueprints",
+      "skillsCountSuffix": "skills",
+      "fromLabel": "From",
+      "goalsTitle": "Goals",
+      "workflowStagesTitle": "Workflow Stages",
+      "includedSkillsTitle": "Included Skills",
+      "viewSkill": "View",
+      "deliverablesTitle": "Deliverables",
+      "guardrailsTitle": "Guardrails & Governance",
+      "successMetricsTitle": "Success Metrics",
+      "detailsTitle": "Blueprint Details",
+      "complexityLabel": "Complexity",
+      "timelineLabel": "Timeline",
+      "skillsLabel": "Skills",
+      "startingFromLabel": "Starting From",
+      "builtForLabel": "Built for",
+      "ctaTitle": "Ready to Deploy This Blueprint?",
+      "ctaSubtitlePrefix": "Get started in",
+      "ctaSubtitleSuffix": "We handle setup, configuration, and handover.",
+      "browseCta": "Browse All Blueprints"
     }
   },
   "security": {

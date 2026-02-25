@@ -4,7 +4,7 @@ type Locale = 'en' | 'ru' | 'fr'
 
 // ── Generic loader ────────────────────────────────────────────────────────────
 
-function normalizeArrayPayload(payload: unknown, entity: string): unknown[] | null {
+export function normalizeArrayPayload(payload: unknown, entity: string): unknown[] | null {
   if (Array.isArray(payload)) return payload
   if (!payload || typeof payload !== 'object') return null
 
@@ -27,7 +27,7 @@ function normalizeArrayPayload(payload: unknown, entity: string): unknown[] | nu
   return Array.isArray(firstArray) ? (firstArray as unknown[]) : null
 }
 
-function normalizeItem<T>(item: T, entity: string): T {
+export function normalizeItem<T>(item: T, entity: string): T {
   if (!item || typeof item !== 'object') return item
   const record = { ...(item as Record<string, unknown>) }
 

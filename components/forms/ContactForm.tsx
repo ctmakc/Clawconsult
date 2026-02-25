@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { TurnstileField } from '@/components/forms/TurnstileField'
 import { cn } from '@/lib/utils'
 import { analytics } from '@/lib/analytics'
 
@@ -358,6 +359,8 @@ export function ContactForm() {
       {status === 'error' && (
         <p className="text-sm text-red-600 bg-red-50 rounded-lg p-3">{t('form.error')}</p>
       )}
+
+      <TurnstileField onToken={(token) => set('turnstileToken', token)} />
 
       <Button
         type="submit"

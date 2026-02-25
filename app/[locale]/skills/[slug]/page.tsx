@@ -21,7 +21,12 @@ export async function generateMetadata({ params }: Props) {
   const { locale, slug } = await params
   const skill = await getSkill(slug, locale as Locale)
   if (!skill) return {}
-  return buildMetadata({ title: skill.seoTitle, description: skill.seoDescription, locale, path: `/${locale}/skills/${slug}` })
+  return buildMetadata({
+    title: skill.seoTitle ?? skill.name,
+    description: skill.seoDescription ?? skill.shortDescription,
+    locale,
+    path: `/${locale}/skills/${slug}`,
+  })
 }
 
 export default async function SkillDetailPage({ params }: Props) {
@@ -30,6 +35,9 @@ export default async function SkillDetailPage({ params }: Props) {
   if (!skill) notFound()
 
   const t = await getTranslations({ locale, namespace: 'skills' })
+  const tDetail = await getTranslations({ locale, namespace: 'skills.detail' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
+  const tBadges = await getTranslations({ locale, namespace: 'badges' })
 
   const [relatedTemplates, relatedUseCases] = await Promise.all([
     getRelatedTemplates(skill.compatibleTemplates ?? [], locale as Locale),
@@ -37,23 +45,28 @@ export default async function SkillDetailPage({ params }: Props) {
   ])
 
   const statusVariant = skill.status === 'stable' ? 'stable' : skill.status === 'beta' ? 'beta' : 'draft'
-  const complexityMap = { L1: 'Beginner', L2: 'Intermediate', L3: 'Advanced' }
+  const complexityMap = {
+    L1: tBadges('L1'),
+    L2: tBadges('L2'),
+    L3: tBadges('L3'),
+  }
+  const statusLabel = tCommon(skill.status as Parameters<typeof tCommon>[0])
 
   return (
     <>
       <section className="bg-slate-900 py-14">
         <div className="container-site">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-6">
-            <Link href="/" className="hover:text-slate-300">Home</Link>
+            <Link href="/" className="hover:text-slate-300">{tDetail('home')}</Link>
             <span>/</span>
-            <Link href="/skills" className="hover:text-slate-300">Skills Library</Link>
+            <Link href="/skills" className="hover:text-slate-300">{tDetail('skills')}</Link>
             <span>/</span>
             <span className="text-slate-200">{skill.name}</span>
           </nav>
 
           <div className="max-w-3xl">
             <div className="flex flex-wrap gap-2 mb-4">
-              <Badge variant={statusVariant}>{skill.status}</Badge>
+              <Badge variant={statusVariant}>{statusLabel}</Badge>
               <Badge variant={skill.complexity as 'L1' | 'L2' | 'L3'}>{complexityMap[skill.complexity]}</Badge>
               <span className="text-xs text-slate-400 font-mono self-center">v{skill.version}</span>
             </div>
@@ -65,13 +78,13 @@ export default async function SkillDetailPage({ params }: Props) {
               {skill.doneForYouAvailable && (
                 <span className="flex items-center gap-1.5 text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
-                  Done-For-You Available
+                  {tDetail('doneForYou')}
                 </span>
               )}
               {skill.requiresHumanApproval && (
                 <span className="flex items-center gap-1.5 text-amber-400">
                   <UserCheck className="h-4 w-4" />
-                  Requires Human Approval
+                  {tDetail('requiresApproval')}
                 </span>
               )}
             </div>
@@ -86,7 +99,6 @@ export default async function SkillDetailPage({ params }: Props) {
       <div className="container-site py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
-            {/* Tags */}
             <div className="flex flex-wrap gap-2">
               {skill.tags.map((tag) => (
                 <span key={tag} className="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-md">
@@ -95,10 +107,9 @@ export default async function SkillDetailPage({ params }: Props) {
               ))}
             </div>
 
-            {/* Inputs & Outputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Inputs Required</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-3">{tDetail('inputsTitle')}</h2>
                 <ul className="space-y-2">
                   {skill.inputs.map((inp, i) => (
                     <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
@@ -109,7 +120,7 @@ export default async function SkillDetailPage({ params }: Props) {
                 </ul>
               </section>
               <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Outputs Produced</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-3">{tDetail('outputsTitle')}</h2>
                 <ul className="space-y-2">
                   {skill.outputs.map((out, i) => (
                     <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
@@ -121,10 +132,9 @@ export default async function SkillDetailPage({ params }: Props) {
               </section>
             </div>
 
-            {/* Prerequisites */}
             {skill.prerequisites.length > 0 && (
               <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Prerequisites</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-3">{tDetail('prerequisitesTitle')}</h2>
                 <ul className="space-y-2">
                   {skill.prerequisites.map((p, i) => (
                     <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
@@ -136,11 +146,10 @@ export default async function SkillDetailPage({ params }: Props) {
               </section>
             )}
 
-            {/* Known Limitations */}
             <section>
               <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-amber-500" />
-                Known Limitations
+                {tDetail('limitationsTitle')}
               </h2>
               <ul className="space-y-2">
                 {skill.knownLimitations.map((lim, i) => (
@@ -152,15 +161,14 @@ export default async function SkillDetailPage({ params }: Props) {
               </ul>
             </section>
 
-            {/* Changelog */}
             <section>
-              <h2 className="text-lg font-bold text-slate-900 mb-2">Changelog</h2>
+              <h2 className="text-lg font-bold text-slate-900 mb-2">{tDetail('changelogTitle')}</h2>
               <p className="text-sm text-slate-500">{skill.changelogSummary}</p>
             </section>
 
             {skill.documentationSnippet && (
               <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Documentation</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-3">{tDetail('documentationTitle')}</h2>
                 <pre className="bg-slate-900 text-slate-100 rounded-lg p-4 text-xs overflow-x-auto">
                   {skill.documentationSnippet}
                 </pre>
@@ -168,27 +176,26 @@ export default async function SkillDetailPage({ params }: Props) {
             )}
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
-              <h3 className="font-semibold text-slate-900 mb-3">Skill Details</h3>
+              <h3 className="font-semibold text-slate-900 mb-3">{tDetail('detailsTitle')}</h3>
               <dl className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Type</dt>
+                  <dt className="text-slate-500">{tDetail('typeLabel')}</dt>
                   <dd className="font-medium text-slate-900 capitalize">{skill.capabilityType}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Complexity</dt>
+                  <dt className="text-slate-500">{tDetail('complexityLabel')}</dt>
                   <dd className="font-medium text-slate-900">{complexityMap[skill.complexity]}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Data Sensitivity</dt>
+                  <dt className="text-slate-500">{tDetail('sensitivityLabel')}</dt>
                   <dd className="font-medium text-slate-900 capitalize">{skill.dataSensitivityLevel}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Status</dt>
+                  <dt className="text-slate-500">{tDetail('statusLabel')}</dt>
                   <dd>
-                    <Badge variant={statusVariant} className="text-xs">{skill.status}</Badge>
+                    <Badge variant={statusVariant} className="text-xs">{statusLabel}</Badge>
                   </dd>
                 </div>
               </dl>
@@ -197,20 +204,17 @@ export default async function SkillDetailPage({ params }: Props) {
               </Button>
             </div>
 
-            <RelatedContent
-              templates={relatedTemplates}
-              useCases={relatedUseCases}
-            />
+            <RelatedContent templates={relatedTemplates} useCases={relatedUseCases} />
           </div>
         </div>
       </div>
 
       <CtaSection
-        title="Need This Skill Implemented?"
-        subtitle="We handle the setup, configuration, and testing end-to-end."
+        title={tDetail('ctaTitle')}
+        subtitle={tDetail('ctaSubtitle')}
         primaryCta={t('implement')}
         primaryHref={`/contact?skill=${skill.slug}`}
-        secondaryCta="Browse Skills Library"
+        secondaryCta={tDetail('browseCta')}
         secondaryHref="/skills"
       />
     </>
