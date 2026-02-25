@@ -9,10 +9,7 @@ import { RelatedContent } from '@/components/sections/RelatedContent'
 import { CtaSection } from '@/components/sections/CtaSection'
 import { buildMetadata, serviceSchema, breadcrumbSchema } from '@/lib/seo'
 import { absoluteUrl } from '@/lib/utils'
-import {
-  getService, getServices, getRelatedSkills,
-  getRelatedTemplates, getRelatedUseCases
-} from '@/lib/content'
+import { getService, getServices, getRelatedSkills, getRelatedTemplates, getRelatedUseCases } from '@/lib/content'
 import type { Locale } from '@/i18n/routing'
 
 type Props = { params: Promise<{ locale: string; slug: string }> }
@@ -27,8 +24,8 @@ export async function generateMetadata({ params }: Props) {
   const service = await getService(slug, locale as Locale)
   if (!service) return {}
   return buildMetadata({
-    title: service.seoTitle,
-    description: service.seoDescription,
+    title: service.seoTitle ?? service.title,
+    description: service.seoDescription ?? service.shortDescription,
     locale,
     path: `/${locale}/services/${slug}`,
   })
@@ -40,6 +37,8 @@ export default async function ServiceDetailPage({ params }: Props) {
   if (!service) notFound()
 
   const t = await getTranslations({ locale, namespace: 'services' })
+  const tDetail = await getTranslations({ locale, namespace: 'services.detail' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
 
   const [relatedSkills, relatedTemplates, relatedUseCases] = await Promise.all([
     getRelatedSkills(service.relatedSkills ?? [], locale as Locale),
@@ -50,17 +49,17 @@ export default async function ServiceDetailPage({ params }: Props) {
   const schemas = [
     serviceSchema(service),
     breadcrumbSchema([
-      { name: 'Home', url: absoluteUrl(`/${locale}`) },
-      { name: 'Services', url: absoluteUrl(`/${locale}/services`) },
+      { name: tDetail('home'), url: absoluteUrl(`/${locale}`) },
+      { name: tDetail('services'), url: absoluteUrl(`/${locale}/services`) },
       { name: service.title, url: absoluteUrl(`/${locale}/services/${slug}`) },
-    ])
+    ]),
   ]
 
-  const FORMAT_LABEL: Record<string, string> = {
-    remote: 'Remote',
-    'onsite-ottawa': 'Onsite Ottawa',
-    hybrid: 'Hybrid',
-    async: 'Async',
+  const formatLabel: Record<string, string> = {
+    remote: tCommon('remote'),
+    'onsite-ottawa': tCommon('onsite'),
+    hybrid: tCommon('hybrid'),
+    async: tCommon('async'),
   }
 
   return (
@@ -69,13 +68,12 @@ export default async function ServiceDetailPage({ params }: Props) {
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
       ))}
 
-      {/* Hero */}
       <section className="bg-slate-900 py-14">
         <div className="container-site">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-6">
-            <Link href="/" className="hover:text-slate-300">Home</Link>
+            <Link href="/" className="hover:text-slate-300">{tDetail('home')}</Link>
             <span>/</span>
-            <Link href="/services" className="hover:text-slate-300">Services</Link>
+            <Link href="/services" className="hover:text-slate-300">{tDetail('services')}</Link>
             <span>/</span>
             <span className="text-slate-200">{service.title}</span>
           </nav>
@@ -84,10 +82,10 @@ export default async function ServiceDetailPage({ params }: Props) {
             <div className="flex flex-wrap gap-2 mb-4">
               {service.formatOptions.map((f) => (
                 <Badge key={f} variant={f === 'onsite-ottawa' ? 'onsite' : f === 'hybrid' ? 'hybrid' : 'remote'}>
-                  {FORMAT_LABEL[f] ?? f}
+                  {formatLabel[f] ?? f}
                 </Badge>
               ))}
-              {service.featured && <Badge variant="default">Featured</Badge>}
+              {service.featured && <Badge variant="default">{tDetail('featured')}</Badge>}
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-white">{service.title}</h1>
@@ -107,27 +105,23 @@ export default async function ServiceDetailPage({ params }: Props) {
                 <Link href={`/contact?service=${service.slug}`}>{service.ctaPrimary}</Link>
               </Button>
               <Button asChild size="lg" variant="outline-white">
-                <Link href="/services">{service.ctaSecondary}</Link>
+                <Link href="/services">{service.ctaSecondary || tDetail('viewAllCta')}</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Main content */}
       <div className="container-site py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Left main */}
           <div className="lg:col-span-2 space-y-10">
-            {/* Problem */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-3">The Problem We Solve</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-3">{tDetail('problemTitle')}</h2>
               <p className="text-slate-600 leading-relaxed">{service.problemStatement}</p>
             </section>
 
-            {/* Outcomes */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">What You Get</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">{tDetail('outcomesTitle')}</h2>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {service.outcomes.map((o, i) => (
                   <li key={i} className="flex items-start gap-3 bg-emerald-50 rounded-lg p-4 border border-emerald-100">
@@ -138,9 +132,8 @@ export default async function ServiceDetailPage({ params }: Props) {
               </ul>
             </section>
 
-            {/* Scope */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">What&apos;s Included</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">{tDetail('scopeTitle')}</h2>
               <ul className="space-y-2">
                 {service.scopeItems.map((item, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
@@ -151,9 +144,8 @@ export default async function ServiceDetailPage({ params }: Props) {
               </ul>
             </section>
 
-            {/* Process */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-5">How It Works</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-5">{tDetail('processTitle')}</h2>
               <ol className="space-y-5">
                 {service.processSteps.map((step, i) => (
                   <li key={i} className="flex gap-4">
@@ -169,9 +161,8 @@ export default async function ServiceDetailPage({ params }: Props) {
               </ol>
             </section>
 
-            {/* Deliverables */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Deliverables</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">{tDetail('deliverablesTitle')}</h2>
               <ul className="space-y-2">
                 {service.deliverables.map((d, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
@@ -182,10 +173,9 @@ export default async function ServiceDetailPage({ params }: Props) {
               </ul>
             </section>
 
-            {/* Prerequisites & Exclusions */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Prerequisites</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-3">{tDetail('prerequisitesTitle')}</h2>
                 <ul className="space-y-2">
                   {service.prerequisites.map((p, i) => (
                     <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
@@ -196,7 +186,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                 </ul>
               </section>
               <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-3">Not Included</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-3">{tDetail('exclusionsTitle')}</h2>
                 <ul className="space-y-2">
                   {service.exclusions.map((e, i) => (
                     <li key={i} className="text-sm text-slate-500 flex items-start gap-2">
@@ -209,9 +199,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Right sidebar */}
           <div className="space-y-6">
-            {/* Pricing card */}
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
               <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">{t('pricingFrom')}</div>
               <div className="text-3xl font-bold text-slate-900">{service.pricingFrom}</div>
@@ -221,12 +209,12 @@ export default async function ServiceDetailPage({ params }: Props) {
                 <div className="flex flex-wrap gap-1.5">
                   {service.formatOptions.map((f) => (
                     <Badge key={f} variant={f === 'onsite-ottawa' ? 'onsite' : f === 'hybrid' ? 'hybrid' : 'remote'}>
-                      {FORMAT_LABEL[f] ?? f}
+                      {formatLabel[f] ?? f}
                     </Badge>
                   ))}
                 </div>
                 <div className="text-xs text-slate-500">
-                  <span className="font-medium">For: </span>
+                  <span className="font-medium">{tDetail('forLabel')}: </span>
                   {service.audience.join(', ')}
                 </div>
               </div>
@@ -236,27 +224,19 @@ export default async function ServiceDetailPage({ params }: Props) {
               </Button>
             </div>
 
-            {/* Related */}
-            <RelatedContent
-              skills={relatedSkills}
-              templates={relatedTemplates}
-              useCases={relatedUseCases}
-            />
+            <RelatedContent skills={relatedSkills} templates={relatedTemplates} useCases={relatedUseCases} />
           </div>
         </div>
       </div>
 
-      {/* FAQ */}
-      {service.faq && service.faq.length > 0 && (
-        <FaqSection faqs={service.faq} />
-      )}
+      {service.faq && service.faq.length > 0 && <FaqSection faqs={service.faq} />}
 
       <CtaSection
         title={service.ctaPrimary}
-        subtitle={`Start with this service — ${service.durationText}`}
+        subtitle={`${tDetail('ctaSubtitlePrefix')} - ${service.durationText}`}
         primaryCta={service.ctaPrimary}
         primaryHref={`/contact?service=${service.slug}`}
-        secondaryCta="View All Services"
+        secondaryCta={tDetail('viewAllCta')}
         secondaryHref="/services"
       />
     </>

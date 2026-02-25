@@ -171,6 +171,21 @@
       "title": "Not Sure Which Service to Start With?",
       "subtitle": "Book a free 20-minute intro call and we'll recommend the right entry point.",
       "cta": "Get a Recommendation"
+    },
+    "detail": {
+      "home": "Home",
+      "services": "Services",
+      "problemTitle": "The Problem We Solve",
+      "outcomesTitle": "What You Get",
+      "scopeTitle": "What's Included",
+      "processTitle": "How It Works",
+      "deliverablesTitle": "Deliverables",
+      "prerequisitesTitle": "Prerequisites",
+      "exclusionsTitle": "Not Included",
+      "forLabel": "For",
+      "viewAllCta": "View All Services",
+      "ctaSubtitlePrefix": "Start with this service",
+      "featured": "Featured"
     }
   },
   "useCases": {
@@ -194,6 +209,26 @@
       "title": "Need a Custom Workflow?",
       "subtitle": "We design agent workflows tailored to your exact processes.",
       "cta": "Book Discovery Session"
+    },
+    "detail": {
+      "home": "Home",
+      "useCases": "Use Cases",
+      "allUseCases": "All Use Cases",
+      "painPointsTitle": "Pain Points This Solves",
+      "solutionTitle": "How It Works",
+      "workflowTitle": "Typical Workflow",
+      "impactTitle": "Expected Impact",
+      "approvalTitle": "Human Approval Points",
+      "securityNotesTitle": "Security Notes",
+      "quickFactsTitle": "Quick Facts",
+      "complexityLabel": "Complexity",
+      "timelineLabel": "Timeline",
+      "functionLabel": "Function",
+      "ctaTitle": "Ready to Implement This Workflow?",
+      "ctaSubtitle": "We will design and build it for your specific business context.",
+      "browseAllCta": "Browse All Use Cases",
+      "featured": "Featured",
+      "roleLabel": "Role"
     }
   },
   "skills": {

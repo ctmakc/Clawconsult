@@ -22,7 +22,12 @@ export async function generateMetadata({ params }: Props) {
   const { locale, slug } = await params
   const uc = await getUseCase(slug, locale as Locale)
   if (!uc) return {}
-  return buildMetadata({ title: uc.seoTitle, description: uc.seoDescription, locale, path: `/${locale}/use-cases/${slug}` })
+  return buildMetadata({
+    title: uc.seoTitle ?? uc.title,
+    description: uc.seoDescription ?? uc.summary,
+    locale,
+    path: `/${locale}/use-cases/${slug}`,
+  })
 }
 
 const COMPLEXITY_BADGE = { low: 'L1', medium: 'L2', high: 'L3' } as const
@@ -33,6 +38,8 @@ export default async function UseCaseDetailPage({ params }: Props) {
   if (!uc) notFound()
 
   const t = await getTranslations({ locale, namespace: 'useCases' })
+  const tDetail = await getTranslations({ locale, namespace: 'useCases.detail' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
 
   const [relatedServices, relatedSkills, relatedTemplates] = await Promise.all([
     getRelatedServices(uc.recommendedServices ?? [], locale as Locale),
@@ -41,8 +48,8 @@ export default async function UseCaseDetailPage({ params }: Props) {
   ])
 
   const breadcrumb = breadcrumbSchema([
-    { name: 'Home', url: absoluteUrl(`/${locale}`) },
-    { name: 'Use Cases', url: absoluteUrl(`/${locale}/use-cases`) },
+    { name: tDetail('home'), url: absoluteUrl(`/${locale}`) },
+    { name: tDetail('useCases'), url: absoluteUrl(`/${locale}/use-cases`) },
     { name: uc.title, url: absoluteUrl(`/${locale}/use-cases/${slug}`) },
   ])
 
@@ -50,13 +57,12 @@ export default async function UseCaseDetailPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
 
-      {/* Hero */}
       <section className="bg-slate-900 py-14">
         <div className="container-site">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-6">
-            <Link href="/" className="hover:text-slate-300">Home</Link>
+            <Link href="/" className="hover:text-slate-300">{tDetail('home')}</Link>
             <span>/</span>
-            <Link href="/use-cases" className="hover:text-slate-300">Use Cases</Link>
+            <Link href="/use-cases" className="hover:text-slate-300">{tDetail('useCases')}</Link>
             <span>/</span>
             <span className="text-slate-200">{uc.title}</span>
           </nav>
@@ -67,18 +73,18 @@ export default async function UseCaseDetailPage({ params }: Props) {
                 {uc.functionCategory.charAt(0).toUpperCase() + uc.functionCategory.slice(1)}
               </Badge>
               <Badge variant={COMPLEXITY_BADGE[uc.implementationComplexity]}>
-                {uc.implementationComplexity.charAt(0).toUpperCase() + uc.implementationComplexity.slice(1)} Complexity
+                {tCommon(`complexity.${uc.implementationComplexity}` as Parameters<typeof tCommon>[0])}
               </Badge>
-              {uc.featured && <Badge variant="default">Featured</Badge>}
+              {uc.featured && <Badge variant="default">{tDetail('featured')}</Badge>}
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-white">{uc.title}</h1>
             <p className="mt-4 text-lg text-slate-300 leading-relaxed">{uc.summary}</p>
 
             <div className="mt-5 text-sm text-slate-400">
-              <span className="font-medium text-slate-300">Role: </span>{uc.rolePersona}
+              <span className="font-medium text-slate-300">{tDetail('roleLabel')}: </span>{uc.rolePersona}
               <span className="mx-3">·</span>
-              <span className="font-medium text-slate-300">Timeline: </span>{uc.timelineEstimate}
+              <span className="font-medium text-slate-300">{tDetail('timelineLabel')}: </span>{uc.timelineEstimate}
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -86,7 +92,7 @@ export default async function UseCaseDetailPage({ params }: Props) {
                 <Link href={`/contact?usecase=${uc.slug}`}>{t('discussWorkflow')}</Link>
               </Button>
               <Button asChild size="lg" variant="outline-white">
-                <Link href="/use-cases">All Use Cases</Link>
+                <Link href="/use-cases">{tDetail('allUseCases')}</Link>
               </Button>
             </div>
           </div>
@@ -96,9 +102,8 @@ export default async function UseCaseDetailPage({ params }: Props) {
       <div className="container-site py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
-            {/* Pain Points */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Pain Points This Solves</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">{tDetail('painPointsTitle')}</h2>
               <ul className="space-y-3">
                 {uc.painPoints.map((p, i) => (
                   <li key={i} className="flex items-start gap-3 bg-red-50 rounded-lg p-4 border border-red-100">
@@ -109,15 +114,13 @@ export default async function UseCaseDetailPage({ params }: Props) {
               </ul>
             </section>
 
-            {/* Solution */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-3">How It Works</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-3">{tDetail('solutionTitle')}</h2>
               <p className="text-slate-600 leading-relaxed">{uc.solutionConcept}</p>
             </section>
 
-            {/* Workflow */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-5">Typical Workflow</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-5">{tDetail('workflowTitle')}</h2>
               <ol className="space-y-4">
                 {uc.typicalWorkflow.map((step) => (
                   <li key={step.step} className="flex gap-4">
@@ -130,9 +133,8 @@ export default async function UseCaseDetailPage({ params }: Props) {
               </ol>
             </section>
 
-            {/* Impact */}
             <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Expected Impact</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">{tDetail('impactTitle')}</h2>
               <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {uc.expectedImpact.map((impact, i) => (
                   <li key={i} className="bg-emerald-50 rounded-lg p-4 border border-emerald-100 text-center">
@@ -143,12 +145,11 @@ export default async function UseCaseDetailPage({ params }: Props) {
               </ul>
             </section>
 
-            {/* Governance */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <section>
                 <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                   <UserCheck className="h-5 w-5 text-blue-500" />
-                  Human Approval Points
+                  {tDetail('approvalTitle')}
                 </h2>
                 <ul className="space-y-2">
                   {uc.humanApprovalPoints.map((p, i) => (
@@ -162,7 +163,7 @@ export default async function UseCaseDetailPage({ params }: Props) {
               <section>
                 <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                   <Shield className="h-5 w-5 text-emerald-500" />
-                  Security Notes
+                  {tDetail('securityNotesTitle')}
                 </h2>
                 <ul className="space-y-2">
                   {uc.securityNotes.map((n, i) => (
@@ -176,21 +177,22 @@ export default async function UseCaseDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
-              <h3 className="font-semibold text-slate-900 mb-3">Quick Facts</h3>
+              <h3 className="font-semibold text-slate-900 mb-3">{tDetail('quickFactsTitle')}</h3>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Complexity</dt>
-                  <dd className="font-medium text-slate-900 capitalize">{uc.implementationComplexity}</dd>
+                  <dt className="text-slate-500">{tDetail('complexityLabel')}</dt>
+                  <dd className="font-medium text-slate-900">
+                    {tCommon(`complexity.${uc.implementationComplexity}` as Parameters<typeof tCommon>[0])}
+                  </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Timeline</dt>
+                  <dt className="text-slate-500">{tDetail('timelineLabel')}</dt>
                   <dd className="font-medium text-slate-900">{uc.timelineEstimate}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Function</dt>
+                  <dt className="text-slate-500">{tDetail('functionLabel')}</dt>
                   <dd className="font-medium text-slate-900 capitalize">{uc.functionCategory}</dd>
                 </div>
               </dl>
@@ -199,21 +201,17 @@ export default async function UseCaseDetailPage({ params }: Props) {
               </Button>
             </div>
 
-            <RelatedContent
-              services={relatedServices}
-              skills={relatedSkills}
-              templates={relatedTemplates}
-            />
+            <RelatedContent services={relatedServices} skills={relatedSkills} templates={relatedTemplates} />
           </div>
         </div>
       </div>
 
       <CtaSection
-        title="Ready to Implement This Workflow?"
-        subtitle="We'll design and build it for your specific business context."
+        title={tDetail('ctaTitle')}
+        subtitle={tDetail('ctaSubtitle')}
         primaryCta={t('discussWorkflow')}
         primaryHref={`/contact?usecase=${uc.slug}`}
-        secondaryCta="Browse All Use Cases"
+        secondaryCta={tDetail('browseAllCta')}
         secondaryHref="/use-cases"
       />
     </>
