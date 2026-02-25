@@ -44,11 +44,36 @@
     },
     "whatWeDo": {
       "title": "What We Do",
-      "subtitle": "End-to-end AI agent consulting — from strategy to live deployment and ongoing support."
+      "subtitle": "End-to-end AI agent consulting — from strategy to live deployment and ongoing support.",
+      "items": {
+        "strategy": "Strategy & Audit",
+        "setup": "Setup & Foundation",
+        "security": "Security & Governance",
+        "build": "Agent Build",
+        "support": "Managed Support"
+      }
     },
     "forWhom": {
       "title": "Who We Work With",
-      "subtitle": "We focus on practical AI agent deployment for businesses where time and resources matter."
+      "subtitle": "We focus on practical AI agent deployment for businesses where time and resources matter.",
+      "items": [
+        {
+          "title": "Professional Services",
+          "desc": "Lawyers, accountants, consultants, recruiters"
+        },
+        {
+          "title": "Agencies & Consultants",
+          "desc": "Marketing, digital, creative, advisory"
+        },
+        {
+          "title": "Local SMB",
+          "desc": "Owner-operated businesses, service providers"
+        },
+        {
+          "title": "Franchises & Multi-unit",
+          "desc": "Standardization, reporting, quality control"
+        }
+      ]
     },
     "whatYouCanAutomate": {
       "title": "What You Can Automate",
@@ -57,7 +82,33 @@
     },
     "howItWorks": {
       "title": "How We Work",
-      "subtitle": "A structured, low-risk approach from first conversation to live agents."
+      "subtitle": "A structured, low-risk approach from first conversation to live agents.",
+      "steps": [
+        {
+          "title": "Discovery",
+          "desc": "We map your workflows, pain points, and automation opportunities in a focused session."
+        },
+        {
+          "title": "Design",
+          "desc": "We design the agent architecture: scope, skills, integrations, approval gates."
+        },
+        {
+          "title": "Build",
+          "desc": "We build and configure agents in a sandbox environment with full documentation."
+        },
+        {
+          "title": "Test & Secure",
+          "desc": "Security review, human approval points, access scoping, and edge-case testing."
+        },
+        {
+          "title": "Handover",
+          "desc": "You receive a fully documented, production-ready system your team can operate."
+        },
+        {
+          "title": "Support",
+          "desc": "Optional managed support, monitoring, and quarterly security reviews."
+        }
+      ]
     },
     "featuredOffers": {
       "title": "Featured Offers",
@@ -68,12 +119,23 @@
       "title": "Skills Library & Templates",
       "subtitle": "Versioned, documented, production-tested agent building blocks.",
       "viewSkills": "Browse Skills",
-      "viewTemplates": "Browse Templates"
+      "viewTemplates": "Browse Templates",
+      "skillsHeading": "Skills Library",
+      "templatesHeading": "Agent Blueprints"
     },
     "securityTeaser": {
       "title": "Security & Governance Built In",
       "subtitle": "We don't just build agents — we build them so they can be trusted.",
-      "cta": "Our Security Approach"
+      "cta": "Our Security Approach",
+      "badge": "Security First",
+      "points": [
+        "Secret and credential isolation",
+        "Minimal permission scoping",
+        "Human approval gates",
+        "Full audit trail",
+        "Sandbox vs production separation",
+        "Incident response playbook"
+      ]
     },
     "pricingPreview": {
       "title": "Transparent Pricing",
@@ -175,7 +237,87 @@
   "security": {
     "title": "Security & Governance",
     "subtitle": "We build AI agents that can be trusted — with clear boundaries, approvals, and auditability.",
-    "cta": "Book Security Pre-Check"
+    "cta": "Book Security Pre-Check",
+    "badge": "Security & Governance",
+    "principlesTitle": "Our Security Principles",
+    "principlesSubtitle": "Every agent we deploy follows these non-negotiable standards, regardless of project size or budget.",
+    "principles": [
+      {
+        "title": "Secrets & Credential Isolation",
+        "desc": "API keys and credentials are never embedded in agent configs. We use environment-level secret management and per-agent isolation to prevent cross-contamination."
+      },
+      {
+        "title": "Minimal Permission Scoping",
+        "desc": "Each agent receives only the permissions required for its specific task: no broad read/write access. We follow least privilege throughout."
+      },
+      {
+        "title": "Human Approval Gates",
+        "desc": "High-stakes actions require explicit human confirmation before execution, regardless of automation level."
+      },
+      {
+        "title": "Full Audit Trail",
+        "desc": "Every agent action, decision point, and data access is logged so you can review what happened and when."
+      },
+      {
+        "title": "Sandbox vs. Production Separation",
+        "desc": "All agents are built and tested in isolated sandbox environments. We do not test with production data or live credentials."
+      },
+      {
+        "title": "Incident Response Playbook",
+        "desc": "Every deployment includes a documented incident response plan for detection, pause, and recovery."
+      }
+    ],
+    "precheck": {
+      "title": "Security Pre-Check Service",
+      "body": "Before you deploy any agents, or if you already have agents running, our Security Pre-Check gives you a written assessment with prioritized findings and remediation steps.",
+      "priceLine": "From CAD 800 ? 1 day ? Remote or onsite Ottawa",
+      "cta": "Book Security Pre-Check",
+      "reviewItems": [
+        "Agent credential storage and rotation practices",
+        "Permission scoping for each agent and integration",
+        "Data flows and sensitive data handling",
+        "Human approval gate placement",
+        "Logging and audit trail completeness",
+        "Sandbox/production environment separation",
+        "Third-party integration security posture",
+        "Incident response readiness"
+      ]
+    },
+    "quarterly": {
+      "title": "Quarterly Agent Security Reviews",
+      "body": "Agent frameworks evolve fast. Our quarterly review retainer keeps deployed agents secure with updated threat modeling, changelog review, and permission re-auditing every three months.",
+      "priceLine": "From CAD 900/quarter",
+      "cta": "Enquire About Quarterly Reviews"
+    },
+    "faqTitle": "Security FAQ",
+    "faqs": [
+      {
+        "question": "Do agents have access to all my business data?",
+        "answer": "No. Agents only access the specific data sources and scopes required for their task. We explicitly configure and document each permission during setup."
+      },
+      {
+        "question": "What happens if an agent makes a mistake or acts unexpectedly?",
+        "answer": "We define approval gates for high-risk actions and implement circuit breakers. Our incident response playbook covers how to pause, roll back, or terminate agents immediately."
+      },
+      {
+        "question": "Is my data sent to third-party AI models?",
+        "answer": "We document which data passes through which AI services during design. For sensitive workloads, we can architect solutions that minimize or eliminate external data transmission."
+      },
+      {
+        "question": "What is the Security Pre-Check service?",
+        "answer": "A one-day review that assesses your current or planned setup against our security baseline. You receive a written report with prioritized findings and remediation steps."
+      },
+      {
+        "question": "Do you offer ongoing security monitoring?",
+        "answer": "Yes. Our Quarterly Agent Security Review retainer includes regular audits, framework changelog reviews, and updated threat modeling."
+      }
+    ],
+    "finalCta": {
+      "title": "Not Sure How Secure Your Agents Are?",
+      "subtitle": "Start with a Security Pre-Check and get clear, written findings in one day.",
+      "primary": "Book Security Pre-Check",
+      "secondary": "View All Services"
+    }
   },
   "pricing": {
     "title": "Pricing",
@@ -366,5 +508,59 @@
     "decline": "Decline",
     "customize": "Customize",
     "learnMore": "Learn More"
+  },
+  "bookDiscoveryPage": {
+    "metaTitle": "Book a Discovery Session",
+    "metaDescription": "Schedule a structured 60-minute discovery session with our AI consulting team. We map workflows, identify automation opportunities, and outline practical next steps.",
+    "title": "Book a Discovery Session",
+    "subtitle": "A focused 60-minute working session where we map your workflows, identify the highest-value automation opportunities, and outline a practical path forward.",
+    "expect": [
+      {
+        "title": "60-minute structured session",
+        "desc": "We follow a clear framework to make every minute count."
+      },
+      {
+        "title": "Remote or onsite (Ottawa)",
+        "desc": "Video call by default. Onsite is available for Ottawa-area clients."
+      },
+      {
+        "title": "Response within 1 business day",
+        "desc": "We confirm timing quickly without long waits."
+      },
+      {
+        "title": "No commitment required",
+        "desc": "The discovery session is separate from any engagement. Zero pressure."
+      }
+    ],
+    "agendaTitle": "Session Agenda",
+    "agenda": [
+      {
+        "time": "0-10 min",
+        "activity": "Introductions and context: your business, team, and current tools"
+      },
+      {
+        "time": "10-25 min",
+        "activity": "Workflow mapping: where time is lost and where automation could help"
+      },
+      {
+        "time": "25-40 min",
+        "activity": "Opportunity prioritization: highest-value, lowest-risk automations"
+      },
+      {
+        "time": "40-55 min",
+        "activity": "Practical next steps: what a pilot could look like and what it would cost"
+      },
+      {
+        "time": "55-60 min",
+        "activity": "Your questions: anything we have not covered"
+      }
+    ],
+    "afterTitle": "After the session",
+    "afterItems": [
+      "Written summary of discussed opportunities",
+      "Rough scope and investment estimate",
+      "Recommended next service (if applicable)"
+    ],
+    "formTitle": "Tell us about your situation"
   }
 }

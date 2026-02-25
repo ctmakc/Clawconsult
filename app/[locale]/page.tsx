@@ -81,11 +81,11 @@ function HeroSection() {
 }
 
 const WHAT_WE_DO_ITEMS = [
-  { icon: Search, key: 'strategy', color: 'text-purple-400', bg: 'bg-purple-900/30', href: '/services?category=strategy', label: 'Strategy & Audit' },
-  { icon: Settings, key: 'setup', color: 'text-blue-400', bg: 'bg-blue-900/30', href: '/services?category=setup', label: 'Setup & Foundation' },
-  { icon: Shield, key: 'security', color: 'text-emerald-400', bg: 'bg-emerald-900/30', href: '/security', label: 'Security & Governance' },
-  { icon: Zap, key: 'build', color: 'text-amber-400', bg: 'bg-amber-900/30', href: '/services?category=build', label: 'Agent Build' },
-  { icon: HeadphonesIcon, key: 'support', color: 'text-rose-400', bg: 'bg-rose-900/30', href: '/services?category=support', label: 'Managed Support' },
+  { icon: Search, key: 'strategy', color: 'text-purple-400', bg: 'bg-purple-900/30', href: '/services?category=strategy' },
+  { icon: Settings, key: 'setup', color: 'text-blue-400', bg: 'bg-blue-900/30', href: '/services?category=setup' },
+  { icon: Shield, key: 'security', color: 'text-emerald-400', bg: 'bg-emerald-900/30', href: '/security' },
+  { icon: Zap, key: 'build', color: 'text-amber-400', bg: 'bg-amber-900/30', href: '/services?category=build' },
+  { icon: HeadphonesIcon, key: 'support', color: 'text-rose-400', bg: 'bg-rose-900/30', href: '/services?category=support' },
 ]
 
 function WhatWeDoSection() {
@@ -98,7 +98,7 @@ function WhatWeDoSection() {
           <p className="mt-3 text-slate-400 max-w-2xl mx-auto">{t('subtitle')}</p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {WHAT_WE_DO_ITEMS.map(({ icon: Icon, label, color, bg, href }) => (
+          {WHAT_WE_DO_ITEMS.map(({ icon: Icon, key, color, bg, href }) => (
             <Link
               key={href}
               href={href as Parameters<typeof Link>[0]['href']}
@@ -108,7 +108,7 @@ function WhatWeDoSection() {
                 <Icon className={`h-6 w-6 ${color}`} />
               </div>
               <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
-                {label}
+                {t(`items.${key}` as Parameters<typeof t>[0])}
               </span>
             </Link>
           ))}
@@ -119,14 +119,15 @@ function WhatWeDoSection() {
 }
 
 const FOR_WHOM_ITEMS = [
-  { icon: Briefcase, label: 'Professional Services', desc: 'Lawyers, accountants, consultants, recruiters', color: 'bg-purple-50 border-purple-100' },
-  { icon: Zap, label: 'Agencies & Consultants', desc: 'Marketing, digital, creative, advisory', color: 'bg-blue-50 border-blue-100' },
-  { icon: Store, label: 'Local SMB', desc: 'Owner-operated businesses, service providers', color: 'bg-emerald-50 border-emerald-100' },
-  { icon: Building2, label: 'Franchises & Multi-unit', desc: 'Standardization, reporting, quality control', color: 'bg-amber-50 border-amber-100' },
+  { icon: Briefcase, color: 'bg-purple-50 border-purple-100' },
+  { icon: Zap, color: 'bg-blue-50 border-blue-100' },
+  { icon: Store, color: 'bg-emerald-50 border-emerald-100' },
+  { icon: Building2, color: 'bg-amber-50 border-amber-100' },
 ]
 
 function ForWhomSection() {
   const t = useTranslations('home.forWhom')
+  const items = t.raw('items') as Array<{ title: string; desc: string }>
   return (
     <section className="py-16 bg-white">
       <div className="container-site">
@@ -135,14 +136,14 @@ function ForWhomSection() {
           <p className="mt-3 text-slate-500 max-w-2xl mx-auto">{t('subtitle')}</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {FOR_WHOM_ITEMS.map(({ icon: Icon, label, desc, color }) => (
-            <div key={label} className={`flex flex-col gap-3 p-6 rounded-xl border ${color}`}>
+          {FOR_WHOM_ITEMS.map(({ icon: Icon, color }, index) => (
+            <div key={index} className={`flex flex-col gap-3 p-6 rounded-xl border ${color}`}>
               <div className="p-2.5 rounded-lg bg-white w-fit shadow-sm">
                 <Icon className="h-5 w-5 text-slate-700" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 text-sm">{label}</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{desc}</p>
+                <h3 className="font-semibold text-slate-900 text-sm">{items[index]?.title}</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{items[index]?.desc}</p>
               </div>
             </div>
           ))}
@@ -190,14 +191,7 @@ function HowItWorksSection() {
 
 function SecurityTeaserSection() {
   const t = useTranslations('home.securityTeaser')
-  const POINTS = [
-    'Secret & credential isolation',
-    'Minimal permission scoping',
-    'Human approval gates',
-    'Full audit trail',
-    'Sandbox vs production separation',
-    'Incident response playbook',
-  ]
+  const points = t.raw('points') as string[]
   return (
     <section className="py-16 bg-slate-900">
       <div className="container-site">
@@ -205,7 +199,7 @@ function SecurityTeaserSection() {
           <div>
             <Badge variant="outline" className="mb-4 border-emerald-400/40 text-emerald-300 bg-transparent">
               <Shield className="h-3.5 w-3.5 mr-1" />
-              Security First
+              {t('badge')}
             </Badge>
             <h2 className="text-2xl sm:text-3xl font-bold text-white">{t('title')}</h2>
             <p className="mt-4 text-slate-400 leading-relaxed">{t('subtitle')}</p>
@@ -214,7 +208,7 @@ function SecurityTeaserSection() {
             </Button>
           </div>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {POINTS.map((point) => (
+            {points.map((point) => (
               <li key={point} className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                 <span className="text-sm text-slate-300">{point}</span>
@@ -337,7 +331,7 @@ export default async function HomePage({ params }: Props) {
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-blue-500" />
-                  Skills Library
+                  {tHome('libraryPreview.skillsHeading')}
                 </h3>
                 <Link href="/skills" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
                   {tHome('libraryPreview.viewSkills')} <ArrowRight className="h-3.5 w-3.5" />
@@ -355,7 +349,7 @@ export default async function HomePage({ params }: Props) {
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                   <Zap className="h-4 w-4 text-amber-500" />
-                  Agent Blueprints
+                  {tHome('libraryPreview.templatesHeading')}
                 </h3>
                 <Link href="/templates" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
                   {tHome('libraryPreview.viewTemplates')} <ArrowRight className="h-3.5 w-3.5" />
