@@ -21,7 +21,12 @@ export async function generateMetadata({ params }: Props) {
   const { locale, slug } = await params
   const resource = await getResource(slug, locale as Locale)
   if (!resource) return {}
-  return buildMetadata({ title: resource.seoTitle, description: resource.seoDescription, locale, path: `/${locale}/resources/${slug}` })
+  return buildMetadata({
+    title: resource.seoTitle ?? resource.title,
+    description: resource.seoDescription ?? resource.excerpt,
+    locale,
+    path: `/${locale}/resources/${slug}`,
+  })
 }
 
 export default async function ResourceDetailPage({ params }: Props) {
@@ -30,6 +35,7 @@ export default async function ResourceDetailPage({ params }: Props) {
   if (!resource) notFound()
 
   const t = await getTranslations({ locale, namespace: 'resources' })
+  const tArticle = await getTranslations({ locale, namespace: 'resources.article' })
 
   const [relatedServices, relatedUseCases] = await Promise.all([
     getRelatedServices(resource.relatedServices ?? [], locale as Locale),
@@ -39,8 +45,8 @@ export default async function ResourceDetailPage({ params }: Props) {
   const schemas = [
     articleSchema({ ...resource, locale }),
     breadcrumbSchema([
-      { name: 'Home', url: absoluteUrl(`/${locale}`) },
-      { name: 'Resources', url: absoluteUrl(`/${locale}/resources`) },
+      { name: tArticle('home'), url: absoluteUrl(`/${locale}`) },
+      { name: tArticle('resources'), url: absoluteUrl(`/${locale}/resources`) },
       { name: resource.title, url: absoluteUrl(`/${locale}/resources/${slug}`) },
     ]),
   ]
@@ -54,9 +60,9 @@ export default async function ResourceDetailPage({ params }: Props) {
       <section className="bg-slate-900 py-14">
         <div className="container-site max-w-3xl">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-6">
-            <Link href="/" className="hover:text-slate-300">Home</Link>
+            <Link href="/" className="hover:text-slate-300">{tArticle('home')}</Link>
             <span>/</span>
-            <Link href="/resources" className="hover:text-slate-300">Resources</Link>
+            <Link href="/resources" className="hover:text-slate-300">{tArticle('resources')}</Link>
             <span>/</span>
             <span className="text-slate-200 line-clamp-1">{resource.title}</span>
           </nav>
@@ -94,57 +100,45 @@ export default async function ResourceDetailPage({ params }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <article className="lg:col-span-2 prose prose-slate max-w-none">
             {resource.content ? (
-              <div className="whitespace-pre-wrap leading-relaxed text-slate-700">
-                {resource.content}
-              </div>
+              <div className="whitespace-pre-wrap leading-relaxed text-slate-700">{resource.content}</div>
             ) : (
               <>
                 <p className="text-slate-600 leading-relaxed">{resource.excerpt}</p>
-                <p className="text-slate-500 italic mt-6 text-sm">
-                  {locale === 'ru'
-                    ? 'Полный текст статьи скоро будет опубликован.'
-                    : locale === 'fr'
-                      ? "Le contenu complet de l'article sera publié prochainement."
-                      : 'Full article content will be published soon.'}
-                </p>
+                <p className="text-slate-500 italic mt-6 text-sm">{tArticle('contentSoon')}</p>
               </>
             )}
           </article>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
-              <h3 className="font-semibold text-slate-900 mb-3">About This Article</h3>
+              <h3 className="font-semibold text-slate-900 mb-3">{tArticle('aboutTitle')}</h3>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Published</dt>
+                  <dt className="text-slate-500">{tArticle('published')}</dt>
                   <dd className="text-slate-900">{formatDate(resource.publishDate, locale)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Read time</dt>
-                  <dd className="text-slate-900">{resource.readTime} min</dd>
+                  <dt className="text-slate-500">{tArticle('readTime')}</dt>
+                  <dd className="text-slate-900">{resource.readTime} {t('minRead')}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-slate-500">Author</dt>
+                  <dt className="text-slate-500">{tArticle('author')}</dt>
                   <dd className="text-slate-900">{resource.author}</dd>
                 </div>
               </dl>
             </div>
 
-            <RelatedContent
-              services={relatedServices}
-              useCases={relatedUseCases}
-            />
+            <RelatedContent services={relatedServices} useCases={relatedUseCases} />
           </div>
         </div>
       </div>
 
       <CtaSection
-        title="Have Questions After Reading?"
-        subtitle="Book a discovery session to discuss your specific situation."
-        primaryCta="Book Discovery Session"
+        title={tArticle('ctaTitle')}
+        subtitle={tArticle('ctaSubtitle')}
+        primaryCta={tArticle('ctaPrimary')}
         primaryHref="/contact"
-        secondaryCta="More Articles"
+        secondaryCta={tArticle('ctaSecondary')}
         secondaryHref="/resources"
       />
     </>

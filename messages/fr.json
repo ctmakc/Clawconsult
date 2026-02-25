@@ -349,6 +349,20 @@
       "security": "Security",
       "case-study": "Case Study",
       "anti-pattern": "Anti-Pattern"
+    },
+    "noArticles": "No articles published yet.",
+    "article": {
+      "home": "Home",
+      "resources": "Resources",
+      "aboutTitle": "About This Article",
+      "published": "Published",
+      "readTime": "Read time",
+      "author": "Author",
+      "ctaTitle": "Have Questions After Reading?",
+      "ctaSubtitle": "Book a discovery session to discuss your specific situation.",
+      "ctaPrimary": "Book Discovery Session",
+      "ctaSecondary": "More Articles",
+      "contentSoon": "Full article content will be published soon."
     }
   },
   "contact": {
@@ -412,7 +426,13 @@
       "11to50": "11–50 employees",
       "51to200": "51–200 employees",
       "200plus": "200+ employees"
-    }
+    },
+    "trustItems": [
+      "Response within 1 business day",
+      "No commitment required",
+      "Remote worldwide ? Onsite Ottawa",
+      "60-minute structured session"
+    ]
   },
   "thankYou": {
     "title": "Thank You!",

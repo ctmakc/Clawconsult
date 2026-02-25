@@ -30,7 +30,7 @@ export default async function ResourcesPage({ params }: Props) {
       <section className="py-12">
         <div className="container-site">
           {resources.length === 0 ? (
-            <p className="text-slate-500 text-center py-12">No articles published yet.</p>
+            <p className="text-slate-500 text-center py-12">{t('noArticles')}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {resources.map((r) => (

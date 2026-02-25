@@ -25,6 +25,13 @@ export function buildMetadata({
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} — AI Agent Consulting Canada`
   const url = absoluteUrl(path)
   const ogImage = image ?? absoluteUrl('/images/og-default.png')
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const localizedPath = normalizedPath.replace(/^\/(en|ru|fr)(?=\/|$)/, '')
+  const localeCodeMap: Record<string, string> = {
+    en: 'en_CA',
+    ru: 'ru_RU',
+    fr: 'fr_CA',
+  }
 
   return {
     title: fullTitle,
@@ -33,8 +40,10 @@ export function buildMetadata({
     alternates: {
       canonical: url,
       languages: {
-        en: absoluteUrl(path.replace(/^\/(en|ru|fr)/, '/en')),
-        ru: absoluteUrl(path.replace(/^\/(en|ru|fr)/, '/ru')),
+        en: absoluteUrl(`/en${localizedPath}`),
+        ru: absoluteUrl(`/ru${localizedPath}`),
+        fr: absoluteUrl(`/fr${localizedPath}`),
+        'x-default': absoluteUrl(`/en${localizedPath}`),
       },
     },
     openGraph: {
@@ -43,7 +52,7 @@ export function buildMetadata({
       url,
       siteName,
       images: [{ url: ogImage, width: 1200, height: 630, alt: fullTitle }],
-      locale: locale === 'ru' ? 'ru_RU' : 'en_CA',
+      locale: localeCodeMap[locale] ?? 'en_CA',
       type: 'website',
     },
     twitter: {

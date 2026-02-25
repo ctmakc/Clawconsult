@@ -18,27 +18,27 @@ export async function generateMetadata({ params }: Props) {
   })
 }
 
-const TRUST_ITEMS = [
-  { icon: Clock, text: 'Response within 1 business day' },
-  { icon: Shield, text: 'No commitment required' },
-  { icon: Globe, text: 'Remote worldwide · Onsite Ottawa' },
-  { icon: CheckCircle2, text: '60-minute structured session' },
-]
-
 export default async function ContactPage({ params }: Props) {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'contact' })
 
+  const trustTexts = (t.raw('trustItems') as string[]) ?? []
+  const trustItems = [
+    { icon: Clock, text: trustTexts[0] ?? '' },
+    { icon: Shield, text: trustTexts[1] ?? '' },
+    { icon: Globe, text: trustTexts[2] ?? '' },
+    { icon: CheckCircle2, text: trustTexts[3] ?? '' },
+  ].filter((item) => item.text)
+
   return (
     <div className="min-h-screen">
-      {/* Hero */}
       <section className="bg-slate-900 py-12">
         <div className="container-site">
           <h1 className="text-3xl sm:text-4xl font-bold text-white">{t('title')}</h1>
           <p className="mt-3 text-slate-400 max-w-2xl">{t('subtitle')}</p>
 
           <div className="mt-6 flex flex-wrap gap-4">
-            {TRUST_ITEMS.map(({ icon: Icon, text }) => (
+            {trustItems.map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-2 text-sm text-slate-300">
                 <Icon className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                 {text}
@@ -48,7 +48,6 @@ export default async function ContactPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Form */}
       <section className="py-12">
         <div className="container-site max-w-3xl">
           <Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 rounded-xl" />}>
