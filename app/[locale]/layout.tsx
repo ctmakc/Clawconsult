@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   description:
     'Production-ready autonomous AI agent implementation for SMB and professional services. Ottawa onsite + remote worldwide.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://openclaw.ca'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://clawhlp.com'),
 }
 
 type Props = {

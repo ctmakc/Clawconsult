@@ -11,6 +11,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: absoluteUrl('/sitemap.xml'),
-    host: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://openclaw.ca',
+    host: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://clawhlp.com',
   }
 }
