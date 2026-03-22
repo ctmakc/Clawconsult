@@ -1,7 +1,5 @@
 import { getTranslations } from 'next-intl/server'
-import { Link } from '@/i18n/navigation'
 import { MapPin, Globe, Shield, Zap } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { CtaSection } from '@/components/sections/CtaSection'
 import { buildMetadata } from '@/lib/seo'
 

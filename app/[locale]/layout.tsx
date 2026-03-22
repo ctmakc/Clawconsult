@@ -7,7 +7,6 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { CookieBanner } from '@/components/layout/CookieBanner'
 import { Analytics } from '@/components/layout/Analytics'
-import '@/app/globals.css'
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
@@ -38,16 +37,14 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages()
 
   return (
-    <html lang={locale}>
-      <body className="min-h-screen flex flex-col font-sans">
-        <NextIntlClientProvider messages={messages}>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <CookieBanner />
-        </NextIntlClientProvider>
-        <Analytics />
-      </body>
-    </html>
+    <div lang={locale} className="min-h-screen flex flex-col font-sans">
+      <NextIntlClientProvider messages={messages}>
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+        <CookieBanner />
+      </NextIntlClientProvider>
+      <Analytics />
+    </div>
   )
 }
