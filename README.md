@@ -118,6 +118,25 @@ See `.env.example` for all variables. Required for production:
 
 ---
 
+## Portainer Deployment
+
+This repository is ready for Portainer as a Docker Compose stack.
+
+1. Copy `.env.example` to `.env`
+2. Set at minimum `NEXT_PUBLIC_SITE_URL`
+3. If port `3001` is busy, change `HOST_PORT`
+4. In Portainer, deploy the repository as a stack using `docker-compose.yml`
+
+The stack will:
+- build the image from the local `Dockerfile`
+- publish `${HOST_PORT}` on the host to container port `3000`
+- load runtime variables from `.env`
+- expose a healthcheck against `/robots.txt`
+
+After deployment, the site should be reachable at `http://SERVER:${HOST_PORT}` or through your reverse proxy/domain.
+
+---
+
 ## Content Management
 
 All content is JSON files in `content/[locale]/`. To update:
