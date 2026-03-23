@@ -23,10 +23,25 @@ export function formatDate(dateStr: string, locale: string = 'en'): string {
 
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str
-  return str.slice(0, length).replace(/\s+\S*$/, '') + '…'
+  return str.slice(0, length).replace(/\s+\S*$/, '') + '...'
+}
+
+export function getSiteOrigin(): string {
+  const fallback = 'https://openclaw.ca'
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+
+  if (!raw) return fallback
+
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+
+  try {
+    return new URL(withProtocol).origin
+  } catch {
+    return fallback
+  }
 }
 
 export function absoluteUrl(path: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://openclaw.ca'
+  const base = getSiteOrigin()
   return `${base}${path}`
 }

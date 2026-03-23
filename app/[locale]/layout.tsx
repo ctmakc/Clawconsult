@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { CookieBanner } from '@/components/layout/CookieBanner'
 import { Analytics } from '@/components/layout/Analytics'
+import { getSiteOrigin } from '@/lib/utils'
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   },
   description:
     'Production-ready autonomous AI agent implementation for SMB and professional services. Ottawa onsite + remote worldwide.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://clawhlp.com'),
+  metadataBase: new URL(getSiteOrigin()),
 }
 
 type Props = {

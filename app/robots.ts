@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { absoluteUrl } from '@/lib/utils'
+import { absoluteUrl, getSiteOrigin } from '@/lib/utils'
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -11,6 +11,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: absoluteUrl('/sitemap.xml'),
-    host: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://clawhlp.com',
+    host: getSiteOrigin(),
   }
 }

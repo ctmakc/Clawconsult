@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { absoluteUrl } from './utils'
+import { absoluteUrl, getSiteOrigin } from './utils'
 
 const siteName = 'OpenClaw Consulting'
 const defaultDescription =
@@ -36,7 +36,7 @@ export function buildMetadata({
   return {
     title: fullTitle,
     description,
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://openclaw.ca'),
+    metadataBase: new URL(getSiteOrigin()),
     alternates: {
       canonical: url,
       languages: {
