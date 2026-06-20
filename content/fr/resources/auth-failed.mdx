@@ -1,0 +1,85 @@
+---
+slug: auth-failed
+title: "Échec d'Authentification dans Claude Code"
+description: "Diagnostiquez et résolvez les échecs d'authentification, les clés API invalides et les problèmes de connexion dans Claude Code CLI."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, claude-code, auth, credentials]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 3
+lang: "fr"
+seoTitle: "Échec d'Authentification Claude Code — Résoudre les Erreurs | ClawHelp"
+seoDescription: "Comment corriger les erreurs de connexion dans Claude Code CLI. Résoudre les conflits de clé API, de session OAuth expirée ou de variables shell."
+---
+
+# Échec d'Authentification dans Claude Code
+
+**Problème** : Lors du lancement de Claude Code, vous obtenez une erreur d'authentification (ex. : `Authentication failed`, `Invalid API Key` ou `Unauthorized`), vous empêchant de démarrer la session.
+
+Claude Code se connecte aux services d'Anthropic via des identifiants OAuth ou des clés API. Des conflits de variables d'environnement, une session expirée ou des restrictions réseau peuvent bloquer l'accès.
+
+---
+
+## Symptômes
+
+- Le lancement de la commande `claude` renvoie : `Error: Authentication failed` ou `401 Unauthorized`.
+- Le CLI vous propose de vous authentifier via le navigateur, mais la redirection échoue ou le code d'autorisation est refusé.
+- Des erreurs de facturation apparaissent, indiquant que la clé API est valide mais que le compte manque de crédits actifs.
+
+---
+
+## Solution 1 : Forcer le renouvellement de session
+
+Si vous utilisez l'authentification OAuth, votre session a peut-être expiré. Vous pouvez vous déconnecter puis vous reconnecter pour rafraîchir les jetons d'accès.
+
+### Action
+
+Exécutez la commande de déconnexion dans votre terminal :
+```bash
+claude logout
+```
+
+Puis lancez la connexion :
+```bash
+claude login
+```
+Suivez les instructions à l'écran pour autoriser le CLI dans votre navigateur web.
+
+---
+
+## Solution 2 : Vérifier les variables d'environnement de clé API
+
+Si votre entreprise utilise des clés API dédiées plutôt qu'OAuth, Claude Code recherche la variable d'environnement `ANTHROPIC_API_KEY`.
+
+### Action
+
+Vérifiez si la variable d'environnement est correctement définie :
+```bash
+echo $ANTHROPIC_API_KEY
+```
+
+Si le retour est vide ou erroné, configurez-la pour votre session de terminal actuelle :
+```bash
+export ANTHROPIC_API_KEY="votre-cle-api-ici"
+```
+
+Pour rendre ce changement permanent, ajoutez la ligne d'exportation dans le fichier de configuration de votre shell (ex. : `~/.bashrc` ou `~/.zshrc`) :
+```bash
+echo 'export ANTHROPIC_API_KEY="votre-cle-api-ici"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+---
+
+## Solution 3 : Résoudre les droits d'accès au stockage des identifiants
+
+Sur certains systèmes Linux, le gestionnaire d'identifiants ne parvient pas à stocker le jeton de session de manière sécurisée, ce qui provoque des demandes d'authentification répétées.
+
+### Action
+
+Supprimez manuellement le cache local des identifiants :
+```bash
+rm -rf ~/.claude/session.json
+```
+Relancez Claude Code et repassez par l'étape de connexion `claude login`.

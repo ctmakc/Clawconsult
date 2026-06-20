@@ -1,0 +1,68 @@
+---
+slug: stuck-thinking
+title: "Claude Code Bloqué dans une Boucle de Réflexion"
+description: "Résolvez les boucles de réflexion infinies ou les commandes bloquées dans Claude Code. Apprenez à interrompre l'exécution et à configurer les contrôles."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, claude-code, thinking-loop, performance]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 3
+lang: "fr"
+seoTitle: "Claude Code Bloqué dans une Boucle de Réflexion | ClawHelp"
+seoDescription: "Comment arrêter Claude Code lorsqu'il est bloqué dans une boucle de réflexion ou exécute des commandes sans fin. Raccourcis claviers et bonnes pratiques."
+---
+
+# Claude Code Bloqué dans une Boucle de Réflexion
+
+**Problème** : Claude Code reste figé dans l'état "réflexion" (thinking) ou une commande lancée par Claude s'exécute indéfiniment, rendant l'interface CLI inactive.
+
+Cela se produit généralement lorsque Claude lance un processus en arrière-plan qui ne se termine pas, attend une saisie utilisateur impossible à fournir, ou exécute une boucle infinie dans un script.
+
+---
+
+## Symptômes
+
+- Le CLI affiche le spinner ou le message "thinking..." pendant plusieurs minutes sans afficher de texte ou d'outils.
+- Une commande comme `npm run dev` ou un serveur de développement local est démarré par Claude, bloquant la session.
+- Les suites de tests s'exécutent indéfiniment en raison de promesses non gérées ou de connexions restées ouvertes.
+
+---
+
+## Solution 1 : Interrompre de force l'exécution
+
+Si Claude Code est bloqué ou exécute une commande trop longue, vous pouvez interrompre le processus directement depuis votre clavier sans fermer le terminal.
+
+### Raccourci Clavier
+
+Appuyez sur **`Ctrl + C`**.
+
+- Appuyer une seule fois tentera d'interrompre proprement l'outil ou la boucle de réflexion en cours pour vous redonner la main.
+- Si Claude reste figé, appuyez à nouveau sur **`Ctrl + C`** ou tapez `/exit` si la ligne de saisie est active.
+
+---
+
+## Solution 2 : Éviter de lancer des serveurs en arrière-plan
+
+Claude Code est conçu pour exécuter des tâches qui ont une fin. Si vous lui demandez de "démarrer le serveur de dev" ou de "lancer docker-compose", il démarrera le processus et attendra indéfiniment.
+
+### Correction
+
+Lancez toujours les serveurs, compilateurs permanents ou watchers dans une fenêtre de terminal distincte, et non au sein de la session Claude Code.
+
+Si vous devez valider le démarrage d'un serveur, demandez à Claude de l'exécuter avec un timeout ou de désactiver le mode interactif :
+
+```
+Lance les tests, mais assure-toi d'utiliser le drapeau --watch=false afin que la commande se termine.
+```
+
+---
+
+## Solution 3 : Limiter l'enchaînement automatique d'outils
+
+Parfois, Claude s'enferme dans une boucle itérative d'édition : il lance une compilation, détecte une erreur, modifie le fichier, compile à nouveau, et recommence indéfiniment.
+
+Pour briser ce cycle :
+
+1. Interrompez le processus avec **`Ctrl + C`**.
+2. Donnez une consigne claire d'arrêt : "Arrête l'exécution des tests. Analysons d'abord les fichiers et établissons un plan par écrit avant toute nouvelle tentative."

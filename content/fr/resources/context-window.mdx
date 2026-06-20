@@ -1,0 +1,96 @@
+---
+slug: context-window
+title: "Gestion de la Fenêtre de Contexte dans Claude Code"
+description: "Gérez votre limite de jetons et optimisez les performances dans les sessions Claude Code. Apprenez à effacer l'historique et à ignorer des fichiers."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, claude-code, context-window, optimization]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 4
+lang: "fr"
+seoTitle: "Gestion de la Fenêtre de Contexte Claude Code | ClawHelp"
+seoDescription: "Résolvez les dépassements de fenêtre de contexte dans Claude Code. Meilleures pratiques pour gérer l'historique et optimiser l'usage des jetons."
+---
+
+# Gestion de la Fenêtre de Contexte dans Claude Code
+
+**Problème** : Lors de sessions prolongées ou de travail sur de gros fichiers, Claude Code peut consommer trop de contexte, entraînant une utilisation élevée de jetons (tokens), des réponses lentes ou des erreurs de limite de fenêtre de contexte (ex. : `Context window limit reached`).
+
+Claude Code maintient l'historique des conversations et le contexte des fichiers locaux dans une seule et unique fenêtre de contexte. Gérer les éléments lus par Claude est essentiel pour des sessions efficaces et peu coûteuses.
+
+---
+
+## Symptômes d'une Surcharge de Contexte
+
+- Claude prend plus de temps pour répondre à des requêtes simples.
+- De grandes arborescences de répertoires sont scannées à plusieurs reprises.
+- L'interface CLI affiche des avertissements concernant la taille de la session ou la consommation de jetons.
+- Vous rencontrez des limites de requêtes (rate limits) très tôt dans votre espace de travail.
+
+---
+
+## Solution 1 : Utiliser un fichier `.claudeignore`
+
+Par défaut, Claude Code scanne votre espace de travail pour en comprendre la structure. Si votre projet contient de gros artefacts de build, des dossiers de dépendances ou des sauvegardes de bases de données, Claude consommera inutilement des jetons pour les lire.
+
+### Action
+
+Créez un fichier `.claudeignore` à la racine de votre projet :
+```bash
+touch .claudeignore
+```
+
+Ajoutez-y les dossiers et fichiers à ignorer :
+```ignore
+# Dossiers de dépendances
+node_modules/
+vendor/
+.venv/
+
+# Artefacts de build et sorties
+dist/
+build/
+.next/
+out/
+*.pyc
+
+# Fichiers de configuration IDE et OS
+.idea/
+.vscode/
+.DS_Store
+
+# Fichiers de données volumineux ou bases de données
+*.sql
+*.sqlite
+*.csv
+*.json
+```
+
+---
+
+## Solution 2 : Réinitialiser l'historique de session
+
+Si une session de terminal est ouverte depuis longtemps, l'historique des échanges accumulé devient colossal. Vous pouvez vider cet historique pour libérer de la mémoire sans fermer votre session.
+
+### Commande
+
+Dans votre session active de Claude Code, utilisez la commande suivante pour compacter le contexte :
+```bash
+/compact
+```
+Cette commande résume les modifications en cours et efface l'historique des dialogues passés, libérant instantanément de l'espace dans la fenêtre de contexte.
+
+Vous pouvez également redémarrer la session en tapant `/exit` puis en relançant `claude`.
+
+---
+
+## Solution 3 : Contrôler l'ajout de fichiers
+
+Évitez d'utiliser des caractères génériques (wildcards) ou de poser des questions globales comme "analyse tout le projet". Demandez plutôt à Claude de cibler des fichiers spécifiques :
+
+```
+Analyse la logique d'authentification dans ./src/lib/auth.ts pour y détecter des failles de sécurité.
+```
+
+Si Claude demande l'autorisation de lire un dossier volumineux, refusez et indiquez-lui précisément les fichiers nécessaires.

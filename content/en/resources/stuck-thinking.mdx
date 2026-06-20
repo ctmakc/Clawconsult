@@ -1,0 +1,67 @@
+---
+slug: stuck-thinking
+title: "Claude Code Stuck in Thinking Loop"
+description: "Resolve infinite thinking loops or commands that hang during execution in Claude Code. Learn when to interrupt and how to configure execution controls."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, claude-code, thinking-loop, performance]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 3
+seoTitle: "Fix Claude Code Stuck in Thinking Loop & Hung Commands | ClawHelp"
+seoDescription: "How to stop Claude Code when it gets stuck in thinking loops or executes commands that run indefinitely. Learn keyboard shortcuts and execution controls."
+---
+
+# Claude Code Stuck in Thinking Loop
+
+**Problem**: Claude Code is stuck in a "thinking" state, or a command run by Claude is hanging indefinitely, making the CLI unresponsive.
+
+This usually happens when Claude executes a background process that does not terminate, waits for user input that it cannot provide, or runs an infinite loop in a script.
+
+---
+
+## Symptoms
+
+- The CLI displays the spinner or "thinking..." message for several minutes without outputting text or tools.
+- A command like `npm run dev` or a local development server is started by Claude, blocking the session.
+- Test suites run indefinitely due to unhandled promise rejections or open handles.
+
+---
+
+## Fix 1: Force Stop Execution
+
+If Claude Code is stuck in a thinking loop or executing a command, you can interrupt it directly from your keyboard without killing the entire terminal.
+
+### Shortcut
+
+Press **`Ctrl + C`** on your keyboard.
+
+- Pressing it once will attempt to safely interrupt the current tool run or thought loop and return control back to the prompt.
+- If Claude remains frozen, press **`Ctrl + C`** again or type `/exit` if the prompt is active.
+
+---
+
+## Fix 2: Prevent Background Server Execution
+
+Claude Code is designed to run tasks that exit. If you ask Claude to "start the development server" or "run docker-compose", it will launch the command and wait for it to complete. Because servers run indefinitely, Claude gets stuck waiting.
+
+### Correction
+
+Always run long-running servers, compilers, or watchers in a separate terminal window, not inside the Claude Code session.
+
+If you must check if a server starts, tell Claude to run it and terminate it immediately, or specify a timeout:
+
+```
+Run the test suite script but make sure it runs with --watch=false so it exits.
+```
+
+---
+
+## Fix 3: Limit Automated Tool Invocation
+
+Sometimes Claude gets stuck in an editing loop where it continuously runs a compiler, sees an error, edits the file, runs the compiler again, and repeats.
+
+To break this loop:
+
+1. Interrupt the process with **`Ctrl + C`**.
+2. Give explicit instructions to stop compiling: "Stop running tests now. Let's inspect the files and write down a plan before we attempt to fix it again."

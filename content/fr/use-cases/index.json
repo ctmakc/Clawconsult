@@ -1,1 +1,88 @@
-[]
+[
+  {
+    "id": "uc-021",
+    "slug": "legal-review",
+    "title": "Revue Juridique",
+    "summary": "Un agent d'IA conçu pour effectuer une revue préliminaire des documents, mettant en évidence les risques potentiels, les clauses manquantes et la non-conformité par rapport à un guide de référence standard.",
+    "functionCategory": "ops",
+    "rolePersona": "Conseiller Juridique / Responsable des Opérations",
+    "painPoints": [
+      "La revue manuelle des contrats prend des heures de travail précieuses à l'équipe juridique pour de simples vérifications de modèles",
+      "L'erreur humaine conduit à omettre des clauses défavorables comme les reconductions tacites ou les indemnisations déséquilibrées",
+      "La lenteur des cycles de validation des contrats retarde les ventes et les partenariats commerciaux de plusieurs jours ou semaines"
+    ],
+    "solutionConcept": "Un agent d'IA analyse les projets de contrats entrants par rapport au guide de conformité prédéfini de l'entreprise. Il signale les clauses non conformes, suggère des modifications spécifiques en mode révision (redlines) et rédige un e-mail de synthèse récapitulant les principaux risques.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Le projet d'accord est téléchargé dans le système ou récupéré par e-mail"},
+      {"step": 2, "action": "L'agent effectue une comparaison textuelle avec les clauses définies dans le guide de conformité interne"},
+      {"step": 3, "action": "Les conditions non conformes (loi applicable, plafonds de responsabilité, propriété intellectuelle) sont signalées avec des explications"},
+      {"step": 4, "action": "Des formulations alternatives conformes et approuvées sont suggérées en mode correction"},
+      {"step": 5, "action": "Un rapport de revue structuré est généré et mis en attente pour validation par le conseiller juridique ou la direction"}
+    ],
+    "expectedImpact": [
+      "Réduction du temps de revue initiale des contrats de 75 %, passant de plusieurs heures à moins de 15 minutes",
+      "Assurance de conformité à 100 % avec les politiques critiques du guide juridique et les clauses standards",
+      "Accélération des cycles de vente en réduisant le délai de négociation des contrats jusqu'à 5 jours"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 semaines",
+    "humanApprovalPoints": [
+      "La validation finale de toute modification de contrat ou des conditions de négociation reste sous le contrôle d'un réviseur humain qualifié",
+      "Les mises à jour et les ajouts au guide de conformité sont gérés et approuvés exclusivement par le conseiller juridique"
+    ],
+    "securityNotes": [
+      "Le traitement et l'analyse des documents doivent se faire dans un environnement sécurisé et privé, sans risque de fuite de données vers l'extérieur",
+      "Les contrats sensibles doivent être chiffrés au repos et en transit, avec un contrôle d'accès basé sur les rôles activé"
+    ],
+    "recommendedServices": ["security-pre-check", "setup-security-baseline", "first-agent-launch"],
+    "recommendedSkills": ["invoice-data-extractor", "follow-up-drafter", "report-formatter"],
+    "recommendedTemplates": ["operations-summary-agent", "founder-agent-stack"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Agent d'IA pour la Revue Juridique et la Conformité des Contrats | ClawHelp",
+    "seoDescription": "Automatisez la revue juridique préliminaire et la conformité des contrats avec un agent d'IA qui analyse les projets de documents, signale les risques et suggère des corrections."
+  },
+  {
+    "id": "uc-022",
+    "slug": "content-writing",
+    "title": "Automatisation de la Rédaction de Contenu",
+    "summary": "Un système de rédaction de contenu assisté par IA qui génère de la documentation technique, des articles de blog et des textes directement à partir de sources, de briefs ou du code.",
+    "functionCategory": "marketing",
+    "rolePersona": "Rédacteur Technique / Responsable Marketing de Contenu",
+    "painPoints": [
+      "La rédaction de documentation technique et de blogs demande un changement constant de contexte et une forte implication des ingénieurs",
+      "La production de contenu est ralentie car les experts techniques manquent de temps pour rédiger les premiers brouillons",
+      "Il est difficile de maintenir la cohérence de l'image de marque et du guide de style entre plusieurs rédacteurs"
+    ],
+    "solutionConcept": "Un agent de rédaction d'IA s'appuie sur le contexte de la base de code, les briefs des développeurs et les spécifications techniques pour rédiger des documentations, des guides d'utilisation ou des articles de blog. Il respecte le ton de la marque, vérifie les règles de style et présente des brouillons prêts pour la relecture humaine.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Le brief, le chemin du dépôt de code ou la description technique du produit sont fournis à l'agent"},
+      {"step": 2, "action": "L'agent parcourt la base de code, les schémas et les documentations existantes pour extraire les faits techniques précis"},
+      {"step": 3, "action": "Le brouillon de contenu est généré au format Markdown ou document, structuré selon un modèle"},
+      {"step": 4, "action": "L'agent vérifie le texte par rapport aux guides de style (terminologie, ton, contraintes de mise en page)"},
+      {"step": 5, "action": "Le brouillon formaté est transmis à l'équipe de contenu ou aux éditeurs pour relecture et approbation"}
+    ],
+    "expectedImpact": [
+      "Réduction du temps de création des brouillons de 80 %, permettant aux rédacteurs de se concentrer sur la relecture plutôt que sur la page blanche",
+      "Accélération des mises à jour de la documentation technique en la synchronisant automatiquement avec les modifications du code",
+      "Respect à 100 % des directives de style, du ton de rédaction et des standards de marque"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 jours",
+    "humanApprovalPoints": [
+      "Tous les brouillons sont relus, modifiés et validés par un responsable éditorial humain avant publication",
+      "Les ajustements du guide de style et les modèles de prompts sont mis à jour et validés exclusivement par les responsables marketing"
+    ],
+    "securityNotes": [
+      "Le code source propriétaire, les fonctionnalités non publiées et les documents de conception internes doivent rester confidentiels",
+      "Aucune donnée client ou clé API privée ne doit être incluse dans les brouillons générés ou dans les données d'apprentissage"
+    ],
+    "recommendedServices": ["ai-readiness-audit", "openclaw-foundation-setup", "founder-agent-stack"],
+    "recommendedSkills": ["research-summarizer", "daily-brief-generator"],
+    "recommendedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "Agent d'IA pour la Rédaction de Contenu et la Documentation Technique | ClawHelp",
+    "seoDescription": "Automatisez la rédaction de contenu et de documentation technique avec un agent d'IA qui analyse le code, applique votre guide de style et prépare des brouillons de qualité."
+  }
+]

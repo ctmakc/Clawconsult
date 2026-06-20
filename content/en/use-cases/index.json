@@ -858,5 +858,91 @@
     "status": "published",
     "seoTitle": "Client Invoice Tracker AI Agent | OpenClaw Consulting",
     "seoDescription": "Track outstanding invoices and automate payment reminders with an AI agent that monitors AR aging, drafts follow-ups for approval, and delivers weekly AR status digests."
+  },
+  {
+    "id": "uc-021",
+    "slug": "legal-review",
+    "title": "Legal Review",
+    "summary": "An AI agent designed to perform preliminary document review, highlighting potential risks, missing clauses, and non-compliance against a standard playbook.",
+    "functionCategory": "ops",
+    "rolePersona": "Legal Counsel / Operations Lead",
+    "painPoints": [
+      "Manual contract review takes hours of expensive legal team time for basic template verification",
+      "Human error leads to missed unfavorable clauses like auto-renewals or unbalanced indemnification",
+      "Slow contract turnaround times delay sales cycles and business partnerships by days or weeks"
+    ],
+    "solutionConcept": "An AI agent reads incoming draft contracts and parses them against the company's predefined compliance playbook. It flags non-compliant terms, suggests specific redline changes, and drafts an initial summary email highlighting key risks for review.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Draft agreement is uploaded to the system or retrieved from email"},
+      {"step": 2, "action": "Agent runs and compares the text against standard clauses defined in the compliance playbook"},
+      {"step": 3, "action": "Non-compliant terms (e.g. governing law, liability caps, IP ownership) are flagged with explanations"},
+      {"step": 4, "action": "Alternative compliance-approved wording is suggested as redline edits"},
+      {"step": 5, "action": "A structured review report is generated and queued for legal counsel or executive approval"}
+    ],
+    "expectedImpact": [
+      "Reduce first-pass contract review time by 75%, from hours to under 15 minutes",
+      "Ensure 100% compliance with critical legal playbook policies and standard clauses",
+      "Accelerate sales cycles by reducing contract negotiation turnaround time by up to 5 days"
+    ],
+    "implementationComplexity": "medium",
+    "timelineEstimate": "1–2 weeks",
+    "humanApprovalPoints": [
+      "Final approval of any contract edits or negotiation terms always remains with a qualified human reviewer",
+      "Playbook updates and additions are managed and approved exclusively by the legal counsel"
+    ],
+    "securityNotes": [
+      "Document ingestion and processing should occur in a secure, private environment with zero external data leak risk",
+      "Sensitive contracts must be encrypted at rest and in transit, with role-based access control enabled"
+    ],
+    "recommendedServices": ["security-pre-check", "setup-security-baseline", "first-agent-launch"],
+    "recommendedSkills": ["invoice-data-extractor", "follow-up-drafter", "report-formatter"],
+    "recommendedTemplates": ["operations-summary-agent", "founder-agent-stack"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "AI Legal Review & Contract Compliance Agent | ClawHelp",
+    "seoDescription": "Automate preliminary legal review and contract compliance with an AI agent that analyzes draft documents against your playbook, flags risks, and suggests redlines."
+  },
+  {
+    "id": "uc-022",
+    "slug": "content-writing",
+    "title": "Content Writing Automation",
+    "summary": "An AI-assisted content drafting system that generates technical documentation, blog posts, and copy directly from source materials, briefs, or engineering docs.",
+    "functionCategory": "marketing",
+    "rolePersona": "Technical Writer / Content Marketer",
+    "painPoints": [
+      "Generating technical documentation and blogs requires constant context-switching and deep engineering input",
+      "Content production slows down because technical experts are too busy to draft initial materials",
+      "Brand voice consistency and style guidelines are difficult to maintain across multiple writers"
+    ],
+    "solutionConcept": "An AI writing agent leverages codebase context, developer briefs, and technical specifications to draft documentation, user guides, or blog posts. It matches the defined brand voice, checks styling rules, and presents ready-to-publish drafts for human editing.",
+    "typicalWorkflow": [
+      {"step": 1, "action": "Brief, code repository path, or rough product specification is provided to the agent"},
+      {"step": 2, "action": "Agent crawls the codebase, schemas, or reference materials to extract technical truth"},
+      {"step": 3, "action": "Content draft is generated in Markdown or document format, structured according to templates"},
+      {"step": 4, "action": "Agent reviews the text against style guides, checking terminology, tone, and formatting constraints"},
+      {"step": 5, "action": "Formatted draft is outputted and sent to content team or editors for final polish and approval"}
+    ],
+    "expectedImpact": [
+      "Reduce draft creation time by 80%, allowing writers to focus on polishing rather than blank-page writing",
+      "Accelerate technical documentation updates by keeping docs in sync with codebase changes automatically",
+      "Ensure 100% adherence to style guidelines, tone instructions, and brand voice standards"
+    ],
+    "implementationComplexity": "low",
+    "timelineEstimate": "3–5 days",
+    "humanApprovalPoints": [
+      "All drafts are reviewed, edited, and approved by a human content owner prior to publication",
+      "Style guide adjustments and prompt templates are updated and verified by marketing leads"
+    ],
+    "securityNotes": [
+      "Proprietary source code, unreleased features, and internal design documents must be kept in a private context",
+      "No customer data or private API keys should be included in generated drafts or training materials"
+    ],
+    "recommendedServices": ["ai-readiness-audit", "openclaw-foundation-setup", "founder-agent-stack"],
+    "recommendedSkills": ["research-summarizer", "daily-brief-generator"],
+    "recommendedTemplates": ["executive-briefing-agent", "founder-agent-stack"],
+    "featured": true,
+    "status": "published",
+    "seoTitle": "AI Content Writing & Technical Documentation Agent | ClawHelp",
+    "seoDescription": "Automate content writing and technical documentation drafting with an AI agent that analyzes codebase context, applies style guides, and writes high-quality copy."
   }
 ]

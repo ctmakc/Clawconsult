@@ -134,5 +134,83 @@
     "seoTitle": "Designing Human-in-the-Loop AI Workflows | OpenClaw",
     "seoDescription": "Learn how to design effective human approval gates in AI agent workflows — where automation ends, where human judgment must take over, and how to avoid bottlenecks.",
     "status": "published"
+  },
+  {
+    "slug": "context-window",
+    "title": "Claude Code Context Window Management",
+    "excerpt": "Manage your token limit and optimize performance in Claude Code sessions. Learn how to clear history, exclude files, and avoid context window overflows.",
+    "category": "troubleshooting",
+    "tags": [
+      "troubleshooting",
+      "claude-code",
+      "context-window",
+      "optimization"
+    ],
+    "author": "ClawHelp Team",
+    "publishDate": "2026-06-20",
+    "readTime": 4,
+    "relatedServices": [
+      "first-agent-launch"
+    ],
+    "relatedUseCases": [
+      "pair-programming",
+      "devops"
+    ],
+    "seoTitle": "Claude Code Context Window Management & Optimization | ClawHelp",
+    "seoDescription": "Solve context window overflows in Claude Code. Best practices for managing session history, excluding directories, and maximizing token efficiency.",
+    "status": "published",
+    "content": "# Claude Code Context Window Management\n\n**Problem**: During long sessions or when working with large files, Claude Code may consume too much context, leading to high token usage, slow responses, or context window limit errors (e.g. `Context window limit reached`).\n\nClaude Code maintains the conversation history and local file context inside a single context window. Gaining control over what files and history Claude reads is crucial for efficient, low-cost sessions.\n\n---\n\n## Symptoms of Context Bloat\n\n- Claude takes longer to respond to simple queries.\n- Large directory structures are repeatedly scanned.\n- The CLI outputs warnings regarding session size or token consumption.\n- You encounter rate limit warnings early in your workspace sessions.\n\n---\n\n## Fix 1: Utilize `.claudeignore` Files\n\nBy default, Claude Code tries to understand your workspace by scanning files. If your project contains large build artifacts, dependency directories, or database dumps, Claude will waste context window tokens reading them.\n\n### Action\n\nCreate a `.claudeignore` file in the root of your project:\n```bash\ntouch .claudeignore\n```\n\nAdd patterns to ignore unnecessary folders:\n```ignore\n# Ignore dependency directories\nnode_modules/\nvendor/\n.venv/\n\n# Ignore build artifacts and outputs\ndist/\nbuild/\n.next/\nout/\n*.pyc\n\n# Ignore IDE and OS meta-files\n.idea/\n.vscode/\n.DS_Store\n\n# Ignore large datasets or database files\n*.sql\n*.sqlite\n*.csv\n*.json\n```\n\n---\n\n## Fix 2: Reset the Session History\n\nIf a single terminal session has been running for a long time, the back-and-forth conversation history becomes huge. You can clear the history to reset the context window without quitting your work.\n\n### Command\n\nWithin your Claude Code terminal session, use the slash command to compact context:\n```bash\n/compact\n```\nThis command summarizes the active changes and clears old dialog history, instantly freeing up the context window.\n\nAlternatively, you can restart the session by typing `/exit` and opening `claude` again.\n\n---\n\n## Fix 3: Control File Addition Natively\n\nAvoid using wildcards or asking broad questions like \"review this whole project.\" Instead, ask Claude to look at specific files or directories:\n\n```\nReview the authentication logic in ./src/lib/auth.ts and check for security bugs.\n```\n\nIf Claude asks for permission to read a massive directory, deny it and point it to the specific files you need."
+  },
+  {
+    "slug": "stuck-thinking",
+    "title": "Claude Code Stuck in Thinking Loop",
+    "excerpt": "Resolve infinite thinking loops or commands that hang during execution in Claude Code. Learn when to interrupt and how to configure execution controls.",
+    "category": "troubleshooting",
+    "tags": [
+      "troubleshooting",
+      "claude-code",
+      "thinking-loop",
+      "performance"
+    ],
+    "author": "ClawHelp Team",
+    "publishDate": "2026-06-20",
+    "readTime": 3,
+    "relatedServices": [
+      "first-agent-launch"
+    ],
+    "relatedUseCases": [
+      "pair-programming",
+      "devops"
+    ],
+    "seoTitle": "Fix Claude Code Stuck in Thinking Loop & Hung Commands | ClawHelp",
+    "seoDescription": "How to stop Claude Code when it gets stuck in thinking loops or executes commands that run indefinitely. Learn keyboard shortcuts and execution controls.",
+    "status": "published",
+    "content": "# Claude Code Stuck in Thinking Loop\n\n**Problem**: Claude Code is stuck in a \"thinking\" state, or a command run by Claude is hanging indefinitely, making the CLI unresponsive.\n\nThis usually happens when Claude executes a background process that does not terminate, waits for user input that it cannot provide, or runs an infinite loop in a script.\n\n---\n\n## Symptoms\n\n- The CLI displays the spinner or \"thinking...\" message for several minutes without outputting text or tools.\n- A command like `npm run dev` or a local development server is started by Claude, blocking the session.\n- Test suites run indefinitely due to unhandled promise rejections or open handles.\n\n---\n\n## Fix 1: Force Stop Execution\n\nIf Claude Code is stuck in a thinking loop or executing a command, you can interrupt it directly from your keyboard without killing the entire terminal.\n\n### Shortcut\n\nPress **`Ctrl + C`** on your keyboard.\n\n- Pressing it once will attempt to safely interrupt the current tool run or thought loop and return control back to the prompt.\n- If Claude remains frozen, press **`Ctrl + C`** again or type `/exit` if the prompt is active.\n\n---\n\n## Fix 2: Prevent Background Server Execution\n\nClaude Code is designed to run tasks that exit. If you ask Claude to \"start the development server\" or \"run docker-compose\", it will launch the command and wait for it to complete. Because servers run indefinitely, Claude gets stuck waiting.\n\n### Correction\n\nAlways run long-running servers, compilers, or watchers in a separate terminal window, not inside the Claude Code session.\n\nIf you must check if a server starts, tell Claude to run it and terminate it immediately, or specify a timeout:\n\n```\nRun the test suite script but make sure it runs with --watch=false so it exits.\n```\n\n---\n\n## Fix 3: Limit Automated Tool Invocation\n\nSometimes Claude gets stuck in an editing loop where it continuously runs a compiler, sees an error, edits the file, runs the compiler again, and repeats.\n\nTo break this loop:\n\n1. Interrupt the process with **`Ctrl + C`**.\n2. Give explicit instructions to stop compiling: \"Stop running tests now. Let's inspect the files and write down a plan before we attempt to fix it again.\""
+  },
+  {
+    "slug": "auth-failed",
+    "title": "Claude Code Authentication Failed",
+    "excerpt": "Diagnose and fix authentication failures, invalid API keys, and credential issues in Claude Code CLI configuration.",
+    "category": "troubleshooting",
+    "tags": [
+      "troubleshooting",
+      "claude-code",
+      "auth",
+      "credentials"
+    ],
+    "author": "ClawHelp Team",
+    "publishDate": "2026-06-20",
+    "readTime": 3,
+    "relatedServices": [
+      "first-agent-launch"
+    ],
+    "relatedUseCases": [
+      "pair-programming",
+      "devops"
+    ],
+    "seoTitle": "Claude Code Authentication Failed — Resolve Token Errors | ClawHelp",
+    "seoDescription": "Diagnose and resolve authentication errors in Claude Code. Fix API credential conflicts, session token expiry, and shell configuration variables.",
+    "status": "published",
+    "content": "# Claude Code Authentication Failed\n\n**Problem**: When starting Claude Code, you receive an authentication error (e.g. `Authentication failed`, `Invalid API Key`, or `Unauthorized`), preventing you from initiating the session.\n\nClaude Code connects to Anthropic's services using OAuth credentials or API keys. Mismatches in environment variables, expired login sessions, or network restrictions can block authentication.\n\n---\n\n## Symptoms\n\n- Launching the `claude` command outputs: `Error: Authentication failed` or `401 Unauthorized`.\n- The CLI prompts you to authenticate via browser, but the redirection fails or the code is not accepted.\n- You see billing errors indicating that the API key is valid but lacks active credits.\n\n---\n\n## Fix 1: Force Login Renewal\n\nIf you are authenticated via OAuth, your login session might have expired. You can force a logout and log back in to renew your credentials.\n\n### Action\n\nRun the logout command in your terminal:\n```bash\nclaude logout\n```\n\nThen, initiate login again:\n```bash\nclaude login\n```\nFollow the on-screen instructions to authorize the CLI in your web browser.\n\n---\n\n## Fix 2: Check API Key Environment Variables\n\nIf your organization uses custom API keys instead of OAuth, Claude Code checks for the `ANTHROPIC_API_KEY` environment variable.\n\n### Action\n\nVerify if the environment variable is set correctly:\n```bash\necho $ANTHROPIC_API_KEY\n```\n\nIf the output is empty or incorrect, set it in your current terminal session:\n```bash\nexport ANTHROPIC_API_KEY=\"your-api-key-here\"\n```\n\nTo make this permanent, add the export line to your shell configuration file (e.g., `~/.bashrc` or `~/.zshrc`):\n```bash\necho 'export ANTHROPIC_API_KEY=\"your-api-key-here\"' >> ~/.bashrc\nsource ~/.bashrc\n```\n\n---\n\n## Fix 3: Resolve Credential Store Permissions\n\nOn some Linux systems, the credential helper cannot store the session token securely, resulting in repeated authentication prompts.\n\n### Action\n\nClear the local credentials cache:\n```bash\nrm -rf ~/.claude/session.json\n```\nRestart Claude Code and perform the login process again."
   }
 ]

@@ -1,0 +1,95 @@
+---
+slug: context-window
+title: "Claude Code Context Window Management"
+description: "Manage your token limit and optimize performance in Claude Code sessions. Learn how to clear history, exclude files, and avoid context window overflows."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, claude-code, context-window, optimization]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 4
+seoTitle: "Claude Code Context Window Management & Optimization | ClawHelp"
+seoDescription: "Solve context window overflows in Claude Code. Best practices for managing session history, excluding directories, and maximizing token efficiency."
+---
+
+# Claude Code Context Window Management
+
+**Problem**: During long sessions or when working with large files, Claude Code may consume too much context, leading to high token usage, slow responses, or context window limit errors (e.g. `Context window limit reached`).
+
+Claude Code maintains the conversation history and local file context inside a single context window. Gaining control over what files and history Claude reads is crucial for efficient, low-cost sessions.
+
+---
+
+## Symptoms of Context Bloat
+
+- Claude takes longer to respond to simple queries.
+- Large directory structures are repeatedly scanned.
+- The CLI outputs warnings regarding session size or token consumption.
+- You encounter rate limit warnings early in your workspace sessions.
+
+---
+
+## Fix 1: Utilize `.claudeignore` Files
+
+By default, Claude Code tries to understand your workspace by scanning files. If your project contains large build artifacts, dependency directories, or database dumps, Claude will waste context window tokens reading them.
+
+### Action
+
+Create a `.claudeignore` file in the root of your project:
+```bash
+touch .claudeignore
+```
+
+Add patterns to ignore unnecessary folders:
+```ignore
+# Ignore dependency directories
+node_modules/
+vendor/
+.venv/
+
+# Ignore build artifacts and outputs
+dist/
+build/
+.next/
+out/
+*.pyc
+
+# Ignore IDE and OS meta-files
+.idea/
+.vscode/
+.DS_Store
+
+# Ignore large datasets or database files
+*.sql
+*.sqlite
+*.csv
+*.json
+```
+
+---
+
+## Fix 2: Reset the Session History
+
+If a single terminal session has been running for a long time, the back-and-forth conversation history becomes huge. You can clear the history to reset the context window without quitting your work.
+
+### Command
+
+Within your Claude Code terminal session, use the slash command to compact context:
+```bash
+/compact
+```
+This command summarizes the active changes and clears old dialog history, instantly freeing up the context window.
+
+Alternatively, you can restart the session by typing `/exit` and opening `claude` again.
+
+---
+
+## Fix 3: Control File Addition Natively
+
+Avoid using wildcards or asking broad questions like "review this whole project." Instead, ask Claude to look at specific files or directories:
+
+```
+Review the authentication logic in ./src/lib/auth.ts and check for security bugs.
+```
+
+If Claude asks for permission to read a massive directory, deny it and point it to the specific files you need.

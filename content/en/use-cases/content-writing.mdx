@@ -1,0 +1,85 @@
+---
+slug: content-writing
+title: "Claude Code for Content Writing"
+description: "How technical writers, developers, and marketers use Claude Code to generate high-quality documentation, blog posts, and copy from codebase context."
+category: use-case
+tags: [content, documentation, markdown, writing, marketing]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 4
+seoTitle: "Claude Code for Content Writing — Technical & Marketing Copy | ClawHelp"
+seoDescription: "See how writers and developers use Claude Code to generate technical documentation, write developer blogs, draft API references, and polish content using codebase context."
+---
+
+# Claude Code for Content Writing
+
+Creating technical documentation, writing developer-focused blogs, and maintaining marketing copy requires deep accuracy and constant reference to the source. Writers often waste significant time toggling between code editors, APIs, style guides, and drafts. Claude Code eliminates this friction by leveraging its direct access to codebase context, file writing systems, and local terminal execution to draft precise, context-aware content.
+
+This page explains how writers, developers, and content leads use Claude Code to streamline content generation directly from their developer workspaces.
+
+## Core Use Cases
+
+### Codebase-Aware Technical Writing
+
+Writers need to keep documentation in sync with fast-moving codebases. Claude Code inspects the actual code (types, controllers, schemas) and writes accurate documentation, avoiding outdated references.
+
+**Why it works**: Unlike web-based chat interfaces, Claude Code reads your live local code files. It doesn't rely on copy-pasted snippets; it traverses code paths to capture the absolute technical truth.
+
+Typical prompt pattern:
+```
+Analyze `./src/controllers/userController.ts` and generate a Markdown API reference guide for the user registration and profile update endpoints. Include query params, request bodies, and responses.
+```
+
+### Developer-Focused Blog Posts
+
+Drafting articles about feature releases, performance optimizations, or complex bug fixes is easier when the AI can read the raw changes. Claude Code inspects Git commits or branch diffs to build technical post outlines and drafts.
+
+```
+Examine the git diff between main and the feature branch `./`. 
+Draft a developer blog post explaining the database migration, how the new query caching layer improves read performance, and how to configure it.
+```
+
+### Brand Voice and Tone Verification
+
+Different channels demand different styles. Claude Code can rewrite technical specifications to fit specific marketing formats (like landing pages, social threads, or email campaigns) while respecting brand guidelines.
+
+```
+Rewrite the technical summary of our security architecture in `./docs/sec-spec.md` into a conversational, 5-tweet Twitter thread highlighting our compliance and encryption standards.
+```
+
+### Markdown Linting and Style Compliance
+
+Corporate content teams maintain strict styling guides (capitalization, heading structures, trademark usage). Claude Code checks existing markdown files and edits them to comply with these guidelines.
+
+```
+Scan `./content/blog/` for any files violating the formatting rules in `./style-guide.md`. 
+Specifically check for proper header nesting, alt text on images, and correct brand capitalization. Fix them in-place.
+```
+
+## A Real Writing Session Example
+
+Here is how a technical writer uses Claude Code to document a new API version:
+
+**Situation**: A developer finished implementing API v2 endpoints, and the documentation needs to be updated before launch.
+
+**Session flow**:
+
+1. Open Claude Code in the API repository.
+2. Ask Claude to locate all endpoints containing `api/v2`.
+3. Instruct Claude to write the documentation:
+   ```
+   Generate `./docs/api-v2-reference.md` by analyzing the new route handlers found in the search.
+   ```
+4. Claude reads the TS controller files, parses the parameters, and writes a structured Markdown API reference.
+5. Ask Claude to review the new file against the corporate style guide.
+6. Claude edits headings and corrects product names in-place, then commits the file to Git.
+
+Total time: 6 minutes. The document is accurate to the code, formatted perfectly, and stored in version control.
+
+## MCP Integrations for Writers
+
+Writers can connect Claude Code to their publishing and editing environments using Model Context Protocol (MCP) servers:
+
+- **GitHub/GitLab MCP**: Directly manage pull requests for documentation reviews.
+- **Google Docs MCP**: Export drafted blog posts or documents for collaborative editing.
+- **Brave/Google Search MCP**: Search online for competitive positioning or factual references during writing sessions.

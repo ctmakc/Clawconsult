@@ -1,0 +1,84 @@
+---
+slug: auth-failed
+title: "Claude Code Authentication Failed"
+description: "Diagnose and fix authentication failures, invalid API keys, and credential issues in Claude Code CLI configuration."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, claude-code, auth, credentials]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 3
+seoTitle: "Claude Code Authentication Failed — Resolve Token Errors | ClawHelp"
+seoDescription: "Diagnose and resolve authentication errors in Claude Code. Fix API credential conflicts, session token expiry, and shell configuration variables."
+---
+
+# Claude Code Authentication Failed
+
+**Problem**: When starting Claude Code, you receive an authentication error (e.g. `Authentication failed`, `Invalid API Key`, or `Unauthorized`), preventing you from initiating the session.
+
+Claude Code connects to Anthropic's services using OAuth credentials or API keys. Mismatches in environment variables, expired login sessions, or network restrictions can block authentication.
+
+---
+
+## Symptoms
+
+- Launching the `claude` command outputs: `Error: Authentication failed` or `401 Unauthorized`.
+- The CLI prompts you to authenticate via browser, but the redirection fails or the code is not accepted.
+- You see billing errors indicating that the API key is valid but lacks active credits.
+
+---
+
+## Fix 1: Force Login Renewal
+
+If you are authenticated via OAuth, your login session might have expired. You can force a logout and log back in to renew your credentials.
+
+### Action
+
+Run the logout command in your terminal:
+```bash
+claude logout
+```
+
+Then, initiate login again:
+```bash
+claude login
+```
+Follow the on-screen instructions to authorize the CLI in your web browser.
+
+---
+
+## Fix 2: Check API Key Environment Variables
+
+If your organization uses custom API keys instead of OAuth, Claude Code checks for the `ANTHROPIC_API_KEY` environment variable.
+
+### Action
+
+Verify if the environment variable is set correctly:
+```bash
+echo $ANTHROPIC_API_KEY
+```
+
+If the output is empty or incorrect, set it in your current terminal session:
+```bash
+export ANTHROPIC_API_KEY="your-api-key-here"
+```
+
+To make this permanent, add the export line to your shell configuration file (e.g., `~/.bashrc` or `~/.zshrc`):
+```bash
+echo 'export ANTHROPIC_API_KEY="your-api-key-here"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+---
+
+## Fix 3: Resolve Credential Store Permissions
+
+On some Linux systems, the credential helper cannot store the session token securely, resulting in repeated authentication prompts.
+
+### Action
+
+Clear the local credentials cache:
+```bash
+rm -rf ~/.claude/session.json
+```
+Restart Claude Code and perform the login process again.

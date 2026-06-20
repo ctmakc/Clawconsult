@@ -1,0 +1,94 @@
+---
+slug: legal-review
+title: "Claude Code for Legal Review"
+description: "How legal teams and developers use Claude Code to perform preliminary document reviews, detect risks, verify compliance, and compare contracts."
+category: use-case
+tags: [legal, compliance, documentation, diff, review]
+author: "ClawHelp Team"
+publishDate: "2026-06-20"
+readTime: 5
+seoTitle: "Claude Code for Legal Review — AI Document Compliance | ClawHelp"
+seoDescription: "Learn how to use Claude Code to automate preliminary legal document reviews, check compliance guidelines, identify risky terms, and analyze contract diffs."
+---
+
+# Claude Code for Legal Review
+
+Legal document review is notorious for being repetitive, high-stakes, and time-critical. Whether verify compliance with an internal corporate playbook, scanning vendor contracts for unfavorable indemnity clauses, or comparing multiple revisions of a non-disclosure agreement (NDA), manual reviews consume hours of expensive legal expertise. Claude Code streamlines this workflow by providing instant, context-aware document analysis directly from your terminal.
+
+This page explains how developers and legal operations teams use Claude Code in production workflows, provides command-line examples, and details integration options.
+
+## Core Use Cases
+
+### Playbook Compliance Verification
+
+Corporate legal teams maintain playbooks defining what clauses are acceptable, preferred, or strictly prohibited. Claude Code reads your draft agreement and compares it side-by-side with your playbook rules.
+
+**Why it exceeds simple prompting**: By utilizing the local terminal environment, Claude Code can read multiple files simultaneously (the draft contract, the playbook, and previous approved examples), identifying discrepancies across hundreds of lines of complex legal prose.
+
+Typical prompt pattern:
+```
+Review the draft agreement in `./contracts/draft-nda.txt` against our legal compliance playbook in `./docs/playbook.md`. 
+Identify any clauses in the draft that violate our standard rules, explain why, and suggest redlined replacements.
+```
+
+### Risk and Liability Detection
+
+Unbalanced indemnification limits, auto-renewing terms, or missing governing law clauses represent hidden liabilities. Claude Code analyzes agreements to highlight these risks before they reach negotiation.
+
+```
+Scan the vendor SLA in `./contracts/vendor-sla.pdf` for:
+1. Indemnity clauses with no liability caps.
+2. Auto-renewal periods exceeding 30 days.
+3. Payment terms longer than Net 45.
+List any matches and outline the financial or operational risk.
+```
+
+### Contract Version Comparison
+
+Analyzing contract updates line-by-line is prone to human error. When a counterparty returns a document, Claude Code compares the original and revised versions to identify hidden alterations that might not show up in track changes.
+
+```
+Compare the original contract `./contracts/nda-v1.txt` with the counterparty's return version `./contracts/nda-v2.txt`. 
+List all modifications, additions, and deletions, highlighting any changes that alter our intellectual property ownership or warranty terms.
+```
+
+### Obligation and Date Extraction
+
+Once a contract is signed, key dates (termination deadlines, renewal notifications) must be tracked. Claude Code parses final documents to extract structured metadata for CRM or contract management systems.
+
+```
+Analyze `./contracts/signed-lease.txt` and extract the following metadata in JSON format:
+- Effective Date
+- Initial Term Length
+- Termination Notice Period
+- Monthly Payment Amount
+- Late Fee Penalty
+```
+
+## A Production Workflow Example
+
+Here is how a legal operations engineer uses Claude Code to fast-track contract vetting:
+
+**Situation**: A sales representative uploads a standard vendor agreement that needs urgent review before an executive signature.
+
+**Session flow**:
+
+1. Start Claude Code in the contract directory.
+2. Run a command to convert a PDF draft to text using local utilities.
+3. Instruct Claude to run the analysis:
+   ```
+   Compare `./temp/vendor-agreement.txt` to our corporate playbook in `./playbook/nda-standards.md`.
+   ```
+4. Claude identifies that the vendor has changed the governing law to Delaware (playbook requires Ontario, Canada) and has omitted the mutual limitation of liability.
+5. Ask Claude to generate a reply email to the vendor outlining the required changes and suggesting the exact redline text.
+6. Claude drafts a precise, professional negotiation email.
+
+Total time: 8 minutes. No manual document scanning. No missed deviations.
+
+## Connecting Claude Code to Document Stores
+
+You can supercharge Claude Code by integrating it with Model Context Protocol (MCP) servers that connect to document stores and office suites:
+
+- **Google Drive / OneDrive MCP**: Access and search draft documents directly within the active terminal session.
+- **Postgres / SQLite MCP**: Look up past approved contracts or vendor records to verify compliance history.
+- **Git MCP**: Version control your legal playbooks and templates, letting Claude Code track modifications or draft commit messages for playbook updates.
