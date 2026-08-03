@@ -1,0 +1,130 @@
+---
+slug: data-science
+title: "Claude Code pour la Science des Données"
+description: "Comment les data scientists utilisent Claude Code pour automatiser l'EDA, générer du code de notebook, déboguer des pipelines et optimiser des requêtes SQL."
+category: use-case
+tags: [data-science, python, notebooks, sql, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 4
+lang: "fr"
+seoTitle: "Claude Code pour la Science des Données — Automatisation d'Analyse IA | ClawHelp"
+seoDescription: "Utilisez Claude Code pour les flux de travail de science des données — automatisation d'EDA, génération de code de notebook, débogage de pipelines et optimisation de requêtes SQL."
+---
+
+# Claude Code pour la Science des Données
+
+Les data scientists passent une part disproportionnée de leur temps à des tâches qui ne nécessitent pas leur expertise : écrire du code EDA standard, reformater des ensembles de données, déboguer des conflits de dépendances, traduire une intention analytique en SQL fonctionnel. Claude Code absorbe cette charge.
+
+Cette page couvre des façons pratiques dont les data scientists utilisent Claude Code pour accélérer le travail réel — pas des exemples jouets, mais le travail désordonné, itératif et soumis à des délais qui remplit la plupart des semaines de data science.
+
+## Cas d'Usage Principaux
+
+### Automatisation de l'Analyse Exploratoire des Données
+
+L'EDA est précieuse mais fastidieuse. Claude Code peut lire un fichier CSV ou Parquet, inspecter le schéma, et produire un notebook EDA complet couvrant :
+
+- Comptages de valeurs nulles et stratégies d'imputation par colonne
+- Graphiques de distribution pour les caractéristiques numériques (histogramme + KDE)
+- Comptages de cardinalité pour les caractéristiques catégorielles
+- Matrice de corrélation avec annotation des paires à forte corrélation
+- Détection des valeurs aberrantes utilisant les méthodes IQR et Z-score
+- Résumé du déséquilibre de classes pour les variables cibles
+
+Le notebook généré inclut des cellules de code et de markdown avec des observations, il est donc prêt à partager — pas seulement un dump de code.
+
+**Modèle de prompt** :
+```
+Voici un fichier CSV : [joindre ou coller le schéma].
+Générez un notebook EDA complet. Mettez en évidence les problèmes de qualité des données,
+les distributions inattendues ou les caractéristiques qui auront probablement besoin 
+d'une transformation avant la modélisation.
+```
+
+### Génération de Code de Notebook
+
+Quand vous savez quelle analyse vous avez besoin mais ne voulez pas écrire le code standard, Claude Code l'écrit. Exemples :
+
+- « Génère un pipeline scikit-learn avec StandardScaler, SMOTE pour le déséquilibre de classes, et un classifieur RandomForest avec une validation croisée à 5 plis »
+- « Écris un tableau de bord plotly avec des menus déroulants pour la sélection des caractéristiques et un nuage de points comparant les valeurs réelles et prédites »
+- « Génère du code pour exécuter un test du chi-deux pour l'indépendance entre toutes les paires de caractéristiques catégorielles et produire les paires significatives sous forme de DataFrame »
+
+Claude Code lit également les notebooks existants pour comprendre vos conventions et génère un nouveau code dans le même style — en utilisant votre bibliothèque de visualisation préférée, vos modèles de nommage, et votre format de documentation.
+
+### Débogage de Pipeline de Données
+
+Les pipelines de données échouent de manières prévisibles : incompatibilités de schéma, valeurs nulles inattendues, coercitions de type, problèmes de mémoire sur les grandes jointures, ordres de tri non déterministes. Claude Code vous aide à les diagnostiquer plus rapidement.
+
+Collez votre traceback d'erreur et le code de pipeline pertinent. Claude identifie :
+
+- La ligne qui a levé l'erreur
+- Pourquoi elle s'est produite (évolution du schéma, changement de données en amont, changement de version de bibliothèque)
+- La correction
+- Une vérification défensive que vous pouvez ajouter pour détecter le même problème plus tôt la prochaine fois
+
+Pour les DAGs Airflow et Prefect, collez le journal des tâches et Claude diagnostique l'échec sans avoir besoin de comprendre votre configuration complète d'orchestration.
+
+**Modèle de prompt** :
+```
+Ce pipeline échoue avec l'erreur suivante : [traceback].
+Voici le code pertinent : [extrait].
+Le pipeline s'exécute quotidiennement contre une base de données Postgres.
+Diagnostiquez la cause principale et suggérez une correction et une clause de garde.
+```
+
+### Optimisation de Requêtes SQL
+
+Claude Code est un solide partenaire SQL. Modèles courants :
+
+**Génération de requêtes** : décrivez la question métier en langage courant et obtenez une requête SQL correcte. « Pour chaque client qui a acheté au cours des 90 derniers jours, montrez leur première date d'achat, le total des dépenses et la catégorie de produit la plus courante. » Claude rédige la requête, explique les jointures, et note toute hypothèse sur votre schéma.
+
+**Optimisation de requêtes** : collez une requête lente et la sortie EXPLAIN. Claude identifie les index manquants, les balayages complets de tables inutiles, les sous-requêtes corrélées inefficaces, et les patterns N+1 dans le SQL généré par ORM.
+
+**Traduction de requêtes** : traduit entre les dialectes SQL (PostgreSQL → BigQuery, MySQL → Snowflake) avec les substitutions correctes de noms de fonctions, l'arithmétique de dates, et les différences de syntaxe des fonctions de fenêtre.
+
+**Conception de schéma** : décrivez les entités et les relations dans votre modèle de données. Claude génère un schéma normalisé avec des index, des contraintes et des commentaires appropriés.
+
+Avec un [serveur MCP de base de données](/services/mcp-integration), Claude peut lire votre schéma réel pendant la session — plus besoin de coller les définitions de tables. Il génère des requêtes calibrées sur vos noms de colonnes réels, types de données et index existants.
+
+### Aide à l'Ingénierie des Caractéristiques
+
+Claude Code aide à traduire l'intuition du domaine en code de caractéristiques :
+
+- « Créez des caractéristiques de décalage pour la colonne sales_amount à 7, 14 et 28 jours d'intervalle, par customer_id »
+- « Encodez cette colonne de date en caractéristiques cycliques utilisant la transformation sinus/cosinus »
+- « Extrayez le domaine email de la colonne email et créez un indicateur binaire pour les domaines professionnels vs. personnels »
+
+Pour les caractéristiques NLP : nettoyage de texte, vectorisation TF-IDF, génération d'embeddings, configuration d'extraction d'entités.
+
+## Exemple de Flux de Travail : Analyse du Taux de Désabonnement
+
+**Situation** : Un data scientist doit construire un modèle de prédiction du churn pour un produit SaaS. Les données sont dans Postgres.
+
+**Session avec Claude Code + MCP de base de données** :
+
+1. « Inspectez les tables users, subscriptions et events et décrivez les données disponibles pour la prédiction du churn. » — Claude lit le schéma réel et le résume.
+2. « Écrivez une requête SQL pour créer une matrice de caractéristiques : une ligne par utilisateur, avec les métriques d'utilisation des 30, 60 et 90 derniers jours, le niveau d'abonnement, et une étiquette de churn. » — Claude génère la requête en utilisant les vrais noms de colonnes.
+3. « Générez un notebook EDA pour cette matrice de caractéristiques. » — Claude écrit le notebook.
+4. « Construisez un pipeline scikit-learn avec un prétraitement des caractéristiques adapté à chaque type de colonne et un classifieur à gradient boosting. Incluez le calcul des valeurs SHAP. » — Claude écrit le code de modélisation.
+
+Résultat : un modèle de churn de base fonctionnel en un après-midi, avec documentation, plutôt que deux jours d'écriture de code standard.
+
+## Modèles de Prompts pour la Science des Données
+
+**Pour l'EDA :**
+> « Analysez [jeu de données / schéma]. Générez une EDA complète couvrant les distributions, les valeurs manquantes, les valeurs aberrantes et les patterns notables. Signalez tout ce qui affecterait la modélisation. »
+
+**Pour le débogage :**
+> « Ce pipeline échoue avec [erreur]. Code : [extrait]. Diagnostiquez et corrigez. »
+
+**Pour SQL :**
+> « Générez une requête SQL pour [question métier]. Schéma : [tables et colonnes]. Optimisez pour [Postgres/BigQuery/Snowflake]. »
+
+**Pour la modélisation :**
+> « Construisez un pipeline [type de modèle] pour [variable cible]. Les caractéristiques sont [liste]. Incluez [validation croisée / importance des caractéristiques / métriques d'évaluation]. »
+
+## Pour Commencer
+
+Claude Code fonctionne bien avec Jupyter (via le terminal), les notebooks VS Code, et les flux de travail basés sur des scripts purs. Pour les équipes dont les données vivent dans une base de données, une [intégration MCP de base de données](/services/mcp-integration) offre le gain de productivité le plus élevé — Claude lit votre schéma réel et des échantillons de données au lieu de travailler à partir de descriptions.
+
+Pour une aide à la configuration spécifique aux environnements de science des données (conda, virtualenv, JupyterHub, ou notebooks cloud), consultez notre [service de configuration Claude Code](/services/claude-code-setup).

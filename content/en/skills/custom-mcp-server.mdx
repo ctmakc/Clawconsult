@@ -1,0 +1,367 @@
+---
+slug: custom-mcp-server
+title: "Building a Custom MCP Server for Claude Code"
+description: "A complete hands-on guide to building, registering, and deploying a custom Model Context Protocol server so Claude Code can query your own databases, APIs, and internal tools."
+category: how-to
+tags: [mcp, tools, claude-code, server, typescript, node]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 10
+relatedServices: [mcp-integration]
+seoTitle: "Building a Custom MCP Server for Claude Code — Full Tutorial"
+seoDescription: "Learn how to build a custom MCP server in TypeScript, register it in Claude Code settings.json, and expose your own data sources as tools Claude can call natively."
+schema: HowTo
+---
+
+# Building a Custom MCP Server for Claude Code
+
+The Model Context Protocol (MCP) is the open standard that lets Claude reach beyond its training data and call your real infrastructure — databases, REST APIs, file systems, internal dashboards — in a structured, safe way. If you have a data source Claude should know about, building a custom MCP server is the cleanest path to connecting it.
+
+This guide walks you through everything: what MCP is under the hood, how a server is structured, a full Node.js implementation, registration in Claude Code, and a production-ready Postgres example.
+
+---
+
+## What Is MCP?
+
+MCP is a JSON-RPC 2.0 protocol that defines how an AI model communicates with external tool servers. Think of it as a well-typed plugin system: instead of pasting raw database dumps into a prompt, you expose callable functions. Claude knows what parameters each function expects, calls it when relevant, and gets a structured result back.
+
+The key insight is that MCP servers are **language-agnostic processes** — they run locally or remotely and communicate over stdio or HTTP+SSE. Claude Code ships with a handful of built-in MCP servers (filesystem, browser automation, etc.) and lets you register any number of custom ones.
+
+---
+
+## MCP Server Anatomy
+
+An MCP server exposes three primitives:
+
+| Primitive | Purpose | Example |
+|-----------|---------|---------|
+| **Tools** | Callable functions with typed parameters | `query_database`, `send_email` |
+| **Resources** | Read-only data sources (URI-addressed) | `postgres://mydb/users` |
+| **Prompts** | Reusable prompt templates | `explain_error_prompt` |
+
+Most custom servers focus on **tools** — they're the most flexible and the easiest for Claude to use autonomously.
+
+---
+
+## Scaffolding a Node.js MCP Server
+
+### 1. Initialize the project
+
+```bash
+mkdir my-mcp-server && cd my-mcp-server
+npm init -y
+npm install @modelcontextprotocol/sdk zod
+npm install -D typescript @types/node ts-node
+```
+
+Create `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["src/**/*"]
+}
+```
+
+### 2. Write the server
+
+Create `src/index.ts`:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+
+// Initialize the server with a name and version
+const server = new McpServer({
+  name: "my-custom-server",
+  version: "1.0.0",
+});
+
+// Register a tool — Claude will call this when it needs weather data
+server.tool(
+  "get_weather",
+  "Fetch current weather for a given city",
+  {
+    city: z.string().describe("The city name, e.g. 'Toronto'"),
+    units: z.enum(["metric", "imperial"]).default("metric"),
+  },
+  async ({ city, units }) => {
+    // Replace with your real API call
+    const temp = units === "metric" ? "18°C" : "64°F";
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ city, temperature: temp, condition: "Partly cloudy" }),
+        },
+      ],
+    };
+  }
+);
+
+// Register a read-only resource
+server.resource(
+  "config://app",
+  "Application configuration",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        text: JSON.stringify({ environment: "production", version: "2.1.0" }),
+        mimeType: "application/json",
+      },
+    ],
+  })
+);
+
+// Start listening on stdio
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("MCP server running on stdio");
+}
+
+main().catch(console.error);
+```
+
+### 3. Build and test locally
+
+```bash
+npx tsc
+node dist/index.js
+```
+
+You should see `MCP server running on stdio` on stderr. The server is now ready to accept JSON-RPC messages on stdin.
+
+---
+
+## Registering the Server in Claude Code
+
+Open (or create) `~/.claude/settings.json` and add your server to the `mcpServers` section:
+
+```json
+{
+  "mcpServers": {
+    "my-custom-server": {
+      "command": "node",
+      "args": ["/absolute/path/to/my-mcp-server/dist/index.js"],
+      "env": {
+        "API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Code. You can verify the server loaded with `/mcp` — it lists all connected servers and their tools.
+
+---
+
+## Testing Your Server
+
+Once registered, ask Claude directly:
+
+> "What's the weather in Tokyo right now?"
+
+Claude should recognize it has a `get_weather` tool, call it with `{ "city": "Tokyo", "units": "metric" }`, and incorporate the result into its response.
+
+For deeper debugging, enable MCP logging:
+
+```json
+{
+  "mcpServers": {
+    "my-custom-server": {
+      "command": "node",
+      "args": ["/path/to/dist/index.js"],
+      "env": { "DEBUG": "mcp:*" }
+    }
+  }
+}
+```
+
+Logs appear in `~/.claude/logs/mcp-*.log`.
+
+---
+
+## Real-World Example: A Postgres MCP Server
+
+Here's a production-grade tool that lets Claude query any table in your database safely (read-only):
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+import postgres from "postgres";
+
+const sql = postgres(process.env.DATABASE_URL!, { max: 5 });
+
+const server = new McpServer({
+  name: "postgres-mcp",
+  version: "1.0.0",
+});
+
+// List all tables in the public schema
+server.tool(
+  "list_tables",
+  "List all tables available in the database",
+  {},
+  async () => {
+    const rows = await sql`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `;
+    return {
+      content: [{ type: "text", text: JSON.stringify(rows) }],
+    };
+  }
+);
+
+// Get table schema
+server.tool(
+  "describe_table",
+  "Return columns and types for a given table",
+  { table: z.string().describe("Table name in the public schema") },
+  async ({ table }) => {
+    // Allowlist-check to prevent SQL injection
+    const allowed = await sql`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = ${table}
+    `;
+    if (allowed.length === 0) throw new Error(`Table '${table}' not found`);
+
+    const cols = await sql`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = ${table}
+      ORDER BY ordinal_position
+    `;
+    return { content: [{ type: "text", text: JSON.stringify(cols) }] };
+  }
+);
+
+// Execute a SELECT-only query
+server.tool(
+  "query",
+  "Run a read-only SQL SELECT query. Never modifies data.",
+  {
+    sql_query: z.string().describe("A SELECT statement to execute"),
+    limit: z.number().int().min(1).max(500).default(50),
+  },
+  async ({ sql_query, limit }) => {
+    if (!/^\s*SELECT/i.test(sql_query)) {
+      throw new Error("Only SELECT queries are allowed");
+    }
+    const rows = await sql.unsafe(`${sql_query} LIMIT ${limit}`);
+    return { content: [{ type: "text", text: JSON.stringify(rows) }] };
+  }
+);
+
+const transport = new StdioServerTransport();
+server.connect(transport);
+```
+
+Register it:
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "node",
+      "args": ["/path/to/postgres-mcp/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://user:pass@localhost:5432/mydb"
+      }
+    }
+  }
+}
+```
+
+Now you can ask Claude: "How many users signed up in the last 7 days?" — and it will write and run the query itself.
+
+---
+
+## Common Pitfalls
+
+### JSON Schema Mismatch
+
+Zod schemas are automatically converted to JSON Schema by the SDK. However, if you use `.transform()` or `.pipe()` in Zod, the conversion may fail silently. Stick to plain types: `z.string()`, `z.number()`, `z.enum()`, `z.object()`, `z.array()`.
+
+### Transport Issues
+
+- Always use `console.error()` for debug output, never `console.log()`. stdout is reserved for the JSON-RPC protocol; any non-JSON output on stdout will corrupt the transport.
+- For remote servers (HTTP+SSE), ensure CORS headers are set correctly if Claude Code is running on a different host.
+
+### Tool Name Collisions
+
+If two MCP servers expose a tool with the same name, Claude Code prefixes them with the server name: `postgres__query` vs `filesystem__query`. Design tool names to be globally unique anyway.
+
+### Timeouts
+
+Claude Code has a 30-second default timeout per tool call. For long-running queries or API calls, either add a timeout inside your tool or increase it in settings:
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "timeout": 60000
+    }
+  }
+}
+```
+
+---
+
+## Deploying to Production
+
+### Local server (recommended for private data)
+
+Keep the server as a local process — Claude Code spawns it automatically. No network exposure, no auth complexity.
+
+### Remote server (team sharing)
+
+For team environments, run the server as an HTTP+SSE endpoint:
+
+```typescript
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import express from "express";
+
+const app = express();
+app.get("/sse", async (req, res) => {
+  const transport = new SSEServerTransport("/messages", res);
+  await server.connect(transport);
+});
+app.listen(3001);
+```
+
+Register a remote server in Claude Code:
+
+```json
+{
+  "mcpServers": {
+    "team-postgres": {
+      "url": "https://mcp.internal.yourcompany.com/sse",
+      "headers": { "Authorization": "Bearer ${MCP_TOKEN}" }
+    }
+  }
+}
+```
+
+Use mutual TLS or a bearer token to secure the endpoint. Never expose a remote MCP server without authentication — it gives anyone who can reach it the same access as Claude.
+
+---
+
+## Next Steps
+
+Custom MCP servers are the highest-leverage Claude Code investment you can make. Once your database, internal API, or cloud provider is wired in, Claude can plan and execute multi-step workflows that previously required a human in the loop for every lookup.
+
+If you need help designing, building, or auditing your MCP server architecture, [the ClawHelp team](https://clawhlp.com/services) offers hands-on integration engagements.

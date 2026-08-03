@@ -1,0 +1,277 @@
+---
+slug: create-claude-skill
+title: "How to Create a Claude Code Skill"
+description: "Learn how to write, install, and share Claude Code skills — reusable markdown-based plugins that extend Claude's behavior with custom workflows and checklists."
+category: how-to
+tags: [skills, plugins, claude-code, workflow, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [workflow-automation]
+seoTitle: "How to Create a Claude Code Skill — Complete Guide"
+seoDescription: "Step-by-step guide to writing Claude Code skills: frontmatter format, skill types, invoking via the Skill tool, and sharing skills across your team."
+schema: HowTo
+---
+
+# How to Create a Claude Code Skill
+
+Claude Code ships with a powerful extension mechanism called **skills** — markdown files that tell Claude how to handle specific recurring tasks. A skill can be as simple as a checklist ("before closing a PR, run these 5 steps") or as complex as a multi-phase orchestration blueprint.
+
+This guide covers what skills are, how to write them well, how to install them, and how to share them across a team.
+
+---
+
+## What Skills Are
+
+Skills are markdown (`.md`) files stored in a directory Claude Code watches — typically `~/.claude/plugins/` for personal skills or `.claude/plugins/` inside a project for team skills. When you invoke a skill by name, Claude reads the file and follows its instructions as the primary guide for the current task.
+
+Skills are not code. They are **structured natural-language instructions** that leverage Claude's reasoning to execute reliably. The same way a CLAUDE.md file gives Claude persistent context about your project, a skill file gives Claude a reusable procedure for a specific type of work.
+
+Key properties:
+- **Persistent** — stored on disk, available in every session
+- **Composable** — skills can reference other skills
+- **Versionable** — they're plain text; git-track them like any code
+- **Zero-runtime-cost** — no tokens consumed until you invoke the skill
+
+---
+
+## Skill File Structure
+
+A minimal skill file has two parts: a YAML frontmatter block and a markdown body.
+
+```markdown
+---
+name: code-review
+description: "Systematic code review checklist for PRs"
+version: "1.0"
+tags: [review, quality, git]
+---
+
+# Code Review Skill
+
+You are performing a thorough code review. Follow these steps in order.
+
+## Checklist
+
+- [ ] Read the PR description and linked issue before touching any code
+- [ ] Check test coverage — new code paths must have tests
+- [ ] Verify no secrets or credentials are hardcoded
+- [ ] Confirm error handling is explicit (no bare `catch` blocks)
+- [ ] Check that the change is scoped — no unrelated refactors mixed in
+- [ ] Look for performance regressions in hot paths
+- [ ] Verify logging is appropriate (not too noisy, not silent on errors)
+- [ ] Leave inline comments with specific file and line references
+
+## Output Format
+
+Produce a structured review with three sections:
+1. **Summary** — one paragraph on what the change does
+2. **Issues** — bulleted list of problems, each with severity (Critical / Major / Minor)
+3. **Approval recommendation** — Approve / Request Changes / Needs Discussion
+```
+
+### Frontmatter Fields
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| `name` | Yes | Unique identifier used to invoke the skill |
+| `description` | Yes | Shown in skill listings; helps Claude pick the right skill |
+| `version` | No | Semantic version for changelog tracking |
+| `tags` | No | Grouping for discovery |
+| `requires` | No | Other skill names this skill depends on |
+
+---
+
+## Skill Types: Rigid vs Flexible
+
+Skills fall on a spectrum between **rigid** (strict step-by-step procedures) and **flexible** (guiding principles with judgment calls left to Claude).
+
+### Rigid Skills
+
+Best for: compliance-sensitive workflows, release checklists, security audits.
+
+A rigid skill spells out every step and uses imperative language:
+
+```markdown
+## Steps
+
+1. Run `npm test` — if any tests fail, STOP and report the failure. Do not proceed.
+2. Run `npm run lint` — fix all errors before continuing.
+3. Run `git diff --staged` — confirm only intended files are staged.
+4. Create the commit using the conventional commit format: `type(scope): message`.
+5. Run `git push origin HEAD` only after all previous steps pass.
+```
+
+### Flexible Skills
+
+Best for: open-ended creative tasks, research, architectural decisions.
+
+A flexible skill sets context and goals, then trusts Claude's judgment:
+
+```markdown
+## Your Goal
+
+Help the user design a data model for the described feature. Prioritize:
+- Normalization where it reduces duplication
+- Practical query patterns over theoretical purity
+- Clear naming that matches the domain language
+
+Ask clarifying questions if the requirements are ambiguous. Propose two
+or three alternatives with trade-offs before recommending one.
+```
+
+---
+
+## Writing an Effective Skill
+
+### Do
+
+- **Start with a one-sentence goal** — Claude reads the opening line first and uses it to decide whether this skill applies.
+- **Use explicit ordering** — numbered lists for sequential steps, bullets for unordered checks.
+- **Define output format** — tell Claude exactly what the final response should look like.
+- **Include stop conditions** — "if X fails, stop and report; do not continue".
+- **Reference tools explicitly** — "use the Bash tool to run tests, not the Write tool".
+
+### Don't
+
+- Don't pad with generic advice Claude already knows ("write clean code", "be thorough").
+- Don't make a skill too broad. A skill that tries to cover "all development tasks" will be invoked inconsistently.
+- Don't omit error handling. Skills that only describe the happy path leave Claude improvising when things go wrong.
+- Don't use passive voice for critical steps. "Tests should be run" is weaker than "Run `npm test` before proceeding".
+
+---
+
+## Installing a Skill
+
+### Personal (single developer)
+
+1. Create the directory: `mkdir -p ~/.claude/plugins/`
+2. Drop your skill file in: `cp code-review.md ~/.claude/plugins/`
+3. In `~/.claude/settings.json`, ensure the plugin path is registered:
+
+```json
+{
+  "pluginDirectories": ["~/.claude/plugins"]
+}
+```
+
+Claude Code automatically picks up all `.md` files in configured plugin directories on startup.
+
+### Project-level (team)
+
+Add skills to the project repo:
+
+```
+your-repo/
+  .claude/
+    plugins/
+      code-review.md
+      deploy-checklist.md
+      db-migration.md
+```
+
+Add `.claude/plugins/` path to your project's `settings.json`:
+
+```json
+{
+  "pluginDirectories": [".claude/plugins"]
+}
+```
+
+Check `.claude/plugins/` into version control. Every developer who clones the repo gets the same skills automatically.
+
+---
+
+## Invoking a Skill
+
+From inside a Claude Code session, use the `Skill` tool:
+
+> "Run the code-review skill on the current PR"
+
+Or reference it by name in any prompt:
+
+> "/code-review"
+
+Claude will locate the skill by its `name` frontmatter field, load the file, and execute it as the primary instruction set for the task.
+
+You can also chain skills:
+
+> "Run /db-migration and then /code-review on the result"
+
+---
+
+## Example: A Complete "code-review" Skill
+
+```markdown
+---
+name: code-review
+description: "Performs a structured PR code review with severity-graded issues"
+version: "1.2"
+tags: [git, review, quality]
+---
+
+# Code Review
+
+You are performing a professional code review. Be specific and constructive.
+
+## Pre-flight
+
+- [ ] Fetch the latest diff: run `git diff main...HEAD`
+- [ ] Read the PR title and description from `gh pr view`
+- [ ] Check if there is a linked issue: `gh issue view <number>`
+
+## Security Scan
+
+- [ ] Search for hardcoded secrets: `grep -rn "password\|secret\|api_key\|token" --include="*.ts" .`
+- [ ] Verify no `.env` files are staged
+- [ ] Check for SQL injection risks in any raw query strings
+
+## Logic Review
+
+For each changed file:
+- Does the change do what the PR description says?
+- Are edge cases handled (null, empty array, network failure)?
+- Is error handling explicit?
+
+## Test Coverage
+
+- [ ] Run `npm test -- --coverage` and report the coverage delta
+- [ ] Every new exported function must have at least one test
+- [ ] New API endpoints must have integration tests
+
+## Output
+
+Produce a review in this exact format:
+
+**Summary**
+[One paragraph]
+
+**Issues**
+- [CRITICAL] ...
+- [MAJOR] ...
+- [MINOR] ...
+
+**Decision**: Approve | Request Changes | Needs Discussion
+```
+
+---
+
+## Sharing Skills Across a Team
+
+The simplest team sharing model is a private GitHub repository of skill files, installed as a git submodule into each project's `.claude/plugins/`:
+
+```bash
+git submodule add git@github.com:yourorg/claude-skills.git .claude/plugins
+```
+
+When skills are updated in the central repo, developers run `git submodule update --remote` to pull the latest.
+
+For larger organizations, a skills registry service (a simple HTTP endpoint returning a JSON list of skill files) can be integrated into developer onboarding automation — new machines pull and install the standard skill pack automatically.
+
+---
+
+## Next Steps
+
+Skills are one of the highest-ROI customizations you can make to Claude Code. Teams that invest an hour writing two or three solid skills for their most repeated workflows — code review, DB migrations, deploy checklists — recover that time within days.
+
+Browse the [ClawHelp skills gallery](https://clawhlp.com/resources) for community-contributed skills, or [work with us](https://clawhlp.com/services) to build a custom skill library for your engineering team.

@@ -1,0 +1,321 @@
+---
+slug: claude-code-multi-agent-orchestration
+title: "Multi-Agent Orchestration with Claude Code: Parallel Agents, Agent Handoffs, and Subagent Patterns"
+description: "How to use Claude Code's Task tool to spawn parallel background agents, hand off work between agents, manage context across subagents, and build research-then-implement pipelines."
+category: guide
+schema: Article
+tags: [multi-agent, orchestration, parallel-agents, task-tool, subagents, worktrees, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 14
+seoTitle: "Multi-Agent Orchestration with Claude Code: Parallel Agents & Subagent Patterns | ClawHelp"
+seoDescription: "Learn how to orchestrate parallel Claude Code agents, handle agent handoffs, use worktree isolation, and build research+implement pipelines with the Task tool."
+---
+
+# Multi-Agent Orchestration with Claude Code: Parallel Agents, Agent Handoffs, and Subagent Patterns
+
+A single Claude Code session is powerful, but it has limits: one context window, one stream of execution, one focus at a time. For large codebases, parallelizable work, or tasks that require specialized reasoning on distinct concerns, multi-agent patterns unlock a qualitatively different level of capability.
+
+This guide covers how to orchestrate multiple Claude Code agents — launching them in parallel, handing work between them, isolating them with git worktrees, and structuring prompts so each subagent has everything it needs to succeed.
+
+---
+
+## Why Multi-Agent Patterns?
+
+There are four main drivers for reaching for multi-agent orchestration instead of a single long session.
+
+**Context window limits.** A very large codebase, a long test suite, or a comprehensive audit can exceed what fits in one session's context. Rather than trying to squeeze everything into one conversation, you spawn specialized agents that each work on a bounded slice.
+
+**Parallel independent work streams.** If task A and task B don't share files or state, there is no reason to run them sequentially. Two agents working simultaneously can complete both in the time it takes to do one.
+
+**Specialized agents for different task types.** A read-only exploration agent that searches the codebase needs different tool permissions and a different prompt posture than a writing agent making changes. Splitting by specialization produces better results than a single agent switching modes.
+
+**Cost-efficient batching.** Background agents running in parallel don't block your main session. You can kick off five agents, work on something else, and collect all results when they finish — instead of sitting idle while one long task runs sequentially.
+
+---
+
+## The Task Tool: Spawning Background Agents
+
+Claude Code's Task tool is the mechanism for spawning subagents. When you invoke it with `run_in_background: true`, the agent starts executing in a background thread and your main session continues immediately. When it finishes, you receive a notification.
+
+**Basic Task tool invocation:**
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Audit authentication module for security issues",
+    "prompt": "Read all files under src/auth/. Identify: hardcoded credentials, missing input validation, insecure token handling, missing rate limiting on endpoints. Output a markdown list of findings with file paths and line numbers.",
+    "run_in_background": true
+  }
+}
+```
+
+The `description` field is a short label used to identify the agent in notifications. The `prompt` is the full task the subagent will execute — it receives no context from your current session other than what you write here.
+
+**Key properties of Task-spawned agents:**
+
+- They start with a fresh context. The subagent has no memory of your current session's conversation history.
+- They have access to the same filesystem as the main agent.
+- They can use tools (Read, Bash, Write, etc.) according to the permissions configured for the session.
+- When `run_in_background: true`, completion triggers a notification to the main session.
+
+---
+
+## Parallel Agent Pattern: Launching Multiple Agents at Once
+
+The most impactful use of multi-agent is batching independent task invocations into a single message. When multiple Tool calls appear in the same assistant turn, Claude Code executes them in parallel.
+
+**Example: parallel security + performance + test coverage audit**
+
+```json
+[
+  {
+    "tool": "Task",
+    "parameters": {
+      "description": "Security audit",
+      "prompt": "Read all files in src/. Check for: SQL injection risks, hardcoded secrets, missing authentication guards on API routes, unsafe deserialization. Output findings as a markdown list with file:line references.",
+      "run_in_background": true
+    }
+  },
+  {
+    "tool": "Task",
+    "parameters": {
+      "description": "Performance audit",
+      "prompt": "Read all files in src/. Identify: O(n²) or worse algorithms, unnecessary database calls inside loops, missing caching on expensive operations, blocking synchronous calls in async contexts. Output findings as a markdown list.",
+      "run_in_background": true
+    }
+  },
+  {
+    "tool": "Task",
+    "parameters": {
+      "description": "Test coverage gaps",
+      "prompt": "Read all files in src/ and all files in tests/ or __tests__/. List every exported function and class that has no corresponding unit test. Output as a markdown list grouped by module.",
+      "run_in_background": true
+    }
+  }
+]
+```
+
+All three agents start simultaneously. Each reads the same codebase but looks for completely different things. Total elapsed time is roughly equal to the slowest single agent, not the sum of all three.
+
+**When parallel is appropriate:**
+
+- The agents read from the same files but don't write to them (no conflict possible).
+- The agents write to different files (no overlap in their output paths).
+- The results are collected and synthesized by the main agent after all complete.
+
+**Granularity guidance:** Don't spawn 50 tiny agents for 50 files. The overhead of spawning and context-loading is non-trivial. Batch related work into meaningful chunks — "audit the auth module," "audit the payment module," "audit the API layer" is a reasonable split; one agent per file is not.
+
+---
+
+## Sequential Agent Handoff
+
+Not all work is parallelizable. When agent B needs the output from agent A, you run them sequentially and the main agent synthesizes the handoff.
+
+**The handoff pattern:**
+
+1. Spawn Agent A. Wait for completion.
+2. Main agent reads Agent A's output (typically a file it wrote, or the response text).
+3. Main agent constructs a new prompt for Agent B that includes the relevant output from A as explicit context.
+4. Spawn Agent B with that self-contained prompt.
+
+**Critical constraint: subagents share no conversation history.** When you spawn Agent B, it has no idea what Agent A did or said. Everything Agent B needs must be written into its prompt explicitly. Prompts like "as we discussed, now implement the plan" will fail — the subagent has no idea what was discussed.
+
+**Example: research then implement**
+
+```json
+// Step 1: Research agent
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Research existing auth patterns",
+    "prompt": "Read all files under src/auth/ and src/middleware/. Describe: how authentication tokens are currently validated, where session state is stored, which routes are protected and which are not, what libraries are used. Output a comprehensive technical summary as markdown.",
+    "run_in_background": false
+  }
+}
+```
+
+After receiving the research agent's output, construct the implementation prompt explicitly:
+
+```json
+// Step 2: Implementation agent, with full context embedded
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Add refresh token rotation",
+    "prompt": "You are implementing refresh token rotation for an existing auth system. Here is the current architecture:\n\n[PASTE RESEARCH AGENT OUTPUT HERE]\n\nTask: Add refresh token rotation. When a refresh token is used, issue a new refresh token and invalidate the old one. Implement this in src/auth/tokenService.ts and update the refresh endpoint in src/routes/auth.ts. Follow the existing patterns described above.",
+    "run_in_background": true
+  }
+}
+```
+
+The implementation agent now has full context and can proceed correctly.
+
+---
+
+## Specialized Agent Types
+
+Different task types benefit from different agent configurations.
+
+**Explore agent (read-only codebase search):**
+
+An exploration agent's only job is to understand the codebase. It should never write files. Constrain it accordingly.
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Find all database query patterns",
+    "prompt": "Search all .ts and .js files under src/ for database queries. Use Grep to find usages of db.query, prisma., mongoose., and raw SQL strings. List every call site with the file path, line number, and the query or ORM call. Do not modify any files.",
+    "run_in_background": true
+  }
+}
+```
+
+**Plan agent (architecture and design):**
+
+A planning agent reads existing code and produces a structured implementation plan. It outputs a document, not code changes.
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Design caching layer architecture",
+    "prompt": "Read src/services/ and src/routes/. Design a Redis caching layer for the three most expensive operations (identify them first by looking for database calls). Output a step-by-step implementation plan as markdown: what files to create, what to modify, and the interface for each cache key. Do not write any code.",
+    "run_in_background": true
+  }
+}
+```
+
+**PR review agents:**
+
+The `pr-review-toolkit` skill dispatches specialized review agents for security, logic, test coverage, and style simultaneously — each focused on one concern, all running in parallel, results merged by the main agent before posting to GitHub.
+
+---
+
+## Worktree Isolation for Writing Agents
+
+When multiple agents need to write files — especially to the same areas of the codebase — they will conflict if they all work on the same working tree. Worktree isolation solves this.
+
+With `isolation: "worktree"`, the agent receives its own isolated copy of the repository in a temporary git worktree. It can write, commit, and modify freely without affecting the main working tree or any other agent's worktree.
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Refactor payments module",
+    "prompt": "Refactor src/payments/ to use the repository pattern. Create src/payments/repositories/ with a PaymentsRepository class. Update all direct database calls in src/payments/service.ts to use the repository. Run the tests and confirm they pass.",
+    "run_in_background": true,
+    "isolation": "worktree"
+  }
+}
+```
+
+Typical use cases for worktree isolation:
+- Two agents refactoring different modules in parallel (they might both need to update shared utility files)
+- An agent running tests that require a clean working tree
+- An agent making speculative changes that the main agent will review and selectively merge
+
+---
+
+## Context Management for Long Background Tasks
+
+Agents started with `run_in_background: true` run concurrently with your main session, which means your main context window keeps accumulating new conversation while the background agents work. This is intentional — it prevents one long-running agent from blocking all forward progress.
+
+**Structuring subagent prompts for self-containment:**
+
+Because subagents have no session history, every prompt must be self-contained. Include:
+
+1. **Relevant code context** — paste key interfaces, function signatures, or the existing pattern you want followed
+2. **Explicit success criteria** — what should the output look like, what files should exist when done
+3. **Constraints** — what the agent should not touch, what libraries to use or avoid
+4. **Output format** — if the main agent needs to parse the result, specify the format
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Write integration tests for UserService",
+    "prompt": "Write integration tests for src/services/UserService.ts.\n\nThe UserService interface is:\n\n```typescript\ninterface UserService {\n  createUser(email: string, password: string): Promise<User>\n  getUserById(id: string): Promise<User | null>\n  updateUser(id: string, data: Partial<User>): Promise<User>\n  deleteUser(id: string): Promise<void>\n}\n```\n\nExisting test patterns: look at tests/services/AuthService.test.ts for the pattern this project uses (supertest + jest + test database). Follow that pattern exactly.\n\nOutput: create tests/services/UserService.test.ts with full coverage of all four methods including error cases. Run the tests and confirm they pass before finishing.",
+    "run_in_background": true
+  }
+}
+```
+
+---
+
+## Common Multi-Agent Patterns
+
+**Research + implement:**
+
+The most common pattern. One read-only agent maps the existing codebase; the main agent synthesizes findings; one or more write agents implement changes informed by that map.
+
+**Parallel benchmark runs:**
+
+Three agents each implement a different algorithmic approach to the same problem in separate files. The main agent then runs benchmarks across all three and reports the winner.
+
+**Content generation at scale:**
+
+For documentation, release notes, or changelogs: spawn one agent per module or per commit range, each producing a section. The main agent assembles the sections into the final document.
+
+**Parallel test suite triage:**
+
+When a large test suite has failures, spawn one agent per test file with failures. Each agent diagnoses the failures in its slice. The main agent reads all diagnoses and groups them by root cause.
+
+---
+
+## Gotchas and What to Avoid
+
+**Don't spawn duplicate agents on the same files.** If two writing agents both modify `src/utils/validation.ts`, their changes will conflict. Plan agent boundaries before spawning.
+
+**Don't poll with sleep loops.** If you spawn a background agent and want to wait for it, don't write a bash loop that sleeps and checks. Use the notification system — when the agent completes, you receive a notification in the main session. A polling loop burns context and can hit rate limits.
+
+**Trust but verify agent results.** Background agents report completion, but "completion" means the agent finished — not that it succeeded at what you asked. After an agent finishes, check the actual files it wrote. Run tests. Don't chain another agent on top of unverified output.
+
+**Subagent prompts must not reference the session.** Phrases like "based on what we discussed," "as mentioned earlier," or "continue the previous approach" will cause the subagent to hallucinate context that doesn't exist. Every subagent prompt is a cold start.
+
+**Limit simultaneous writing agents.** Read-only agents can run in arbitrary numbers simultaneously. Writing agents should be limited to non-overlapping areas of the codebase, and you should use worktree isolation when any overlap is possible.
+
+---
+
+## Task Tool JSON Reference
+
+Complete parameter reference for the Task tool:
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Short label for this agent (shown in notifications)",
+    "prompt": "Full, self-contained instructions for the subagent. Include all context it needs.",
+    "run_in_background": true,
+    "isolation": "worktree"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `description` | string | yes | Short human-readable label |
+| `prompt` | string | yes | Complete, self-contained task instructions |
+| `run_in_background` | boolean | no | `true` to run concurrently, `false` to block |
+| `isolation` | string | no | `"worktree"` to give the agent an isolated git worktree |
+
+---
+
+## Putting It Together: A Full Orchestration Example
+
+Here is how a full "add a feature" orchestration might flow:
+
+1. **Explore agent** (background, read-only): Maps all files relevant to the feature area.
+2. Main agent reads the map, identifies three independent subtasks.
+3. **Three parallel implementation agents** (background, worktree-isolated): Each implements one subtask.
+4. Main agent waits for all three to complete.
+5. Main agent reviews each worktree's changes, merges the non-conflicting parts into main, and flags any conflicts for human review.
+6. **Test agent** (background): Runs the full test suite on the merged result and reports failures.
+7. Main agent reads the test report and fixes any failures directly.
+
+This workflow compresses what would be an hour of sequential work into a much shorter elapsed time — the three parallel implementation agents and the test agent all run concurrently where possible.
+
+Multi-agent orchestration is one of the more complex capabilities in Claude Code, but the payoff for large, well-structured tasks is substantial. ClawHelp's consulting services help teams design orchestration patterns that fit their specific codebase and workflow. [Talk to us about your setup](/en/contact).

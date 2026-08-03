@@ -1,0 +1,556 @@
+---
+slug: claude-code-mcp-server-leitfaden
+lang: "de"
+title: "MCP-Server mit Claude Code verwenden: Der vollständige Leitfaden"
+description: "Alles über MCP-Server (Model Context Protocol) in Claude Code — Konfiguration, built-in und Drittanbieter-Server, eigene MCP-Server schreiben, Sicherheit und Debugging."
+category: guide
+schema: Article
+tags: [mcp, model-context-protocol, server, konfiguration, integration, tools]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 12
+seoTitle: "MCP-Server mit Claude Code: Vollständiger Leitfaden zum Model Context Protocol | ClawHelp"
+seoDescription: "MCP-Server für Claude Code konfigurieren und nutzen — built-in Server, GitHub, Slack, Datenbank-Integrationen, eigene Server schreiben, Sicherheit und Debugging."
+---
+
+# MCP-Server mit Claude Code verwenden: Der vollständige Leitfaden
+
+Claude Code kann von Haus aus vieles — Dateien lesen, Shell-Befehle ausführen, Code bearbeiten, git verwalten. Aber MCP-Server ermöglichen es, weit darüber hinaus zu gehen: Sie geben Claude strukturierten Zugang zu externen Systemen wie GitHub-PRs, Slack-Nachrichten, Datenbankeinträgen, Browser-Automatisierung, internen APIs und allem anderen, was du über das Protokoll zugänglich machen kannst.
+
+Dieser Leitfaden behandelt das vollständige Bild: Was MCP ist, wie Server konfiguriert werden, die nützlichsten verfügbaren Server, wie du deinen eigenen schreibst, und wie du debuggst, wenn etwas nicht funktioniert.
+
+---
+
+## Was ist MCP (Model Context Protocol)?
+
+MCP ist ein offenes Protokoll, das von Anthropic entwickelt wurde und einen Standardweg definiert, wie KI-Modelle mit externen Tools und Datenquellen kommunizieren. Stell es dir wie ein Plugin-System für Claude vor — aber anstatt dass das Modell jeden Tool ad hoc kennenlernt, spricht jeder MCP-Server dasselbe Protokoll, sodass Claude jeden kompatiblen Server entdecken und nutzen kann, ohne Sonderbehandlung.
+
+Ein MCP-Server ist ein Prozess (lokal oder remote), der:
+
+1. **Tools** exponiert — Funktionen, die Claude aufrufen kann (z.B. `create_pull_request`, `query_database`)
+2. **Resources** exponiert — Daten, die Claude lesen kann (z.B. Dateiinhalte, API-Antworten)
+3. Optional **Prompts** exponiert — vordefinierte Prompt-Templates für spezifische Workflows
+
+Wenn du einen MCP-Server konfigurierst, startet Claude Code ihn als Subprocess (oder verbindet sich mit einem Remote-Endpoint), fragt ab, welche Tools und Resources er bereitstellt, und macht diese in deiner Session verfügbar. Du musst Claude nicht sagen "du hast ein GitHub-Tool" — es entdeckt und versteht das Tool automatisch aus dem Schema des Servers.
+
+**Warum das für Claude Code-Nutzer wichtig ist:** Deine Claude-Session ist nicht länger auf das beschränkt, was sich auf deinem lokalen Dateisystem befindet. Sie gewinnt Echtzeit-Kenntnis von und Schreibzugriff auf die externen Systeme, mit denen deine Software interagiert.
+
+---
+
+## Wie MCP-Server Claude Code erweitern
+
+Ohne MCP arbeitet Claude Code in deinem lokalen Working Tree. Es kann Dateien lesen und schreiben, Shell-Befehle ausführen und mit git interagieren. Das ist für Coding-Aufgaben mächtig.
+
+Mit MCP-Servern kann Claude:
+
+- **GitHub-Issues und PRs lesen und schreiben** — Code reviewen, PRs erstellen, Review-Kommentare hinterlassen, ohne das Fenster zu wechseln
+- **Datenbanken direkt abfragen** — Produktionsdaten inspizieren, um einen Bug zu verstehen, schema-bewusste Migrationen generieren
+- **Slack-Nachrichten senden** — Teamkollegen benachrichtigen, wenn ein Deploy bereit ist, Zusammenfassungen in Channels posten
+- **Browser automatisieren** — E2E-Tests ausführen, Seiten für Kontext scrapen, mit Web-Apps interagieren
+- **Interne Dokumentation durchsuchen** — Kontext aus Notion, Confluence oder einer eigenen Knowledge Base holen
+- **Mit Cloud-Infrastruktur interagieren** — laufende Container auflisten, CloudWatch-Logs prüfen, Services skalieren
+
+Das Protokoll ist so konzipiert, dass jedes System in einen MCP-Server gewickelt werden kann. Wenn du einen API-Client dafür schreiben kannst, kannst du es Claude über MCP zugänglich machen.
+
+---
+
+## MCP-Server in .claude/settings.json konfigurieren
+
+MCP-Server werden unter dem Schlüssel `"mcpServers"` in `.claude/settings.json` (Projektebene, mit dem Team geteilt) oder `.claude/settings.local.json` (persönlich, nicht committed) konfiguriert.
+
+Die Grundstruktur für einen lokalen Subprocess-Server:
+
+```json
+{
+  "mcpServers": {
+    "mein-server": {
+      "command": "node",
+      "args": ["/pfad/zum/server/index.js"],
+      "env": {
+        "API_KEY": "dein-key-hier"
+      }
+    }
+  }
+}
+```
+
+Für einen Server, der via `npx` läuft (keine lokale Installation nötig):
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_..."
+      }
+    }
+  }
+}
+```
+
+Für einen Remote-Server über SSE (Server-Sent Events):
+
+```json
+{
+  "mcpServers": {
+    "remote-api": {
+      "url": "https://mcp.example.com/sse",
+      "headers": {
+        "Authorization": "Bearer dein-token"
+      }
+    }
+  }
+}
+```
+
+**Die wichtigsten Konfigurationsfelder:**
+
+| Feld | Beschreibung |
+|------|-------------|
+| `command` | Executable zum Starten des Server-Subprocesses |
+| `args` | Array von Argumenten, die an den Befehl übergeben werden |
+| `env` | Umgebungsvariablen, die in den Server-Prozess injiziert werden |
+| `url` | Für Remote-SSE-Server — schließt sich mit `command` gegenseitig aus |
+| `headers` | HTTP-Header für Remote-Server-Authentifizierung |
+
+**Geltungsbereich der Settings-Dateien:**
+
+- `.claude/settings.json` — Projektebene, diese für team-geteilte Server committen (ohne Secrets in env; Tokens über `settings.local.json` referenzieren)
+- `.claude/settings.local.json` — persönliche Überschreibungen, niemals committen
+- `~/.claude/settings.json` — globaler Standard, gilt für alle Projekte
+
+---
+
+## Built-in MCP-Server
+
+Claude Code wird mit mehreren built-in Servern geliefert, die du ohne zusätzliche Installation aktivieren kannst.
+
+### Filesystem-Server
+
+Gibt Claude Zugang zu spezifischen Verzeichnissen mit Lese-/Schreibkontrolle:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/user/dokumente",
+        "/home/user/projekte"
+      ]
+    }
+  }
+}
+```
+
+Nützlich, wenn Claude auf Dateien außerhalb des aktuellen Working Directory zugreifen muss — etwa ein gemeinsames Konfigurations-Verzeichnis oder ein Dokumentations-Repository.
+
+### Memory-Server
+
+Ein Key-Value-Store, der über Claude Code-Sessions hinweg persistiert:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+```
+
+Der Memory-Server ermöglicht es Claude, Fakten über Sessions hinweg zu speichern und abzurufen. Du kannst Claude bitten, projektspezifischen Kontext, Team-Konventionen oder andere Informationen zu merken, die sonst beim Beenden einer Session verloren gehen würden. Das ergänzt `CLAUDE.md` für strukturiertes persistentes Gedächtnis.
+
+### Fetch/Browser-Server
+
+Gibt Claude die Möglichkeit, URLs abzurufen und mit Web-Seiten zu interagieren:
+
+```json
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  }
+}
+```
+
+Mit diesem Server kann Claude Dokumentationen nachschlagen, API-Antworten abrufen, um Datenstrukturen zu verstehen, oder Web-Seiten als Teil der Recherche während einer Coding-Session lesen.
+
+---
+
+## Beliebte Drittanbieter-MCP-Server
+
+Das MCP-Ökosystem ist schnell gewachsen. Dies sind die am häufigsten genutzten Drittanbieter-Server.
+
+### GitHub
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_dein_token_hier"
+      }
+    }
+  }
+}
+```
+
+Gibt Claude Zugang zu: Repositories, Issues, Pull Requests, Code-Suche, Dateiinhalte, Commits, Branches und GitHub Actions-Workflows. In der Praxis bedeutet das, dass Claude nach der Implementierung eines Features einen PR erstellen, den CI-Status prüfen und Review-Kommentare hinterlassen kann — alles ohne das Terminal zu verlassen.
+
+**Erforderliche Token-Scopes:** `repo`, `read:org` (für Org-Repos), `workflow` (für Actions).
+
+### Slack
+
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "xoxb-dein-token",
+        "SLACK_TEAM_ID": "T0123456789"
+      }
+    }
+  }
+}
+```
+
+Ermöglicht Claude, Channel-Verlauf zu lesen, Nachrichten zu posten, Nutzer nachzuschlagen und Threads zu verwalten. Nützlich für automatisierte Standup-Posts, Shipping-Benachrichtigungen oder um Kontext aus einem Slack-Thread über einen Bug zu holen.
+
+### PostgreSQL / SQLite
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://user:password@localhost/meindb"
+      ]
+    }
+  }
+}
+```
+
+Gibt Claude Lesezugriff auf dein Datenbankschema und die Möglichkeit, Queries auszuführen. Das ist leistungsstark für: die Datenstruktur vor dem Schreiben einer Migration verstehen, Datenprobleme debuggen oder Queries gegen ein echtes Schema generieren.
+
+**Sicherheitshinweis:** Konfiguriere deinen Datenbanknutzer mit read-only-Berechtigungen, wenn du das mit Claude verwendest. Produktionsdaten sollen nicht unbeabsichtigt verändert werden.
+
+### Weitere nennenswerte Server
+
+- **`@modelcontextprotocol/server-brave-search`** — Web-Suche via Brave Search API
+- **`@modelcontextprotocol/server-google-drive`** — Google Drive-Dateien lesen und suchen
+- **`@modelcontextprotocol/server-puppeteer`** — Browser-Automatisierung mit Puppeteer
+- **`mcp-server-linear`** — Linear-Issue-Tracking-Integration
+- **`mcp-notion-server`** — Notion-Workspace Lesen/Schreiben
+
+Die vollständige Registry findest du unter [modelcontextprotocol.io](https://modelcontextprotocol.io) und der MCP-Servers GitHub-Organisation.
+
+---
+
+## Einen eigenen MCP-Server schreiben
+
+Wenn kein bestehender Server für dein System existiert, ist das Schreiben eines eigenen unkompliziert. Das MCP-SDK übernimmt das Protokoll — du implementierst nur die Tools.
+
+### Node.js-Beispiel
+
+```bash
+npm install @modelcontextprotocol/sdk
+```
+
+```javascript
+// server.js
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+
+const server = new Server(
+  { name: "interne-deploy-api", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
+
+// Deklarieren, welche Tools dieser Server bereitstellt
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: "get_deployment_status",
+      description: "Aktuellen Deployment-Status für eine Umgebung abrufen",
+      inputSchema: {
+        type: "object",
+        properties: {
+          environment: {
+            type: "string",
+            enum: ["staging", "production"],
+            description: "Die zu prüfende Umgebung",
+          },
+        },
+        required: ["environment"],
+      },
+    },
+  ],
+}));
+
+// Tool-Calls behandeln
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === "get_deployment_status") {
+    const { environment } = request.params.arguments;
+
+    const response = await fetch(
+      `https://deploy.intern/api/status/${environment}`,
+      { headers: { Authorization: `Bearer ${process.env.DEPLOY_API_KEY}` } }
+    );
+    const data = await response.json();
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+  throw new Error(`Unbekanntes Tool: ${request.params.name}`);
+});
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+In `.claude/settings.json` konfigurieren:
+
+```json
+{
+  "mcpServers": {
+    "deploy-api": {
+      "command": "node",
+      "args": ["./tools/mcp-deploy-server/server.js"],
+      "env": {
+        "DEPLOY_API_KEY": "dein-key"
+      }
+    }
+  }
+}
+```
+
+### Python-Beispiel
+
+```bash
+pip install mcp
+```
+
+```python
+# server.py
+import asyncio
+import os
+import httpx
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent, CallToolResult
+
+app = Server("interne-api")
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    return [
+        Tool(
+            name="get_feature_flags",
+            description="Aktuelle Feature-Flag-Werte vom Feature-Flag-Service abrufen",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "environment": {
+                        "type": "string",
+                        "enum": ["dev", "staging", "prod"]
+                    }
+                },
+                "required": ["environment"]
+            }
+        )
+    ]
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> CallToolResult:
+    if name == "get_feature_flags":
+        env = arguments["environment"]
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://flags.intern/api/{env}",
+                headers={"X-API-Key": os.environ["FLAGS_API_KEY"]}
+            )
+            return CallToolResult(
+                content=[TextContent(type="text", text=resp.text)]
+            )
+    raise ValueError(f"Unbekanntes Tool: {name}")
+
+async def main():
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(read_stream, write_stream, app.create_initialization_options())
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+---
+
+## Sicherheitsüberlegungen für MCP-Server
+
+MCP-Server laufen mit denselben OS-Berechtigungen wie dein Claude Code-Prozess. Ein Server, der Zugang zu deinen Datenbank-Credentials hat, kann diese nutzen. Ein Server mit `exec`-Fähigkeiten kann beliebigen Code ausführen. Beachte diese Vorsichtsmaßnahmen:
+
+**1. Principle of Least Privilege für Credentials**
+
+Erstelle dedizierte Credentials für MCP-Server, die nur die Berechtigungen haben, die sie benötigen. Ein GitHub-Token für einen MCP-Server sollte `repo`-Scope haben, nicht `admin:org`. Ein Datenbanknutzer für MCP sollte read-only sein, sofern Schreibzugriff nicht wirklich nötig ist.
+
+**2. Niemals Secrets in settings.json committen**
+
+API-Keys in `settings.local.json` (gitignored) halten oder über Umgebungsvariablen auf Shell-Ebene injizieren:
+
+```bash
+# In ~/.bashrc oder ~/.zshrc:
+export GITHUB_MCP_TOKEN="ghp_..."
+```
+
+Dann in `settings.json` ohne den Wert referenzieren:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+**3. Drittanbieter-Server prüfen**
+
+Bevor du einen MCP-Server von npm oder GitHub ausführst, prüfe seinen Quellcode. Ein MCP-Server läuft als Subprocess mit Netzwerkzugang — er kann Credentials exfiltrieren, die ihm über die `env`-Konfiguration übergeben werden. Bleibe bei Servern mit verifizierbarem Open-Source-Code und aktiven Maintainern.
+
+**4. Keine Produktionsdaten ohne read-only-Nutzung**
+
+Wer mit Datenbankservern auf Produktionsdaten zugreift, sollte ausschließlich read-only-Nutzer konfigurieren. Das gilt umso mehr in regulierten Umgebungen — in Deutschland und der EU ist der Schutz personenbezogener Daten durch die DSGVO verbindlich. Verbinde MCP-Server niemals mit Produktionsdatenbanken, die personenbezogene Daten enthalten, ohne dass ein read-only-Nutzer und Protokollierung vorhanden sind. Credentials für Produktionssysteme gehören ausschließlich in persönliche, nicht committete Konfigurationen.
+
+**5. Netzwerkisolierung für sensible Server**
+
+Wenn MCP-Server Zugang zu Produktionsdatenbanken oder internen APIs haben, erwäge, Claude Code auf einem Rechner mit durch Firewall-Regeln eingeschränktem Netzwerkzugang auszuführen. Das begrenzt, was ein MCP-Server erreichen kann.
+
+---
+
+## MCP-Verbindungen debuggen
+
+Wenn ein MCP-Server nicht funktioniert, findest du mit diesen Schritten schnell die Ursache.
+
+**Schritt 1: Prüfen, ob der Server überhaupt startet**
+
+Führe den Server-Befehl direkt im Terminal aus:
+
+```bash
+node /pfad/zum/server.js
+# oder
+npx -y @modelcontextprotocol/server-github
+```
+
+Wenn der Server sofort abstürzt, siehst du den Fehler. Häufige Ursachen: fehlende Abhängigkeiten, falsche Node/Python-Version, fehlende Umgebungsvariablen.
+
+**Schritt 2: Überprüfen, ob Umgebungsvariablen gesetzt sind**
+
+```bash
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
+# Sollte deinen Token ausgeben, nicht leer sein
+```
+
+Wenn du auf Shell-Profile-Exports angewiesen bist, stelle sicher, dass Claude Code aus einer Shell gestartet wird, die das Profil bereits geladen hat.
+
+**Schritt 3: MCP-Debug-Logging aktivieren**
+
+Setze die Debug-Umgebungsvariable beim Starten von Claude:
+
+```bash
+CLAUDE_MCP_DEBUG=1 claude
+```
+
+Das gibt MCP-Protokollnachrichten an stderr aus und zeigt dir genau, was der Server an Claude Code meldet.
+
+**Schritt 4: Tool-Calls manuell testen**
+
+Du kannst MCP-Tool-Calls manuell über das `mcp`-CLI (falls installiert) oder durch Senden von JSON-RPC-Nachrichten an stdin des Servers aufrufen. Das isoliert, ob das Problem im Server selbst oder in der Claude Code-Integration liegt.
+
+**Schritt 5: Auf Versionskonflikte prüfen**
+
+MCP-Server und Claude Code müssen kompatible Protokollversionen sprechen. Wenn du einen Server vor einiger Zeit installiert hast und Claude Code seitdem aktualisiert wurde, aktualisiere das Server-Package:
+
+```bash
+npx -y @modelcontextprotocol/server-github@latest
+```
+
+**Häufige Fehlermeldungen und Fixes:**
+
+| Fehler | Wahrscheinliche Ursache | Fix |
+|--------|------------------------|-----|
+| `ENOENT: command not found` | `command` in Config nicht im PATH | Vollen Pfad verwenden oder Befehl installieren |
+| `Error: spawn failed` | Server-Prozess stürzt beim Start ab | Server direkt ausführen, um Fehler zu sehen |
+| `Tools not available` | Server gestartet, aber keine Tools zurückgegeben | Server-Logs prüfen, Auth-Credentials verifizieren |
+| `Connection refused` | Remote-SSE-URL nicht erreichbar | URL, Firewall, Auth-Header prüfen |
+
+---
+
+## Alles zusammen: Eine realistische MCP-Konfiguration
+
+Hier eine realistische `.claude/settings.json` für ein Team, das eine Web-Applikation entwickelt:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_MCP_TOKEN}"
+      }
+    },
+    "postgres-dev": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${DEV_DATABASE_URL}"
+      ]
+    },
+    "interne-deploy-api": {
+      "command": "node",
+      "args": ["./tools/mcp-deploy/server.js"],
+      "env": {
+        "DEPLOY_API_KEY": "${DEPLOY_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Mit dieser Konfiguration kann Claude: PRs erstellen und reviewen, die Dev-Datenbank für schema-bewusste Arbeit abfragen und Deployments prüfen oder auslösen — alles innerhalb einer einzigen Claude Code-Session.
+
+---
+
+MCP-Server sind eines der mächtigsten und am wenigsten genutzten Features von Claude Code. Die Einrichtung dauert 15 Minuten; der Produktivitätsmultiplikator gilt für jede Session danach.
+
+Brauchst du Hilfe beim Entwerfen einer MCP-Integration für deinen spezifischen Stack oder beim Schreiben eines eigenen Servers für ein internes System? Das Claude Code Beratungsteam von ClawHelp hat das in vielen Produktionsumgebungen gemacht. [Schreib uns für ein Beratungsgespräch](/de/contact).

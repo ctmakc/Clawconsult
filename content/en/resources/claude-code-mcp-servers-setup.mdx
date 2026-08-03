@@ -1,0 +1,611 @@
+---
+slug: claude-code-mcp-servers-setup
+title: "Building Production-Grade Custom MCP Servers for Claude Code"
+description: "A deep-dive into writing, testing, and deploying custom MCP servers — Node.js and Python implementations, resource exposure, schema design, multi-tool servers, authentication patterns, and running MCP servers as long-lived services."
+category: guide
+schema: Article
+tags: [mcp, model-context-protocol, custom-server, node, python, tools, resources, production]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 14
+seoTitle: "Building Custom MCP Servers for Claude Code: Node.js & Python Guide | ClawHelp"
+seoDescription: "Learn how to design and build production-grade custom MCP servers for Claude Code — Node.js and Python implementations, resource APIs, schema best practices, auth patterns, and deployment."
+---
+
+# Building Production-Grade Custom MCP Servers for Claude Code
+
+The built-in MCP servers cover common integrations — GitHub, databases, filesystems, web search. But every engineering team has internal systems that no off-the-shelf server reaches: a custom deployment API, a proprietary feature flag service, an internal knowledge base, a legacy SOAP service behind a REST shim.
+
+Writing your own MCP server is the answer. The protocol is simple, the SDKs are mature, and a well-designed custom server becomes a permanent productivity multiplier: every Claude Code session in your team gains structured, schema-aware access to your internal systems.
+
+This guide goes beyond the basics. It covers schema design principles, exposing resources (not just tools), authentication patterns for multi-user environments, structuring multi-tool servers for large systems, and running MCP servers as long-lived services rather than short-lived subprocesses.
+
+---
+
+## MCP Server Architecture: Tools vs Resources vs Prompts
+
+Every MCP server exposes up to three capability types. Understanding the distinction is important for good server design.
+
+**Tools** are callable functions that take arguments and return results. They are the right choice for actions: querying data, triggering operations, creating or modifying records.
+
+**Resources** are data sources Claude can read. They are the right choice for content: documentation pages, file contents, logs, configuration. Resources have URIs, and Claude can list available resources and fetch them by URI. They are conceptually closer to file reads than function calls.
+
+**Prompts** are pre-defined prompt templates the server provides. They are useful for codifying complex, multi-step workflows as reusable "skills" within Claude's tool list.
+
+Most custom servers start with tools only. But adding resources for documentation, schema definitions, or API specs gives Claude richer context without requiring explicit tool calls.
+
+---
+
+## Schema Design: Writing Tool Definitions Claude Uses Well
+
+The quality of your tool's `inputSchema` directly affects how accurately Claude invokes it. Invest time here.
+
+**Always include descriptions at the property level, not just the tool level:**
+
+```json
+{
+  "name": "create_deployment",
+  "description": "Trigger a deployment to a target environment",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "service": {
+        "type": "string",
+        "description": "The service name as it appears in the service registry (e.g., 'api-gateway', 'user-service')"
+      },
+      "environment": {
+        "type": "string",
+        "enum": ["dev", "staging", "prod"],
+        "description": "Target environment. Prod deployments require approval and will send Slack notifications."
+      },
+      "version": {
+        "type": "string",
+        "description": "Git SHA or semantic version tag (e.g., 'abc1234', 'v2.3.1'). Defaults to HEAD of main if omitted.",
+        "pattern": "^[a-f0-9]{7,40}$|^v[0-9]+\\.[0-9]+\\.[0-9]+"
+      }
+    },
+    "required": ["service", "environment"]
+  }
+}
+```
+
+**Use `enum` for any field with a fixed set of valid values.** This prevents Claude from inventing values and surfaces the options explicitly in the schema Claude reads.
+
+**Mark truly optional fields as optional** (omit them from `required`). If Claude can reasonably infer or default a parameter, requiring it forces unnecessary prompting.
+
+**Return structured output in tool responses.** Claude parses tool response text. JSON or markdown tables are far more useful than prose:
+
+```javascript
+// Prefer this:
+return {
+  content: [{
+    type: "text",
+    text: JSON.stringify({
+      deploymentId: "dep-8472",
+      status: "queued",
+      estimatedDuration: "4m",
+      logsUrl: "https://deploy.internal/logs/dep-8472"
+    }, null, 2)
+  }]
+};
+
+// Over this:
+return {
+  content: [{
+    type: "text",
+    text: "Deployment triggered successfully. ID is dep-8472."
+  }]
+};
+```
+
+---
+
+## Full Node.js Multi-Tool Server
+
+Here is a realistic multi-tool MCP server for an internal developer platform, implementing deployment, service health, and log retrieval:
+
+```bash
+npm init -y
+npm install @modelcontextprotocol/sdk node-fetch
+```
+
+```javascript
+// src/server.js
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+
+const BASE_URL = process.env.PLATFORM_API_URL;
+const API_TOKEN = process.env.PLATFORM_API_TOKEN;
+
+async function platformRequest(path, method = "GET", body = null) {
+  const resp = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Platform API error ${resp.status}: ${text}`);
+  }
+  return resp.json();
+}
+
+const server = new Server(
+  { name: "internal-platform", version: "1.0.0" },
+  { capabilities: { tools: {}, resources: {} } }
+);
+
+// ── Tools ──────────────────────────────────────────────────────────────────
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: "get_service_status",
+      description: "Get the current health and deployment status of a service",
+      inputSchema: {
+        type: "object",
+        properties: {
+          service: {
+            type: "string",
+            description: "Service name from the service registry",
+          },
+        },
+        required: ["service"],
+      },
+    },
+    {
+      name: "trigger_deployment",
+      description: "Queue a deployment for a service to a target environment",
+      inputSchema: {
+        type: "object",
+        properties: {
+          service: { type: "string", description: "Service name" },
+          environment: {
+            type: "string",
+            enum: ["dev", "staging", "prod"],
+            description: "Target deployment environment",
+          },
+          gitRef: {
+            type: "string",
+            description: "Git SHA or tag to deploy (defaults to main HEAD)",
+          },
+        },
+        required: ["service", "environment"],
+      },
+    },
+    {
+      name: "get_recent_logs",
+      description: "Fetch the most recent log lines for a service",
+      inputSchema: {
+        type: "object",
+        properties: {
+          service: { type: "string" },
+          environment: {
+            type: "string",
+            enum: ["dev", "staging", "prod"],
+          },
+          lines: {
+            type: "number",
+            description: "Number of log lines to return (max 500, default 100)",
+          },
+          filter: {
+            type: "string",
+            description: "Optional grep-style filter string",
+          },
+        },
+        required: ["service", "environment"],
+      },
+    },
+  ],
+}));
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    let result;
+
+    if (name === "get_service_status") {
+      result = await platformRequest(`/services/${args.service}/status`);
+    } else if (name === "trigger_deployment") {
+      result = await platformRequest("/deployments", "POST", {
+        service: args.service,
+        environment: args.environment,
+        gitRef: args.gitRef ?? "main",
+      });
+    } else if (name === "get_recent_logs") {
+      const params = new URLSearchParams({
+        lines: String(args.lines ?? 100),
+        ...(args.filter ? { filter: args.filter } : {}),
+      });
+      result = await platformRequest(
+        `/services/${args.service}/logs/${args.environment}?${params}`
+      );
+    } else {
+      throw new Error(`Unknown tool: ${name}`);
+    }
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  } catch (err) {
+    return {
+      content: [{ type: "text", text: `Error: ${err.message}` }],
+      isError: true,
+    };
+  }
+});
+
+// ── Resources ─────────────────────────────────────────────────────────────
+// Expose the service registry as a readable resource so Claude can browse
+// available services without making an explicit tool call.
+
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  const services = await platformRequest("/services");
+  return {
+    resources: services.map((s) => ({
+      uri: `platform://services/${s.name}`,
+      name: s.name,
+      description: `${s.displayName} — ${s.team} — ${s.environment}`,
+      mimeType: "application/json",
+    })),
+  };
+});
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const serviceName = request.params.uri.replace("platform://services/", "");
+  const service = await platformRequest(`/services/${serviceName}`);
+  return {
+    contents: [
+      {
+        uri: request.params.uri,
+        mimeType: "application/json",
+        text: JSON.stringify(service, null, 2),
+      },
+    ],
+  };
+});
+
+// ── Start ──────────────────────────────────────────────────────────────────
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+Register it in `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "internal-platform": {
+      "command": "node",
+      "args": ["./tools/mcp-platform/src/server.js"],
+      "env": {
+        "PLATFORM_API_URL": "https://platform.internal",
+        "PLATFORM_API_TOKEN": "${PLATFORM_API_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Full Python Multi-Tool Server
+
+For teams on Python, here is the equivalent server using the `mcp` package:
+
+```bash
+pip install mcp httpx
+```
+
+```python
+# server.py
+import asyncio
+import json
+import os
+import httpx
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import (
+    Tool, Resource, TextContent,
+    CallToolResult, ListResourcesResult, ReadResourceResult,
+    ResourceContents,
+)
+
+BASE_URL = os.environ["PLATFORM_API_URL"]
+API_TOKEN = os.environ["PLATFORM_API_TOKEN"]
+
+app = Server("internal-platform")
+
+async def platform_get(path: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{BASE_URL}{path}",
+            headers={"Authorization": f"Bearer {API_TOKEN}"},
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+async def platform_post(path: str, body: dict) -> dict:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{BASE_URL}{path}",
+            json=body,
+            headers={"Authorization": f"Bearer {API_TOKEN}"},
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    return [
+        Tool(
+            name="get_service_status",
+            description="Get health and deployment status of a service",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "service": {"type": "string", "description": "Service name"},
+                },
+                "required": ["service"],
+            },
+        ),
+        Tool(
+            name="list_services",
+            description="List all registered services in the platform",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+    ]
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> CallToolResult:
+    try:
+        if name == "get_service_status":
+            result = await platform_get(f"/services/{arguments['service']}/status")
+        elif name == "list_services":
+            result = await platform_get("/services")
+        else:
+            raise ValueError(f"Unknown tool: {name}")
+
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps(result, indent=2))]
+        )
+    except Exception as e:
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"Error: {e}")],
+            isError=True,
+        )
+
+@app.list_resources()
+async def list_resources() -> ListResourcesResult:
+    services = await platform_get("/services")
+    return ListResourcesResult(
+        resources=[
+            Resource(
+                uri=f"platform://services/{s['name']}",
+                name=s["name"],
+                description=s.get("description", ""),
+                mimeType="application/json",
+            )
+            for s in services
+        ]
+    )
+
+@app.read_resource()
+async def read_resource(uri: str) -> ReadResourceResult:
+    service_name = uri.removeprefix("platform://services/")
+    data = await platform_get(f"/services/{service_name}")
+    return ReadResourceResult(
+        contents=[
+            ResourceContents(
+                uri=uri,
+                mimeType="application/json",
+                text=json.dumps(data, indent=2),
+            )
+        ]
+    )
+
+async def main():
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(
+            read_stream, write_stream, app.create_initialization_options()
+        )
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+---
+
+## Authentication Patterns for Multi-User Environments
+
+When a single MCP server is shared across a team (e.g., run as a remote SSE service), you need per-user authentication rather than a single shared credential.
+
+**Pattern 1: Per-user local servers with user-scoped credentials**
+
+Each developer runs their own local MCP server subprocess with their own credentials injected via their personal `settings.local.json`. This is the simplest approach and requires no server-side multi-tenancy:
+
+```json
+// .claude/settings.local.json (each developer's personal file, not committed)
+{
+  "mcpServers": {
+    "internal-platform": {
+      "command": "node",
+      "args": ["./tools/mcp-platform/src/server.js"],
+      "env": {
+        "PLATFORM_API_TOKEN": "my-personal-token-here"
+      }
+    }
+  }
+}
+```
+
+**Pattern 2: Remote SSE server with per-request auth headers**
+
+For a centrally hosted MCP server, pass authentication via request headers:
+
+```json
+// .claude/settings.local.json
+{
+  "mcpServers": {
+    "platform-remote": {
+      "url": "https://mcp.internal/sse",
+      "headers": {
+        "Authorization": "Bearer ${PLATFORM_API_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+The remote server reads the `Authorization` header on each request and authenticates the user before executing any tool. This enables audit logging, rate limiting per user, and permission scoping by role.
+
+**Pattern 3: OAuth token exchange**
+
+For MCP servers that need to act on behalf of the user against a third-party OAuth service (e.g., a Jira or Salesforce integration), implement a token exchange: the MCP server receives a short-lived session token from Claude Code, exchanges it for a scoped OAuth token, and uses that for downstream API calls. The token exchange endpoint validates the Claude Code session and issues only the minimum-scoped OAuth token needed for the requested operation.
+
+---
+
+## Running MCP Servers as Long-Lived Services
+
+By default, Claude Code launches an MCP server as a subprocess for each session and kills it when the session ends. This is fine for lightweight servers but creates overhead for servers with expensive initialization (database connection pools, in-memory caches, loaded ML models).
+
+**Option 1: Remote SSE server**
+
+The cleanest approach for teams: run your MCP server as a persistent HTTP service with SSE transport. Multiple developers connect to the same instance; the server stays warm.
+
+```javascript
+// server-http.js — same logic as above, but SSEServerTransport instead of stdio
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import express from "express";
+
+const app = express();
+const mcpServer = new Server(/* ... same as before ... */);
+
+app.get("/sse", async (req, res) => {
+  const transport = new SSEServerTransport("/messages", res);
+  await mcpServer.connect(transport);
+});
+
+app.post("/messages", express.json(), async (req, res) => {
+  // Route incoming messages to the active transport
+  // (implementation depends on your session tracking)
+});
+
+app.listen(3100, () => console.log("MCP server listening on :3100"));
+```
+
+Then point Claude Code at it:
+
+```json
+{
+  "mcpServers": {
+    "platform": {
+      "url": "http://mcp.internal:3100/sse",
+      "headers": { "Authorization": "Bearer ${TOKEN}" }
+    }
+  }
+}
+```
+
+**Option 2: Unix socket for local long-lived servers**
+
+For a local server you want to keep warm across sessions, run it as a daemon and connect via Unix socket. This avoids per-session startup cost while keeping everything local.
+
+---
+
+## Testing Your MCP Server
+
+Test MCP servers as you would any service — unit test the handler functions, integration test the full server.
+
+**Unit testing tool handlers:**
+
+```javascript
+// server.test.js
+import { describe, it, expect, vi } from "vitest";
+
+// Mock the fetch calls
+vi.mock("node-fetch");
+
+describe("get_service_status", () => {
+  it("returns structured status for a known service", async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ name: "api-gateway", healthy: true, version: "v2.1.0" }),
+    });
+
+    const result = await handleToolCall("get_service_status", { service: "api-gateway" });
+
+    expect(result.content[0].type).toBe("text");
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.healthy).toBe(true);
+  });
+
+  it("returns isError: true when the platform API returns 404", async () => {
+    fetch.mockResolvedValue({ ok: false, status: 404, text: async () => "Not found" });
+
+    const result = await handleToolCall("get_service_status", { service: "nonexistent" });
+
+    expect(result.isError).toBe(true);
+  });
+});
+```
+
+**Manual end-to-end testing with the MCP Inspector:**
+
+Anthropic publishes an MCP Inspector tool that lets you connect to any MCP server and invoke tools manually:
+
+```bash
+npx @modelcontextprotocol/inspector node ./src/server.js
+```
+
+This opens a browser UI where you can list tools, inspect schemas, and fire test calls against your server — without going through Claude Code at all. Use this to validate your server before connecting it to Claude.
+
+---
+
+## Graceful Error Handling and Observability
+
+Claude Code displays tool errors to the user. Make your error responses actionable:
+
+```javascript
+// Bad: Claude can't do anything with this
+return { content: [{ type: "text", text: "Error" }], isError: true };
+
+// Good: Claude can diagnose and potentially retry
+return {
+  content: [{
+    type: "text",
+    text: JSON.stringify({
+      error: "RATE_LIMITED",
+      message: "Platform API rate limit exceeded",
+      retryAfterSeconds: 30,
+      requestId: "req-8841",
+    })
+  }],
+  isError: true,
+};
+```
+
+For production servers, add structured logging and emit metrics on tool call latency, error rates, and token counts. This gives you visibility into which Claude Code workflows are hitting your internal systems hardest.
+
+---
+
+## Related Resources
+
+- [Using MCP Servers with Claude Code: A Complete Guide](/en/resources/claude-code-mcp-servers-guide) — configuration, built-in servers, third-party servers, debugging
+- [Claude Code Hooks Guide](/en/resources/claude-code-hooks-guide) — combine hooks with MCP for audit trails and approval gates
+- [Multi-Agent Orchestration with Claude Code](/en/resources/claude-code-multi-agent-orchestration) — using MCP tools inside spawned subagents
+- [Claude Code Permissions Model](/en/resources/claude-code-permissions-model) — scoping what Claude can do with MCP server tools

@@ -1,0 +1,334 @@
+---
+slug: claude-code-slash-befehle
+lang: "de"
+title: "Claude Code Slash-Befehle: Vollständige Referenz und Custom Commands"
+description: "Vollständige Referenz aller Claude Code Slash-Befehle — /help, /clear, /memory, /model, /settings, /review, /init — plus Anleitung zum Erstellen eigener Slash Commands für projektspezifische Workflows."
+category: guide
+schema: Article
+tags: [slash-commands, workflow, anpassung, produktivitaet, shortcuts]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 9
+seoTitle: "Claude Code Slash-Befehle: Built-in & Custom Commands Referenz | ClawHelp"
+seoDescription: "Vollständiger Leitfaden zu Claude Code Slash-Befehlen. /help, /clear, /memory, /model, /review, /init erklärt und eigene Slash Commands für Projektworkflows erstellen."
+---
+
+# Claude Code Slash-Befehle: Vollständige Referenz und Custom Commands
+
+Slash-Befehle sind Abkürzungen, die du am Claude Code Prompt eingibst, um bestimmte Verhaltensweisen auszulösen oder auf Meta-Funktionalität zuzugreifen. Sie unterscheiden sich von regulären Prompts — statt eine Nachricht an Claude zu senden, rufen sie integrierte Claude Code Features direkt auf oder führen vordefinierte eigene Workflows aus, die du in deinem Projekt eingerichtet hast.
+
+Dieser Leitfaden behandelt jeden integrierten Slash-Befehl sowie das vollständige System zur Erstellung eigener Commands.
+
+---
+
+## Wie Slash-Befehle funktionieren
+
+Am interaktiven Claude Code Prompt tippst du `/` gefolgt von einem Befehlsnamen. Claude Code fängt diese ab, bevor sie das Modell erreichen — sie werden vom CLI selbst behandelt, nicht von Claude.
+
+```
+> /help
+```
+
+Eigene Slash-Befehle, die du definierst, werden als Markdown-Dateien in `.claude/commands/` gespeichert. Wenn du einen Custom Command aufrufst, liest Claude Code die Datei und sendet ihren Inhalt als Prompt. Custom Commands sind damit im Wesentlichen gespeicherte, wiederverwendbare Prompts mit dem Slash-Command-Interface.
+
+---
+
+## Integrierte Slash-Befehle
+
+### /help
+
+Zeigt eine Übersicht der verfügbaren Slash-Befehle und grundlegende Nutzungsinformationen.
+
+```
+> /help
+```
+
+Verwende dies, wenn du einen Befehlsnamen vergessen hast oder sehen möchtest, was verfügbar ist. Es zeigt sowohl eingebaute Commands als auch alle Custom Commands, die du in `.claude/commands/` definiert hast.
+
+---
+
+### /clear
+
+Löscht den aktuellen Konversationskontext und startet neu.
+
+```
+> /clear
+```
+
+**Wann verwenden:**
+
+Claude Code pflegt ein Rolling-Context-Window deiner Konversation. Mit zunehmender Sitzungsdauer verbleiben frühere Nachrichten im Kontext und verbrauchen Tokens. `/clear` setzt das vollständig zurück — Claude verliert alle Erinnerungen an die aktuelle Sitzung und beginnt nur mit dem, was es aus deinen Projektdateien und CLAUDE.md lesen kann.
+
+Verwende `/clear` wenn:
+- Du eine Aufgabe abgeschlossen hast und eine vollständig andere anfängst
+- Die Konversation lang geworden ist und Claude beginnt, Fehler zu machen, die auf Kontext-Verwirrung hindeuten
+- Du ohne vorheriges Sitzungsbias einen frischen Blick auf ein Problem möchtest
+
+**Was /clear nicht macht:**
+
+Es beeinflusst nicht deine CLAUDE.md, deine `.claude/settings.json`, deinen Git-Verlauf oder Dateien auf der Festplatte. Es löscht nur Claudes kurzfristiges Konversationsgedächtnis für die aktuelle Sitzung.
+
+---
+
+### /memory
+
+Öffnet deine CLAUDE.md-Datei (oder erstellt eine, wenn sie nicht existiert) zum Bearbeiten. Das ist der schnelle Weg, Claudes persistente Projektanweisungen mitten in einer Sitzung zu aktualisieren.
+
+```
+> /memory
+```
+
+Die Datei öffnet sich in deinem Standard-Editor (`$EDITOR` oder `$VISUAL`). Nach dem Speichern und Schließen lädt Claude Code die Datei neu und die aktualisierten Anweisungen gelten für alle nachfolgenden Interaktionen in der Sitzung.
+
+**Praktischer Workflow:**
+
+Wenn Claude etwas tut, das es immer oder nie tun soll, verwende `/memory` sofort, um diese Regel zur CLAUDE.md hinzuzufügen, solange sie frisch ist. Wenn Claude beispielsweise `var` in JavaScript verwendet und du möchtest, dass es immer `const`/`let` verwendet, führe `/memory` aus und füge die Regel direkt ein.
+
+---
+
+### /model
+
+Wechselt das Claude-Modell, das für die aktuelle Sitzung verwendet wird.
+
+```
+> /model
+```
+
+Das öffnet einen interaktiven Selektor mit verfügbaren Modellen. Änderungen gelten für nachfolgende Nachrichten in der Sitzung.
+
+**Wann der Modellwechsel relevant ist:**
+
+- **Schnelleres/günstigeres Modell** für repetitive oder einfache Aufgaben — Boilerplate generieren, Variablen umbenennen, einfache Tests schreiben
+- **Leistungsfähigeres Modell** für komplexe architektonische Entscheidungen, schwierige Bugs oder Aufgaben, bei denen Qualität wichtiger als Geschwindigkeit ist
+
+In den meisten Fällen bleibst du bei einem Modell pro Projekt, das in deinen Einstellungen konfiguriert ist. `/model` ist nützlich für einmalige Wechsel ohne Änderung der globalen Konfiguration.
+
+---
+
+### /settings
+
+Öffnet eine interaktive Ansicht der aktuellen Konfiguration von Claude Code, einschließlich aktiver Permissions, Hook-Konfiguration und Modell-Einstellungen.
+
+```
+> /settings
+```
+
+Das ist ein lesender Befehl — er zeigt dir, was konfiguriert ist, kein vollständiger Editor zum Ändern von allem. Für persistente Änderungen die `.claude/settings.json` direkt bearbeiten.
+
+---
+
+### /review
+
+Bittet Claude, einen Code-Review der letzten Änderungen durchzuführen. Standardmäßig reviewed es den aktuellen Git-Diff (staged + unstaged Änderungen gegen den aktuellen Branch).
+
+```
+> /review
+```
+
+**Was Claude reviewed:**
+
+Claude Code liest `git diff HEAD` und erstellt ein strukturiertes Review, das folgendes abdeckt:
+- Potenzielle Bugs oder Logikfehler
+- Fehlende Fehlerbehandlung
+- Sicherheitsbedenken
+- Code-Qualität und Lesbarkeit
+- Fehlende Tests für geänderten Code
+
+**Den Review-Scope anpassen:**
+
+Du kannst `/review` mit Kontext folgen lassen:
+
+```
+> /review nur auf Sicherheit und Fehlerbehandlung fokussieren
+> /review nur die Änderungen in src/auth/
+> /review als Senior-Engineer, der den PR eines Juniors reviewed
+```
+
+**Integration von /review in deinen Workflow:**
+
+Vor jedem Commit `/review` ausführen. Das dauert 30–60 Sekunden und findet Probleme, die später Code-Review-Zyklen ersparen. Das ist besonders wertvoll, wenn Claude Code viele Änderungen gemacht hat — ein Review-Durchlauf gibt Claude die Chance, Inkonsistenzen zu finden, die es während der Sitzung eingeführt hat.
+
+---
+
+### /init
+
+Analysiert dein Projekt und generiert eine CLAUDE.md-Datei mit angemessener Projektdokumentation.
+
+```
+> /init
+```
+
+Claude Code liest deine Projektverzeichnisstruktur, Package-Dateien, Konfiguration, vorhandene Dokumentation und Quellcode, um eine CLAUDE.md zu generieren, die beschreibt:
+- Projektübersicht und Zweck
+- Technologie-Stack und Versionen
+- Verfügbare Befehle (Build, Test, Lint, Dev-Server)
+- Projektstruktur und wichtige Verzeichnisse
+- Konventionen, die es aus dem Code erkannt hat
+
+**Wann /init verwenden:**
+
+- Wenn du anfängst, Claude Code auf einem bestehenden Projekt zu verwenden
+- Beim Einrichten von Claude Code für ein neues Teammitglied
+- Nach einem größeren Projekt-Refactor, der die Struktur wesentlich verändert hat
+
+**Nach /init ausführen:**
+
+Immer die generierte CLAUDE.md überprüfen und bearbeiten. Claudes Analyse ist gut, aber nicht perfekt — es kann Konventionen verpassen, die aus dem Code allein nicht sichtbar sind, veraltete Befehle einschließen oder wichtige projektspezifische Regeln weglassen. Behandle `/init` als Erstentwurf, nicht als fertiges Dokument.
+
+---
+
+## Eigene Slash-Befehle erstellen
+
+Custom Slash Commands sind der Bereich, in dem die echten Produktivitätsgewinne liegen. Jeder Workflow, den du über Sitzungen hinweg wiederholst, ist ein Kandidat für einen Custom Command.
+
+### Wie Custom Commands funktionieren
+
+Eine Markdown-Datei in `.claude/commands/` erstellen:
+
+```
+.claude/
+  commands/
+    mein-befehl.md
+```
+
+Der Dateiname (ohne `.md`) wird zum Slash-Befehlsnamen. `mein-befehl.md` erstellt also `/mein-befehl`.
+
+Wenn du `/mein-befehl` tippst, liest Claude Code die Datei und sendet ihren Inhalt als Prompt. Alles, was in der Markdown-Datei folgt, wird als Anweisungen an Claude für diesen Aufruf behandelt.
+
+### Dein erster Custom Command
+
+`.claude/commands/pruefen.md` erstellen:
+
+```markdown
+Führe die vollständige Test-Suite und den Linter aus. Berichte:
+1. Wie viele Tests bestanden/fehlgeschlagen sind
+2. Alle Lint-Fehler mit Datei und Zeilennummer
+3. Ob der Build erfolgreich ist
+
+Verwende diese Befehle:
+- Tests: `npm test`
+- Lint: `npm run lint`
+- Build: `npm run build`
+
+Falls etwas fehlschlägt, versuche nicht es zu beheben — berichte einfach, was fehlgeschlagen ist, und stoppe.
+```
+
+Jetzt führt `/pruefen` dein gesamtes Quality-Gate mit einem Befehl aus:
+
+```
+> /pruefen
+```
+
+### Template-Variablen in Custom Commands
+
+Custom Commands unterstützen `$ARGUMENTS` — ein Platzhalter, der durch den Text ersetzt wird, den du nach dem Befehlsnamen tippst.
+
+`.claude/commands/erklaeren.md` erstellen:
+
+```markdown
+Erkläre das folgende Code- oder Konzept in verständlichem Deutsch für einen Entwickler,
+der die Sprache kennt, aber mit diesem spezifischen Muster oder Modul nicht vertraut ist.
+Sei konkret. Verwende Analogien, wo hilfreich. Zeige Beispiele.
+
+Zu erklärendes Thema: $ARGUMENTS
+```
+
+Verwendung:
+
+```
+> /erklaeren das Visitor-Pattern in unserem AST-Modul
+> /erklaeren warum wir Optimistic Locking in src/db/transactions.ts verwenden
+> /erklaeren was die Middleware-Chain in src/server/index.ts macht
+```
+
+### Projektspezifische Workflow-Commands
+
+Custom Commands glänzen für projektspezifische Workflows, die jedes Mal eine lange Erklärung erfordern würden.
+
+**Release-Vorbereitung** (`.claude/commands/release-vorbereiten.md`):
+
+```markdown
+Bereite ein Release vor. Schritte:
+1. `npm test` ausführen — wenn Tests fehlschlagen, stoppen und berichten. Nicht fortfahren.
+2. `npm run lint` ausführen — auto-fixierbare Probleme beheben, nicht-fixierbare melden
+3. `npm run build` ausführen — sicherstellen, dass der Build erfolgreich ist
+4. `git log main..HEAD --oneline` prüfen, um Commits seit dem letzten Release zu sehen
+5. Einen semantischen Versions-Bump (major/minor/patch) basierend auf den Änderungen vorschlagen
+6. `CHANGELOG.md` mit einer Zusammenfassung der Änderungen seit dem letzten Release aktualisieren
+7. Mich um Bestätigung der Version und des Changelogs bitten, bevor package.json angefasst wird
+
+Keinen Git-Tag erstellen oder etwas pushen ohne explizite Bestätigung.
+```
+
+**PR-Beschreibung** (`.claude/commands/pr.md`):
+
+```markdown
+Pull Request für den aktuellen Branch öffnen.
+
+Vor dem Schreiben des PR:
+1. `git log main..HEAD --oneline` ausführen, um alle Commits zu sehen
+2. `git diff main...HEAD --stat` ausführen, um zu sehen, welche Dateien geändert wurden
+
+PR-Anforderungen:
+- Titel: prägnant, Imperativ-Modus, unter 60 Zeichen
+- Zusammenfassung: 2–4 Bullet-Points zu Was und Warum der Änderungen
+- Test-Plan: Was sollte vor dem Mergen getestet werden
+- Breaking Changes oder Migrationsschritte vermerken
+- Verwandte Issues referenzieren, falls in Commit-Messages sichtbar
+
+Nach dem Erstellen des PR die URL anzeigen.
+```
+
+### Team-geteilte vs. persönliche Commands
+
+Commands in `.claude/commands/` werden ins Repository committed und mit dem gesamten Team geteilt. Jeder erhält dieselben `/pruefen`-, `/release-vorbereiten`- und `/pr`-Commands.
+
+**Best Practice**: Team-Workflow-Commands ins Projekt-Repo committen. Persönliche Abkürzungen außerhalb des Projekts halten.
+
+---
+
+## Slash Commands und Hooks kombinieren
+
+Slash Commands und Hooks ergänzen sich gegenseitig. Hooks laufen automatisch bei Tool-Calls; Slash Commands laufen bei explizitem Aufruf. Zusammen decken sie beide Enden des Automatisierungsspektrums ab.
+
+**Beispiel-Workflow:**
+- Hooks formatieren automatisch jeden Datei-Schreibvorgang (kein manueller Schritt nötig)
+- `/pruefen` führt manuell das vollständige Quality-Gate aus, wenn gewünscht
+- `/pr` bündelt den PR-Workflow in einem Command
+- `/review` gibt ein strukturiertes Review vor jedem PR
+
+---
+
+## Best Practices für Custom Commands
+
+**1. Commands nach der Absicht benennen, nicht nach der Implementierung**
+
+`/release-vorbereiten` ist besser als `/tests-lint-build-changelog-ausfuehren`. Der Command-Name soll dir sagen, *was du erreichst*, nicht *was er intern tut*.
+
+**2. Explizite Stoppbedingungen einschließen**
+
+Dem Command sagen, wann er stoppen und um Bestätigung bitten soll versus wann er autonom fortfahren soll.
+
+**3. Commands fokussiert halten**
+
+Ein Command, der 15 Dinge tut, ist schwer nachzuvollziehen. Kleinere, komposierbare Commands bevorzugen.
+
+**4. Commands in CLAUDE.md dokumentieren**
+
+Einen Abschnitt in CLAUDE.md hinzufügen, der deine Custom Commands und ihre Funktion auflistet:
+
+```markdown
+## Verfügbare Slash Commands
+- `/pruefen` — Tests, Lint und Build ausführen; Ergebnisse berichten
+- `/pr` — PR für den aktuellen Branch öffnen
+- `/release-vorbereiten` — Quality-Gates ausführen und Release Notes vorbereiten
+- `/erklaeren <thema>` — Code oder Konzept auf Deutsch erklären
+```
+
+**5. Commands versionieren**
+
+Dein `.claude/commands/`-Verzeichnis sollte in Git sein. Commands kodieren Team-Wissen und Workflow-Konventionen — behandle sie mit derselben Sorgfalt wie deine CI-Konfiguration.
+
+---
+
+Brauchst du Hilfe beim Entwerfen einer Custom-Command-Bibliothek, die zum Workflow deines Teams passt? Die Claude Code Beratungsleistungen von ClawHelp können ein vollständiges Produktivitäts-Setup entwerfen und implementieren — von projektspezifischen Commands bis hin zu Hook-Integrationen. [Kontaktiere uns](/de/contact).

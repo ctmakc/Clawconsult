@@ -1,0 +1,279 @@
+---
+slug: claude-code-session-management
+title: "Managing Claude Code Sessions: Context Windows, Compacting, and Project Memory"
+description: "Understand how Claude Code manages conversation context, when context limits matter, how /compact and auto-compaction work, and practical strategies for long-running development tasks."
+category: guide
+schema: Article
+tags: [sessions, context-window, compact, memory, todo, workflow, long-running]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+seoTitle: "Claude Code Session Management: Context Windows, /compact, and Project Memory | ClawHelp"
+seoDescription: "Learn how to manage Claude Code sessions effectively — context windows, the /compact command, auto-compaction, TodoList, CLAUDE.md persistence, and the --resume flag."
+---
+
+# Managing Claude Code Sessions: Context Windows, Compacting, and Project Memory
+
+Claude Code sessions are not infinite. The conversation you're having with Claude — every prompt you've sent, every file Claude has read, every command it has run — accumulates inside a context window. When that window fills up, Claude's ability to reference earlier parts of your session degrades, and eventually the session becomes unusable.
+
+Understanding how context management works — and using the tools Claude Code provides to extend and recover sessions — is the difference between a 20-minute debugging session and a productive multi-hour feature build.
+
+---
+
+## How Claude Code Manages Conversation Context
+
+Every Claude Code session is a conversation. Claude sees:
+
+- Your prompts and its own responses
+- The contents of files it has read
+- The output of commands it has run
+- Tool call inputs and outputs
+
+All of this accumulates in the context window as the session progresses. The context window has a fixed token limit — the exact number depends on the underlying Claude model, but you should assume it's large but finite (in the range of 100,000–200,000 tokens for current models).
+
+**What gets expensive quickly:**
+
+- Reading large files (a 2,000-line source file consumes a lot of tokens)
+- Running commands with verbose output
+- Back-and-forth debugging conversations with lots of error messages
+- Tasks that require reading many files across a large codebase
+
+**What doesn't get expensive:**
+
+- Short prompts and responses
+- Precise targeted reads (reading 20 lines of a file rather than the full file)
+- Claude writing files (write operations are cheap compared to reading)
+
+Claude Code is designed to manage this somewhat on its own — it reads specific sections of files rather than always reading entire files, for example. But for long sessions, you need to understand and use the compaction tools.
+
+---
+
+## Context Window Limits and When They Matter
+
+You won't hit context limits in a typical 30-minute focused session on a small change. Context limits start mattering when:
+
+**You're working on a large feature over several hours.** The conversation history itself grows large, and if you've read many files along the way, the accumulated context is substantial.
+
+**You're in a deep debugging session.** Debugging often involves reading many files, running commands with long output, and multiple back-and-forth exchanges. This is the scenario where hitting the limit mid-session is most disruptive.
+
+**You're working in a large codebase.** If Claude needs to read many files to understand how something works, those reads consume significant context.
+
+**Signs you're approaching the limit:**
+
+- Claude starts referring to earlier parts of the conversation incorrectly or says it can't recall something it clearly did
+- Claude Code displays a warning about context length
+- Responses slow down noticeably
+- Claude says it needs to stop and compact
+
+When you're close to the limit, Claude Code will warn you. At the hard limit, the session must be compacted or ended.
+
+---
+
+## The /compact Command and Auto-Compaction
+
+Claude Code provides `/compact` as the primary tool for managing context in long sessions.
+
+**How `/compact` works:**
+
+When you run `/compact`, Claude Code:
+
+1. Takes the full current conversation context
+2. Generates a dense summary of what has happened — what was worked on, what files were changed, what decisions were made, what remains to be done
+3. Replaces the full conversation history with this summary
+4. Continues the session from this compressed starting point
+
+The result is that the context window is dramatically freed up — you've gone from a full conversation history to a compact summary — while preserving the essential information Claude needs to continue working effectively.
+
+**Running /compact:**
+
+```
+/compact
+```
+
+That's it. Claude Code handles the rest. After compaction, Claude will confirm what it summarized and what context was preserved. The session continues without interruption.
+
+**When to manually compact:**
+
+- After completing a major subtask (e.g., after finishing one module of a larger feature)
+- When you notice the session getting slow or responses becoming less accurate
+- Proactively after any session longer than 1-2 hours
+- Before switching to a significantly different task within the same session
+
+**Auto-compaction:**
+
+Claude Code can also compact automatically when it determines the context window is getting too full. Auto-compaction happens without you doing anything — Claude will notify you that it's compacting and then continue. This is generally seamless, but being aware it can happen helps you understand why a session might briefly pause.
+
+You can influence auto-compaction behavior through the `--auto-compact` flag when starting Claude, though the default behavior is usually fine for most workflows.
+
+**What gets preserved vs. lost in compaction:**
+
+Preserved:
+- What files were created or modified (and their current state)
+- What the current task is and what remains to be done
+- Key decisions made during the session
+- The current state of any TodoList items
+
+Not preserved with full fidelity:
+- The exact wording of earlier conversations
+- Intermediate steps that led to a current state
+- Debugging paths that were tried and abandoned
+
+This means compaction is lossy in a useful way — it drops what's no longer relevant and keeps what Claude needs to continue working.
+
+---
+
+## TodoList: Tracking Work Across Sessions
+
+Claude Code has a built-in TodoList that persists across compactions and is one of the best tools for long-running tasks.
+
+When Claude creates a TodoList, it maintains a structured list of tasks with their completion status. Unlike conversation history, the TodoList is explicitly tracked and survives compaction — it's included in the compact summary by design.
+
+**How to use it:**
+
+Ask Claude to create a todo list at the start of a multi-step task:
+
+```
+Create a todo list for this feature: [description of feature]
+```
+
+Claude will create a structured list and maintain it as it works. You can ask Claude to show you the current state at any time:
+
+```
+Show me the current todo list status
+```
+
+**Why this matters for session management:**
+
+If your session is compacted (automatically or manually) and Claude loses some detail about what has been done, it can reference the TodoList to understand current progress. Items marked complete indicate work that's done; pending items are what remains.
+
+For long tasks that span multiple days, the TodoList combined with CLAUDE.md (or a task note file in your project) gives Claude a reliable source of truth about where things stand.
+
+**Creating persistent task notes:**
+
+For anything spanning more than one session, ask Claude to write a task state file:
+
+```
+Write a TASK_STATE.md in the project root summarizing what we've done, 
+what's in progress, and what remains. I'll use this to resume tomorrow.
+```
+
+This gives you something to reference — or share with Claude — in a future session to restore context quickly.
+
+---
+
+## Using CLAUDE.md for Persistent Context
+
+As discussed in depth in the CLAUDE.md guide, the project's `CLAUDE.md` file is read at the start of every session, before any conversation. This makes it the mechanism for truly persistent context — information that survives not just compaction, but the end of sessions entirely.
+
+For long-running development tasks, use CLAUDE.md to record:
+
+**Progress and current state for active multi-session work:**
+
+```markdown
+## Active Work (as of 2026-05-16)
+- Feature: User dashboard redesign (started 2026-05-14)
+- Current phase: Backend API changes complete, frontend implementation in progress
+- Next task: Implement the chart components in `apps/web/src/components/dashboard/`
+- Blocked on: Design approval for mobile breakpoints (pending)
+```
+
+This section should be updated (by Claude, during your session) when meaningful progress is made. Ask Claude to update CLAUDE.md at natural stopping points:
+
+```
+Update the "Active Work" section in CLAUDE.md to reflect what we've done today
+```
+
+**Architecture decisions made during active work:**
+
+When you make a significant decision mid-session — choosing between two approaches, deciding to refactor something, picking a library — ask Claude to document it in CLAUDE.md. Future sessions and future you will thank you.
+
+---
+
+## The --resume Flag for Continuing Sessions
+
+If a Claude Code session was interrupted (you closed the terminal, the process was killed, etc.) rather than ending gracefully, you may be able to resume it:
+
+```bash
+claude --resume
+```
+
+This attempts to resume the most recent session. Claude Code maintains session state that can be recovered from, including the conversation context up to the point of interruption.
+
+For a specific session (if you have multiple active sessions):
+
+```bash
+claude --resume <session-id>
+```
+
+Session IDs are displayed when Claude Code starts and are included in the compact summary notifications.
+
+**When --resume doesn't help:**
+
+If the session was too long ago, if the session ended due to hitting the hard context limit, or if the underlying process state was corrupted, `--resume` may not fully restore the session. In these cases, you're starting a new session — use your CLAUDE.md, task state files, and git history to re-establish context for Claude.
+
+---
+
+## Best Practices for Long-Running Development Tasks
+
+**Break large tasks into session-sized chunks**
+
+A session that accomplishes one complete subtask is more reliable than a marathon session that tries to do everything. Plan large features as a sequence of sessions:
+
+- Session 1: Database schema and migrations
+- Session 2: Backend API layer
+- Session 3: Frontend components
+- Session 4: Integration, testing, and cleanup
+
+Each session starts with context from CLAUDE.md and ends with Claude updating CLAUDE.md with progress.
+
+**Compact proactively, not reactively**
+
+Don't wait for auto-compaction to kick in. Run `/compact` after completing meaningful chunks of work — after a module is done, after a debugging saga is resolved, after a batch of files is created. Proactive compaction gives you more control over what the summary captures.
+
+**Read only what Claude needs**
+
+During long sessions, be specific about what Claude reads. "Read the authentication module" is less efficient than "Read `src/auth/session.ts` lines 45-90 — that's the part we need to change." Targeted reads preserve more context window space for the actual work.
+
+**Use git as external memory**
+
+Commit often during long sessions. A committed git state is reliable external memory — you can always reference what Claude has done by looking at git history, and if a session fails catastrophically, you can at least see what was written. This is especially important when auto-compaction happens and you want to verify what was done before the compact point.
+
+---
+
+## Splitting Large Tasks Into Multiple Sessions
+
+For genuinely large tasks (a full feature, a major refactor, a new service), plan multiple sessions explicitly:
+
+**Session handoff pattern:**
+
+At the end of each session, ask Claude to prepare for the handoff:
+
+```
+We're stopping here for today. Please:
+1. Commit all current changes with a descriptive message
+2. Update CLAUDE.md with what we've done and what remains
+3. Write a brief summary I can paste at the start of tomorrow's session
+```
+
+Claude will produce a compact summary you can paste at the start of the next session to re-establish context instantly.
+
+**Starting a resumed session:**
+
+```
+Continuing from yesterday's session. Here's where we left off:
+[paste Claude's session summary]
+
+Today's goal: [specific subtask]
+```
+
+This is faster and more reliable than trying to use `--resume` across days.
+
+**When tasks span weeks:**
+
+For multi-week projects, the `CLAUDE.md` "Active Work" section becomes essential. Keep it current throughout the project. Anyone on the team starting a new session can read CLAUDE.md and understand the current state without a handoff conversation.
+
+---
+
+Managing context is the operational side of working effectively with Claude Code. It's not glamorous, but teams and individuals who understand it get dramatically more out of long sessions than those who don't.
+
+Have questions about setting up Claude Code for your team's specific workflow, or need help designing a session management strategy for a large ongoing project? ClawHelp's consulting services have helped teams structure Claude Code workflows that scale. [Reach out for a consultation](/en/contact).

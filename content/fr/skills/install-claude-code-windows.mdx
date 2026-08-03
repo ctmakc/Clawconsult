@@ -1,0 +1,361 @@
+---
+slug: install-claude-code-windows
+title: "Installer Claude Code sur Windows — Guide complet"
+description: "Guide étape par étape pour installer Claude Code sur Windows avec WSL2 ou Node.js natif, avec la configuration du PATH, l'intégration VS Code et les correctifs Windows courants."
+category: how-to
+lang: "fr"
+tags: [installation, windows, wsl, claude-code, configuration]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 9
+relatedServices: [claude-code-setup]
+seoTitle: "Comment installer Claude Code sur Windows : guide WSL2 2026 | ClawHelp"
+seoDescription: "Installez Claude Code sur Windows en 10 minutes. Méthode recommandée via WSL2 plus option Node.js natif — avec configuration du PATH, intégration VS Code et correctifs spécifiques Windows."
+schema: HowTo
+---
+
+# Installer Claude Code sur Windows — Guide complet
+
+Claude Code fonctionne sur Windows, mais l'expérience diffère significativement selon la méthode choisie. Ce guide couvre les deux options : **WSL2** (recommandé) et **Windows natif** via nvm-windows. Vous trouverez aussi les étapes d'intégration VS Code, des notes sur Windows Defender et les correctifs pour les erreurs Windows les plus courantes.
+
+Pour un survol multi-plateformes, consultez le [guide d'installation complet](/skills/install-claude-code).
+
+---
+
+## WSL2 ou Windows natif — Lequel choisir ?
+
+| | WSL2 (recommandé) | Windows natif |
+|---|---|---|
+| Expérience shell | bash/zsh complet — identique à Linux | PowerShell ou cmd |
+| Écosystème Node | Meilleure compatibilité | Problèmes occasionnels avec les modules natifs |
+| Vitesse E/S fichiers | Rapide dans le système de fichiers WSL | Rapide sur NTFS |
+| Prise en charge VS Code | Excellente via Remote - WSL | Native |
+| Hooks Claude Code | Scripts bash complets | Scripts PowerShell uniquement |
+| Temps de configuration | ~10 minutes | ~7 minutes |
+
+**Choisissez WSL2 si** vous faites du scripting shell, utilisez des hooks bash, ou voulez une expérience identique à la documentation Linux. La grande majorité des utilisateurs de Claude Code sur Windows sont mieux servis par WSL2.
+
+**Choisissez Windows natif si** votre projet vit entièrement sur NTFS, que vous ne pouvez pas activer WSL2 à cause d'une politique d'entreprise, ou si vous devez appeler des outils natifs Windows qui n'existent pas dans WSL.
+
+---
+
+## Option A : WSL2 (Recommandé)
+
+### Étape 1 — Activer WSL2
+
+Ouvrez PowerShell en tant qu'administrateur et exécutez :
+
+```powershell
+wsl --install
+```
+
+Cette commande unique active les fonctionnalités Windows requises, installe le noyau WSL2 et télécharge Ubuntu (la distribution par défaut). Si vous avez déjà WSL1, mettez-le à niveau :
+
+```powershell
+wsl --set-default-version 2
+wsl --list --verbose          # vérifiez que la colonne VERSION affiche 2
+```
+
+Redémarrez quand vous y êtes invité.
+
+### Étape 2 — Lancer Ubuntu et créer un utilisateur
+
+Après le redémarrage, Ubuntu s'ouvre automatiquement et vous demande de créer un nom d'utilisateur et un mot de passe Unix. Ceux-ci n'ont pas besoin de correspondre à vos identifiants Windows. Notez-les — vous aurez besoin du mot de passe pour `sudo`.
+
+```bash
+# Confirmer que vous êtes dans WSL2
+uname -r
+# Devrait afficher quelque chose comme : 5.15.167.4-microsoft-standard-WSL2
+```
+
+### Étape 3 — Mettre à jour les paquets Ubuntu
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+### Étape 4 — Installer Node.js via nvm
+
+N'installez jamais Node.js depuis le dépôt `apt` d'Ubuntu dans WSL — la version est toujours dépassée. Utilisez nvm :
+
+```bash
+# Installer nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Recharger le shell
+source ~/.bashrc
+
+# Confirmer que nvm fonctionne
+nvm --version
+
+# Installer le dernier Node LTS
+nvm install --lts
+nvm use --lts
+nvm alias default node
+
+# Vérifier
+node --version   # v22.x.x ou similaire
+npm --version    # 10.x.x ou similaire
+```
+
+### Étape 5 — Installer Claude Code
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+### Étape 6 — Vérifier et s'authentifier
+
+```bash
+claude --version
+
+# Naviguez vers un projet et démarrez Claude Code
+cd ~/mon-projet
+claude
+```
+
+Au premier lancement, Claude Code ouvrira une fenêtre de navigateur du côté Windows pour l'OAuth. Si le navigateur ne s'ouvre pas automatiquement, copiez l'URL affichée dans le terminal et collez-la manuellement dans votre navigateur Windows.
+
+---
+
+## Option B : Windows natif (nvm-windows + PowerShell)
+
+### Étape 1 — Installer nvm-windows
+
+Téléchargez le dernier `nvm-setup.exe` depuis la [page des versions de nvm-windows](https://github.com/coreybutler/nvm-windows/releases). Lancez l'installateur avec les paramètres par défaut. Il installe nvm dans `C:\Users\<VotreNom>\AppData\Roaming\nvm` et l'ajoute automatiquement à votre PATH système.
+
+Ouvrez une **nouvelle** fenêtre PowerShell (important — nvm ne sera pas dans le PATH des fenêtres déjà ouvertes) :
+
+```powershell
+nvm version
+# Devrait afficher : 1.x.x
+```
+
+### Étape 2 — Définir la politique d'exécution PowerShell
+
+Par défaut, PowerShell bloque les scripts non signés. nvm-windows nécessite une politique d'exécution permissive :
+
+```powershell
+# Ouvrir PowerShell en tant qu'administrateur
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+`RemoteSigned` exige que les scripts téléchargés soient signés, mais autorise l'exécution des scripts locaux non signés. C'est le paramètre standard pour les développeurs.
+
+### Étape 3 — Installer Node.js
+
+```powershell
+nvm install lts
+nvm use lts
+
+node --version   # v22.x.x
+npm --version    # 10.x.x
+```
+
+### Étape 4 — Confirmer que Node est dans le PATH
+
+```powershell
+where.exe node
+# C:\Users\<VotreNom>\AppData\Roaming\nvm\v22.x.x\node.exe
+```
+
+Si la sortie est vide, fermez et rouvrez PowerShell. nvm-windows ajoute Node au PATH quand vous exécutez `nvm use`, mais seulement dans les nouvelles sessions.
+
+### Étape 5 — Installer Claude Code
+
+```powershell
+npm install -g @anthropic-ai/claude-code
+```
+
+### Étape 6 — Vérifier
+
+```powershell
+claude --version
+```
+
+Si vous voyez `'claude' n'est pas reconnu comme une commande interne ou externe`, le répertoire bin global de npm n'est pas dans votre PATH. Trouvez-le et ajoutez-le :
+
+```powershell
+npm config get prefix
+# C:\Users\<VotreNom>\AppData\Roaming\npm
+
+# Ajoutez ce chemin à votre variable d'environnement PATH utilisateur :
+$env:PATH += ";C:\Users\$env:USERNAME\AppData\Roaming\npm"
+
+# Pour le rendre permanent, utilisez :
+[Environment]::SetEnvironmentVariable(
+  "PATH",
+  "$([Environment]::GetEnvironmentVariable('PATH','User'));C:\Users\$env:USERNAME\AppData\Roaming\npm",
+  "User"
+)
+```
+
+Ouvrez une nouvelle fenêtre PowerShell et exécutez `claude --version` pour confirmer.
+
+---
+
+## Intégration VS Code
+
+### Chemin WSL2 — Extension Remote - WSL
+
+Si vous avez installé Claude Code dans WSL2, vous l'exécutez depuis le terminal WSL, pas depuis Windows. VS Code relie les deux environnements via l'extension **Remote - WSL** :
+
+1. Dans VS Code, installez l'extension **Remote - WSL** (`ms-vscode-remote.remote-wsl`).
+2. Ouvrez votre terminal Ubuntu WSL.
+3. Naviguez vers votre projet dans le système de fichiers WSL (ex. : `~/projets/mon-app`).
+4. Exécutez :
+
+```bash
+code .
+```
+
+VS Code ouvre le projet avec le système de fichiers WSL monté. Vous pouvez ouvrir le terminal intégré de VS Code, qui vous amène dans le shell bash WSL — ce qui signifie que `claude` est disponible directement depuis le terminal VS Code.
+
+**Important :** Gardez vos fichiers de projet dans le système de fichiers WSL (`~/` ou `/home/username/`) plutôt que sur le lecteur Windows (`/mnt/c/`). Les E/S de fichiers à travers la frontière WSL sont significativement plus lentes, ce qui affecte les performances de Claude Code lors de l'indexation de grandes bases de code.
+
+### Chemin Windows natif
+
+Claude Code fonctionne avec le terminal intégré de VS Code sur Windows sans configuration particulière. Le terminal intégré utilise PowerShell par défaut ; basculez-le vers Git Bash si vous préférez une expérience de type bash :
+
+1. Dans VS Code, ouvrez la palette de commandes (`Ctrl+Maj+P`).
+2. Exécutez **Terminal : Sélectionner le profil par défaut**.
+3. Choisissez **Git Bash** (nécessite [Git pour Windows](https://git-scm.com/download/win)).
+
+Claude Code fonctionne de façon identique dans PowerShell et Git Bash sur Windows.
+
+---
+
+## Windows Defender et faux positifs
+
+Windows Defender signale parfois le comportement de création de sous-processus de Claude Code comme suspect. Il s'agit d'un faux positif — Claude Code crée des processus enfants (vos commandes shell) dans le cadre de son fonctionnement normal, et certaines heuristiques confondent cela avec une activité malveillante.
+
+### Si Windows Defender met en quarantaine le binaire claude
+
+1. Ouvrez **Sécurité Windows → Protection contre les virus et menaces → Historique de la protection**.
+2. Trouvez l'élément mis en quarantaine (probablement `claude` ou un fichier dans `node_modules`).
+3. Cliquez sur **Restaurer** puis sur **Autoriser sur l'appareil**.
+
+### Ajouter une exclusion pour éviter les avertissements répétés
+
+```powershell
+# Exécuter PowerShell en tant qu'administrateur
+Add-MpPreference -ExclusionPath "$env:APPDATA\npm\node_modules\@anthropic-ai\claude-code"
+Add-MpPreference -ExclusionPath "$env:APPDATA\nvm"
+```
+
+Pour les utilisateurs de WSL2, vous pouvez aussi ajouter une exclusion pour le disque virtuel WSL :
+
+```powershell
+Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\Packages\CanonicalGroupLimited.Ubuntu*"
+```
+
+Ces exclusions sont conservatrices — elles couvrent uniquement le répertoire d'installation de Claude Code et NVM, pas l'ensemble de votre système de fichiers.
+
+---
+
+## Erreurs Windows courantes et correctifs
+
+### `EACCES: permission denied` lors de l'installation globale npm
+
+Sur Windows, cela signifie généralement que vous exécutez PowerShell sans droits administrateur, ou que nvm-windows n'a pas reçu les droits d'écriture lors de l'installation. Lancez PowerShell en tant qu'administrateur et réessayez :
+
+```powershell
+npm install -g @anthropic-ai/claude-code
+```
+
+Si vous préférez ne pas lancer en tant qu'administrateur, définissez un préfixe npm appartenant à l'utilisateur :
+
+```powershell
+mkdir "$env:USERPROFILE\.npm-global"
+npm config set prefix "$env:USERPROFILE\.npm-global"
+# Puis ajoutez $env:USERPROFILE\.npm-global à votre PATH comme indiqué ci-dessus
+npm install -g @anthropic-ai/claude-code
+```
+
+### `Error: spawn ENOENT` quand Claude Code tente d'exécuter des commandes shell
+
+Claude Code appelle `sh` pour les commandes bash. Sur Windows natif, `sh` n'est pas disponible sauf si Git pour Windows est installé et dans le PATH :
+
+```powershell
+# Installer Git pour Windows depuis https://git-scm.com/download/win
+# Puis vérifier :
+where.exe sh
+# C:\Program Files\Git\usr\bin\sh.exe
+```
+
+Si `sh` est installé mais toujours introuvable par Claude Code, ajoutez `C:\Program Files\Git\usr\bin` à votre PATH système.
+
+### WSL2 : `claude` introuvable dans WSL
+
+L'installation de Claude Code s'est faite côté Windows, pas dans WSL. Chaque environnement maintient son propre PATH et ses propres paquets npm globaux. Exécutez l'installation npm depuis le terminal Ubuntu, pas depuis PowerShell :
+
+```bash
+# Dans le terminal Ubuntu WSL — PAS PowerShell
+npm install -g @anthropic-ai/claude-code
+claude --version
+```
+
+### La politique d'exécution PowerShell bloque les scripts npm
+
+Si vous voyez `ne peut pas être chargé car l'exécution de scripts est désactivée sur ce système`, la politique d'exécution n'a pas été définie :
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### Authentification : le navigateur ne s'ouvre pas automatiquement (WSL2)
+
+WSL2 n'a pas de navigateur par défaut. Claude Code affiche l'URL OAuth dans le terminal. Copiez-la et ouvrez-la dans votre navigateur Windows manuellement. Après approbation dans le navigateur, revenez au terminal WSL — l'authentification se terminera automatiquement.
+
+---
+
+## Liste de vérification
+
+Exécutez ces commandes dans votre environnement choisi (bash WSL ou PowerShell Windows) :
+
+```bash
+node --version          # v18.x.x ou supérieur
+npm --version           # 8.x.x ou supérieur
+claude --version        # Claude Code 1.x.x
+claude --help           # affiche la référence des commandes
+```
+
+Puis faites un test en conditions réelles :
+
+```bash
+mkdir ~/claude-test && cd ~/claude-test
+git init
+claude "Quels fichiers se trouvent dans ce répertoire ?"
+```
+
+Claude Code devrait répondre en décrivant le dépôt git (vide). Tapez `exit` pour quitter.
+
+---
+
+## Prochaines étapes
+
+- [Guide d'installation complet (toutes plateformes)](/skills/install-claude-code)
+- [Guide d'installation macOS](/skills/install-claude-code-mac)
+- [Guide d'installation Linux](/skills/install-claude-code-linux)
+- [Hooks Claude Code](/skills/claude-code-hooks) — automatisez des actions sur les appels d'outils et les événements de session
+- [Création de sous-agents](/skills/build-subagent) — instanciez des agents parallèles pour des tâches indépendantes
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Installer Claude Code sur Windows",
+  "description": "Guide étape par étape pour installer Claude Code sur Windows via WSL2 ou Node.js natif",
+  "totalTime": "PT15M",
+  "step": [
+    { "@type": "HowToStep", "name": "Activer WSL2", "text": "Exécutez : wsl --install dans PowerShell en tant qu'administrateur" },
+    { "@type": "HowToStep", "name": "Installer Node.js via nvm dans WSL", "text": "Exécutez le script d'installation de nvm, puis nvm install --lts" },
+    { "@type": "HowToStep", "name": "Installer Claude Code", "text": "Exécutez : npm install -g @anthropic-ai/claude-code" },
+    { "@type": "HowToStep", "name": "Vérifier l'installation", "text": "Exécutez : claude --version" },
+    { "@type": "HowToStep", "name": "S'authentifier", "text": "Exécutez claude dans un répertoire de projet et complétez le flux OAuth dans le navigateur" }
+  ]
+}
+*/}

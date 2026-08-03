@@ -1,0 +1,314 @@
+---
+slug: claude-code-git-workflow
+title: "Git Workflow Best Practices with Claude Code"
+description: "How to work with Claude Code and git effectively — commit quality, branch conventions, reviewing diffs, worktrees, pre-commit hooks, and when to stash."
+category: guide
+schema: Article
+tags: [git, workflow, best-practices, commits, worktrees]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 9
+seoTitle: "Git Workflow Best Practices with Claude Code | ClawHelp"
+seoDescription: "Master git workflows with Claude Code. Learn commit quality, branch naming, reviewing diffs with git diff --staged, worktrees, pre-commit hooks, and PR descriptions."
+---
+
+# Git Workflow Best Practices with Claude Code
+
+Claude Code can manage your entire git workflow — from staging and committing to branching, rebasing, and opening pull requests. Done well, this is a force multiplier. Done carelessly, you can end up with a messy history, lost work, or commits you didn't intend to push.
+
+This guide covers the practices that keep your git workflow clean when working with an AI collaborator.
+
+---
+
+## How Claude Code Manages Git
+
+Claude Code has direct access to your shell and treats git as a standard tool. By default it will:
+
+- Stage files with `git add`
+- Commit with a descriptive message it generates
+- Create branches when needed for isolated changes
+- Read git history to understand your project's conventions
+- Open PRs via the `gh` CLI if installed
+
+It does not have opinions about your workflow — it will follow whatever conventions and constraints you give it. That means the quality of your git output is directly determined by how clearly you define expectations.
+
+---
+
+## Commit Message Quality
+
+Claude Code generates commit messages by examining the diff and inferring intent. The quality is generally good, but you can improve it by giving Claude context that the diff alone doesn't contain.
+
+**What makes a good commit message for Claude to write:**
+
+Tell Claude the *why*, not just the *what*. Compare:
+
+- "Commit these changes" — Claude writes a mechanical description of the diff
+- "Commit this fix. The bug was that session tokens weren't being refreshed on expiry, causing silent logouts." — Claude writes a message that captures the root cause
+
+**Set conventions in CLAUDE.md:**
+
+```markdown
+## Git Commit Style
+- Imperative mood: "Add feature" not "Added feature"
+- 50 character subject line max
+- Include ticket number if working on a task: "Fix token refresh (PROJ-142)"
+- Body explains *why*, not *what*
+```
+
+Claude will read this and apply these rules when generating commit messages.
+
+**Always review before Claude commits.** The workflow should be:
+
+1. Claude stages changes
+2. You review: `git diff --staged`
+3. You confirm the commit or ask Claude to adjust the message
+4. Claude commits
+
+If you skip the review step, you may end up with commits that don't match your project's history style, or that include files you didn't intend to stage.
+
+---
+
+## Reviewing Diffs Before Committing
+
+The single most important git habit when working with Claude Code: **always run `git diff --staged` before confirming a commit.**
+
+```bash
+git diff --staged
+```
+
+This shows exactly what will be committed. Claude Code operates with high confidence and may stage more than you expected — for example, it might stage a configuration file it modified as a side effect of the main task, or include a debug log you added temporarily.
+
+**Make reviewing diffs a reflex.** If you're using Claude Code through a terminal, run `git diff --staged` yourself before saying "yes, commit." If Claude Code is proposing a commit, you can tell it: "Show me `git diff --staged` first, then we'll commit."
+
+You can also add a hook that opens the diff automatically (see Pre-commit Hooks below).
+
+---
+
+## Branch Naming Conventions
+
+When Claude Code creates branches, it generates names based on the task at hand. The default names are usually reasonable (`fix-auth-token-refresh`, `add-user-export-endpoint`) but may not match your project's convention.
+
+**Set branch naming rules in CLAUDE.md:**
+
+```markdown
+## Git Branch Naming
+- Feature branches: feature/<short-description>
+- Bug fixes: fix/<short-description>
+- Hotfixes: hotfix/<short-description>
+- Include ticket number: feature/PROJ-142-user-export
+```
+
+Claude will follow these patterns when creating branches. This matters most when working on teams where branch names drive CI behavior or integration with project management tools.
+
+---
+
+## When to Use Worktrees
+
+Git worktrees let you check out multiple branches simultaneously in separate directories. Claude Code supports this natively and it's particularly useful for:
+
+- Working on a bug fix while Claude continues feature development on a different branch
+- Reviewing someone else's PR branch without disturbing your working directory
+- Running parallel Claude Code sessions on different parts of the codebase
+
+**Basic worktree setup:**
+
+```bash
+# Create a worktree for a hotfix while main development continues
+git worktree add ../myapp-hotfix hotfix/critical-auth-bug
+
+# Claude Code can then be pointed at either directory
+cd ../myapp-hotfix
+claude
+```
+
+**When worktrees are the right tool:**
+- You have two truly independent tasks that shouldn't share working state
+- You need to run tests on a branch without switching your main environment
+- You're doing parallel Claude Code sessions on the same repo
+
+**When worktrees are overkill:**
+- Simple sequential tasks — finish one, start the next
+- Tasks that share files or configuration
+
+---
+
+## Pre-commit Hooks and Claude Code
+
+Pre-commit hooks run automatically before each commit. Claude Code respects them — it will not bypass hooks with `--no-verify` unless you explicitly instruct it to (and it will warn you if you try).
+
+**This is a feature, not a limitation.** Hooks are your quality gates. Common hooks that work well with Claude Code:
+
+```bash
+# .husky/pre-commit example
+#!/bin/sh
+pnpm lint
+pnpm test --passWithNoTests
+```
+
+If a pre-commit hook fails, Claude Code will see the failure output and typically:
+1. Explain what failed
+2. Fix the issue
+3. Re-stage and attempt the commit again
+
+This cycle works well for linting failures. For test failures, Claude Code will usually investigate and fix the root cause before retrying.
+
+**Critical: Never ask Claude to skip hooks.** Hooks exist to catch problems before they reach the repository. If a hook is failing and you're tempted to bypass it, the right answer is to fix the underlying issue. Claude Code can help with that.
+
+---
+
+## .gitignore Patterns for Claude Code
+
+Claude Code creates several local files that generally should not be committed:
+
+```gitignore
+# Claude Code local config (may contain personal settings)
+.claude/settings.local.json
+
+# If you use project-level settings that are team-shared, commit:
+# .claude/settings.json  ← this one is usually safe to commit
+# .claude/CLAUDE.md      ← this is your project instructions, commit it
+
+# Never commit these
+.claude/settings.local.json
+```
+
+**What to commit vs. not commit:**
+
+| File | Commit? | Reason |
+|------|---------|--------|
+| `CLAUDE.md` (root) | Yes | Shared project instructions |
+| `.claude/settings.json` | Usually yes | Shared tool permissions |
+| `.claude/settings.local.json` | No | Personal overrides |
+| `.claude/projects/` | No | Personal session memory |
+
+If your `.claude/` directory contains API keys or personal configuration, add it to `.gitignore` entirely. Use environment variables for credentials, not config files.
+
+---
+
+## Stashing Work Before Major Refactors
+
+Before asking Claude to do a large-scale refactor, stash your current in-progress work:
+
+```bash
+git stash push -m "WIP: before Claude refactor of auth module"
+```
+
+This gives you a clean rollback point. If the refactor goes sideways — Claude misunderstands the scope, makes unexpected changes, or breaks something non-obvious — you can restore your previous state:
+
+```bash
+git stash pop
+```
+
+**When to stash before a Claude Code task:**
+- "Refactor the entire authentication module"
+- "Rename this concept across the whole codebase"
+- "Convert this class-based component to hooks throughout"
+- Any task where "all files" or "everywhere" appears in the description
+
+For surgical edits (fix this one function, add this one endpoint), stashing is usually unnecessary. For broad structural changes, it's cheap insurance.
+
+---
+
+## Rebasing vs. Merging Feature Branches
+
+When Claude Code creates a feature branch and you want to integrate it back to main, you have two choices: rebase or merge. Claude Code will follow whatever strategy you specify.
+
+**Merge** (`git merge feature/my-branch`):
+- Preserves the exact history of when changes were made
+- Creates a merge commit
+- Easier to understand "what happened and when"
+- Better for teams that value historical accuracy
+
+**Rebase** (`git rebase main`):
+- Replays feature branch commits onto the current tip of main
+- Creates a linear history
+- Makes `git log` easier to read
+- Better when you want a clean, linear project history
+
+**Recommendation for Claude Code workflows**: Use rebase + squash for small feature branches Claude creates. This keeps your main branch history clean without the noise of intermediate commits Claude made while exploring solutions.
+
+```bash
+# Squash all commits on the feature branch into one clean commit
+git rebase -i main
+# Then pick 'squash' for all but the first commit
+```
+
+Or tell Claude: "Squash all commits on this branch into one with a clean summary message, then merge to main."
+
+---
+
+## Pull Request Description Quality
+
+When you ask Claude Code to open a pull request, it generates a description based on the changes. The quality of this description depends on the context available.
+
+**Tips for better PR descriptions:**
+
+1. **Tell Claude what the PR should accomplish before it writes the description.** "Open a PR — this fixes the session expiry bug reported in issue #142. The root cause was that refresh tokens weren't being checked before making authenticated requests."
+
+2. **Reference issues.** Claude will link to GitHub issues if you mention them: "This closes #142."
+
+3. **Set a PR template.** Add a `.github/PULL_REQUEST_TEMPLATE.md` and Claude will use it as a structure guide.
+
+4. **Review the description before submitting.** Claude Code's PR descriptions are good starting points but may miss business context, security implications, or migration notes that a human reviewer needs.
+
+**Example prompt for a quality PR:**
+
+```
+Open a PR from this branch to main. 
+Title: "Fix session token expiry handling"
+- Closes issue #142
+- Include: what changed, why it was broken, how to test it
+- Note that this requires a database migration before deploying
+```
+
+---
+
+## Common Mistakes to Avoid
+
+**1. Letting Claude commit without reviewing `git diff --staged`**
+Always review what's staged. Claude is accurate but not infallible — it may stage files it shouldn't.
+
+**2. Not setting git conventions in CLAUDE.md**
+Without guidance, Claude commits in a generic style that may not match your project. Invest 5 minutes in writing commit and branch conventions.
+
+**3. Asking Claude to force-push to shared branches**
+Never instruct Claude to `git push --force` to main or any branch shared with your team. Legitimate force-push scenarios (rewriting feature branch history before merge) are fine on private branches.
+
+**4. Skipping pre-commit hooks**
+Don't ask Claude to use `--no-verify`. Fix the underlying issue instead.
+
+**5. Doing large refactors without stashing**
+Stash first. The two minutes it takes is worth it.
+
+---
+
+## Recommended CLAUDE.md Git Section
+
+Here's a production-ready git section for your CLAUDE.md:
+
+```markdown
+## Git Workflow
+
+### Commit Messages
+- Imperative mood, 50-char subject
+- Body: explain *why*, not *what*
+- Reference tickets: "Fix login timeout (PROJ-89)"
+
+### Branches
+- feature/<description> for new features
+- fix/<description> for bug fixes
+- Always branch from main unless told otherwise
+
+### Rules
+- Always run `git diff --staged` before committing — show me output
+- Never use --no-verify
+- Never force-push to main or develop
+- Stash before large refactors
+
+### PR Descriptions
+- Include: what changed, why, how to test
+- Reference related issues
+- Note any migration steps or deployment considerations
+```
+
+With this in CLAUDE.md, Claude Code will consistently follow your workflow conventions throughout every session.

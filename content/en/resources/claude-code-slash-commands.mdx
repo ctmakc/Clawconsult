@@ -1,0 +1,369 @@
+---
+slug: claude-code-slash-commands
+title: "Claude Code Slash Commands: Complete Reference and Custom Commands Guide"
+description: "Full reference for Claude Code's built-in slash commands — /help, /clear, /memory, /model, /settings, /review, /init — plus how to create custom slash commands for project-specific workflows."
+category: guide
+schema: Article
+tags: [slash-commands, workflow, customization, shortcuts, productivity]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+seoTitle: "Claude Code Slash Commands: Built-in & Custom Commands Reference | ClawHelp"
+seoDescription: "Complete guide to Claude Code slash commands. Learn /help, /clear, /memory, /model, /review, /init, and how to build custom slash commands for your project workflows."
+---
+
+# Claude Code Slash Commands: Complete Reference and Custom Commands Guide
+
+Slash commands are shortcuts you type at the Claude Code prompt to trigger specific behaviors or access meta-functionality. They're different from regular prompts — instead of sending a message to Claude, they invoke built-in Claude Code features directly or run pre-defined custom workflows you've set up in your project.
+
+This guide covers every built-in slash command plus the full system for creating your own.
+
+---
+
+## How Slash Commands Work
+
+At the Claude Code interactive prompt, type `/` followed by a command name. Claude Code intercepts these before they reach the model — they're handled by the CLI itself, not by Claude.
+
+```
+> /help
+```
+
+Custom slash commands you define are stored as Markdown files in `.claude/commands/`. When you invoke a custom command, Claude Code reads the file and sends its contents as a prompt. This means custom commands are essentially saved, reusable prompts with the slash command interface.
+
+---
+
+## Built-in Slash Commands
+
+### /help
+
+Displays a summary of available slash commands and basic usage information.
+
+```
+> /help
+```
+
+Use this when you forget a command name or want to see what's available. It shows both built-in commands and any custom commands you've defined in `.claude/commands/`.
+
+---
+
+### /clear
+
+Clears the current conversation context and starts fresh.
+
+```
+> /clear
+```
+
+**When to use it:**
+
+Claude Code maintains a rolling context window of your conversation. As the session goes on, earlier messages remain in context and consume tokens. `/clear` resets this completely — Claude loses all memory of the current session and starts with only what it can read from your project files and CLAUDE.md.
+
+Use `/clear` when:
+- You've finished one task and are starting a completely different one
+- The conversation has grown long and Claude is starting to make mistakes that suggest context confusion
+- You want to get a fresh perspective on a problem without prior session bias
+
+**What /clear does not do:**
+
+It does not affect your CLAUDE.md, your `.claude/settings.json`, your git history, or any files on disk. It only clears Claude's short-term conversational memory for the current session.
+
+---
+
+### /memory
+
+Opens your CLAUDE.md file (or creates one if it doesn't exist) for editing. This is the quick way to update Claude's persistent project instructions mid-session.
+
+```
+> /memory
+```
+
+The file opens in your system's default editor (`$EDITOR` or `$VISUAL`). After you save and close, Claude Code reloads the file and the updated instructions apply to all subsequent interactions in the session.
+
+**Practical workflow:**
+
+When Claude does something you want it to always or never do, use `/memory` immediately to add that rule to CLAUDE.md while it's fresh. For example, if Claude uses `var` in JavaScript and you want it to always use `const`/`let`, run `/memory` and add the rule right there.
+
+---
+
+### /model
+
+Switches the Claude model being used for the current session.
+
+```
+> /model
+```
+
+This opens an interactive selector showing available models. Changes apply to subsequent messages in the session.
+
+**When model switching matters:**
+
+- **Faster/cheaper model** for repetitive or simple tasks — generating boilerplate, renaming variables, writing straightforward tests
+- **More capable model** for complex architectural decisions, tricky bugs, or tasks where quality is more important than speed
+
+In most cases you'll stick to one model per project, configured in your settings. `/model` is useful for one-off switches without changing your global configuration.
+
+---
+
+### /settings
+
+Opens an interactive view of Claude Code's current configuration, including active permissions, hook configuration, and model settings.
+
+```
+> /settings
+```
+
+This is a read-oriented command — it shows you what's configured, not a full editor for changing everything. For persistent changes, edit `.claude/settings.json` directly.
+
+---
+
+### /review
+
+Asks Claude to perform a code review of recent changes. By default it reviews the current git diff (staged + unstaged changes against the current branch).
+
+```
+> /review
+```
+
+**What Claude reviews:**
+
+Claude Code reads `git diff HEAD` (or `git diff --staged` if you specify) and produces a structured review covering:
+- Potential bugs or logic errors
+- Missing error handling
+- Security concerns
+- Code quality and readability issues
+- Missing tests for changed code
+
+**Customizing the review scope:**
+
+You can follow `/review` with context:
+
+```
+> /review focus on security and error handling only
+> /review just the changes in src/auth/
+> /review treat this as a senior engineer reviewing a junior's PR
+```
+
+Claude Code uses the slash command as a starting point and applies your additional instructions on top.
+
+**Integrating /review into your workflow:**
+
+Before every commit, run `/review`. It takes 30–60 seconds and catches issues that save code review cycles later. This is especially valuable when Claude Code has been making many changes — a review pass gives Claude a chance to catch inconsistencies it introduced across the session.
+
+---
+
+### /init
+
+Analyzes your project and generates a CLAUDE.md file with appropriate project documentation.
+
+```
+> /init
+```
+
+Claude Code reads your project's directory structure, package files, configuration, existing documentation, and source code to generate a CLAUDE.md that describes:
+- Project overview and purpose
+- Technology stack and versions
+- Available commands (build, test, lint, dev server)
+- Project structure and important directories
+- Conventions it detected from the code
+
+**When to use /init:**
+
+- Starting to use Claude Code on an existing project for the first time
+- Setting up Claude Code for a new team member
+- After a major project refactor that changed the structure significantly
+
+**After running /init:**
+
+Always review and edit the generated CLAUDE.md. Claude's analysis is good but not perfect — it may miss conventions that aren't visible from code alone, include outdated commands, or omit important project-specific rules you want enforced. Treat `/init` as a first draft, not a finished document.
+
+---
+
+## Creating Custom Slash Commands
+
+Custom slash commands are where the real productivity gains live. Any workflow you repeat across sessions is a candidate for a custom command.
+
+### How Custom Commands Work
+
+Create a Markdown file in `.claude/commands/`:
+
+```
+.claude/
+  commands/
+    my-command.md
+```
+
+The filename (without `.md`) becomes the slash command name. So `my-command.md` creates `/my-command`.
+
+When you type `/my-command`, Claude Code reads the file and sends its contents as a prompt. Everything that follows in the Markdown file is treated as instructions to Claude for that invocation.
+
+### Your First Custom Command
+
+Create `.claude/commands/check.md`:
+
+```markdown
+Run the full test suite and linter. Report:
+1. How many tests passed/failed
+2. Any lint errors with file and line numbers
+3. Whether the build succeeds
+
+Use these commands:
+- Tests: `npm test`
+- Lint: `npm run lint`
+- Build: `npm run build`
+
+If anything fails, do not attempt to fix it — just report what failed and stop.
+```
+
+Now `/check` runs your entire quality gate in one command:
+
+```
+> /check
+```
+
+### Template Variables in Custom Commands
+
+Custom commands support `$ARGUMENTS` — a placeholder that gets replaced with whatever text you type after the command name.
+
+Create `.claude/commands/explain.md`:
+
+```markdown
+Explain the following code or concept in plain English suitable for a developer 
+who knows the language but is unfamiliar with this specific pattern or module.
+Be concrete. Use analogies where helpful. Show examples.
+
+Topic to explain: $ARGUMENTS
+```
+
+Usage:
+
+```
+> /explain the Visitor pattern in our AST module
+> /explain why we use optimistic locking in src/db/transactions.ts
+> /explain what the middleware chain does in src/server/index.ts
+```
+
+The `$ARGUMENTS` text is substituted before the prompt is sent to Claude.
+
+### Project-Specific Workflow Commands
+
+Custom commands shine for project-specific workflows that would require a long explanation to describe from scratch each time.
+
+**Release preparation command** (`.claude/commands/prep-release.md`):
+
+```markdown
+Prepare a release. Steps:
+1. Run `npm test` — if any tests fail, stop and report. Do not proceed.
+2. Run `npm run lint` — fix any auto-fixable issues, report unfixable ones
+3. Run `npm run build` — verify the build succeeds
+4. Check `git log main..HEAD --oneline` to see commits since last release
+5. Suggest a semantic version bump (major/minor/patch) based on the changes
+6. Update `CHANGELOG.md` with a summary of changes since last release
+7. Ask me to confirm the version and changelog before touching package.json
+
+Do not create a git tag or push anything without explicit confirmation.
+```
+
+**Database migration command** (`.claude/commands/new-migration.md`):
+
+```markdown
+Create a new database migration for: $ARGUMENTS
+
+Steps:
+1. Generate the migration file using `npx prisma migrate dev --name "$ARGUMENTS" --create-only`
+2. Review the auto-generated SQL and verify it matches the intent
+3. If the SQL looks correct, explain what it does
+4. Do NOT run `migrate deploy` — leave the migration unapplied for review
+
+If the Prisma schema needs to be updated first, make those changes before generating the migration.
+```
+
+**PR description command** (`.claude/commands/pr.md`):
+
+```markdown
+Open a pull request for the current branch.
+
+Before writing the PR:
+1. Run `git log main..HEAD --oneline` to see all commits
+2. Run `git diff main...HEAD --stat` to see which files changed
+
+PR requirements:
+- Title: concise, imperative mood, under 60 characters
+- Summary: 2–4 bullet points on what changed and why
+- Test plan: what should be tested before merging
+- Note any breaking changes or migration steps required
+- Reference related issues if visible in commit messages
+
+After creating the PR, show me the URL.
+```
+
+### Team-Shared vs. Personal Commands
+
+Commands in `.claude/commands/` are committed to the repository and shared with the whole team. Everyone gets the same `/check`, `/prep-release`, and `/pr` commands.
+
+For personal commands that are specific to your workflow, use `.claude/commands/` in your home directory's global Claude config, or create a separate directory and configure Claude to read from it.
+
+**Best practice**: commit team-workflow commands to the project repo. Keep personal shortcuts out of the project.
+
+### Organizing Commands for Larger Projects
+
+As your command library grows, use descriptive names that make the purpose obvious at a glance:
+
+```
+.claude/commands/
+  check.md              → /check        (run tests + lint + build)
+  pr.md                 → /pr           (open pull request)
+  prep-release.md       → /prep-release (prepare a release)
+  new-migration.md      → /new-migration (create DB migration)
+  review-security.md    → /review-security (security-focused review)
+  explain.md            → /explain      (explain code/concept)
+  refactor.md           → /refactor     (refactor $ARGUMENTS)
+  debug.md              → /debug        (systematic debugging workflow)
+```
+
+---
+
+## Combining Slash Commands with Hooks
+
+Slash commands and hooks complement each other. Hooks run automatically on tool calls; slash commands run on explicit invocation. Together they cover both ends of the automation spectrum.
+
+**Example workflow:**
+- Hooks auto-format every file write (no manual step needed)
+- `/check` manually runs the full quality gate when you want it
+- `/pr` bundles the PR workflow into one command
+- `/review` gives a structured review before any PR
+
+---
+
+## Best Practices for Custom Commands
+
+**1. Name commands for the intent, not the implementation**
+
+`/prep-release` is better than `/run-tests-lint-build-changelog`. The command name should tell you *what you're accomplishing*, not *what it does internally*.
+
+**2. Include explicit stop conditions**
+
+Tell the command when to stop and ask for confirmation versus when to proceed autonomously. "Do not create a git tag without explicit confirmation" is more reliable than hoping Claude infers it.
+
+**3. Keep commands focused**
+
+A command that does 15 things is hard to reason about and hard to debug when something goes wrong. Prefer smaller, composable commands over monolithic ones.
+
+**4. Document commands in CLAUDE.md**
+
+Add a section to CLAUDE.md listing your custom commands and what they do. When Claude Code reads CLAUDE.md at session start, it becomes aware of the commands and can suggest using them when appropriate.
+
+```markdown
+## Available Slash Commands
+- `/check` — run tests, lint, and build; report results
+- `/pr` — open a PR for the current branch
+- `/prep-release` — run quality gates and prepare release notes
+- `/explain <topic>` — explain code or a concept in plain English
+```
+
+**5. Version control your commands**
+
+Your `.claude/commands/` directory should be in git. Commands encode team knowledge and workflow conventions — treat them with the same care as your CI configuration.
+
+---
+
+Need help designing a custom slash command library that fits your team's workflow? ClawHelp's Claude Code consulting services can design and implement a complete productivity setup — from project-specific commands to hook integrations. [Get in touch](/en/contact).

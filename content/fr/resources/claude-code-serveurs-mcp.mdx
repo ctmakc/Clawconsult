@@ -1,0 +1,404 @@
+---
+slug: claude-code-serveurs-mcp
+title: "Les serveurs MCP avec Claude Code : guide complet"
+description: "Tout sur le Model Context Protocol avec Claude Code — configuration des serveurs MCP dans settings.json, serveurs populaires (GitHub, Slack, bases de données), création d'un serveur personnalisé en Node.js, sécurité et débogage des connexions MCP."
+category: guide
+schema: Article
+tags: [MCP, serveurs-mcp, model-context-protocol, configuration, intégrations]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+lang: "fr"
+seoTitle: "Les serveurs MCP avec Claude Code : guide complet | ClawHelp"
+seoDescription: "Maîtrisez les serveurs MCP avec Claude Code. Configuration dans settings.json, serveurs populaires (GitHub, Slack, filesystem, bases de données), création d'un serveur personnalisé Node.js, sécurité et débogage MCP."
+---
+
+# Les serveurs MCP avec Claude Code : guide complet
+
+Le Model Context Protocol — MCP pour les intimes — est l'un des aspects les plus puissants de Claude Code qui reste sous-utilisé par beaucoup de développeurs. Si vous avez l'impression que Claude Code fonctionne dans un vide, sans accès à vos outils internes, vos bases de données, ou vos services tiers, c'est probablement parce que vous n'avez pas encore configuré de serveurs MCP.
+
+Ce guide vous explique ce que c'est, comment ça fonctionne, quels serveurs valent la peine d'être installés, et comment en créer un pour vos propres besoins.
+
+---
+
+## MCP, c'est quoi exactement?
+
+Le Model Context Protocol est un standard ouvert développé par Anthropic qui permet à Claude Code de se connecter à des sources de données et des outils externes de façon sécurisée et structurée. Pensez-y comme un protocole USB pour les agents IA : n'importe quel outil peut s'y brancher en suivant la même interface.
+
+Sans MCP, Claude Code est limité à ce qu'il peut voir dans votre système de fichiers local et exécuter dans votre shell. Avec MCP, il peut :
+
+- Lire et écrire dans des bases de données directement
+- Créer des issues, des PRs, et des révisions GitHub
+- Chercher dans Slack et y publier des messages
+- Accéder à des APIs internes de votre entreprise
+- Interagir avec des outils de monitoring, des systèmes de billetterie, des registres de conteneurs
+
+La différence est substantielle. Une session Claude Code avec les bons serveurs MCP configurés peut accomplir des tâches qui autrement nécessiteraient plusieurs outils ouverts simultanément.
+
+---
+
+## Architecture d'un serveur MCP
+
+Un serveur MCP est un processus léger qui :
+
+1. Expose une liste d'**outils** (fonctions que Claude peut appeler)
+2. Expose optionnellement des **ressources** (données que Claude peut lire)
+3. Communique avec Claude Code via stdio ou HTTP+SSE
+4. S'authentifie selon les besoins du service sous-jacent
+
+Claude Code agit comme **hôte MCP** : il démarre les serveurs, maintient la connexion, et présente leurs capacités à Claude comme des outils natifs. De votre point de vue en tant qu'utilisateur, la distinction entre un outil intégré de Claude Code et un outil fourni par MCP est invisible — Claude les utilise de la même façon.
+
+---
+
+## Configuration des serveurs MCP dans settings.json
+
+Tous les serveurs MCP se configurent dans `.claude/settings.json` (niveau projet) ou `~/.claude/settings.json` (niveau global).
+
+La structure de base :
+
+```json
+{
+  "mcpServers": {
+    "nom-du-serveur": {
+      "command": "commande-pour-démarrer-le-serveur",
+      "args": ["argument1", "argument2"],
+      "env": {
+        "VARIABLE_ENV": "valeur"
+      }
+    }
+  }
+}
+```
+
+Chaque entrée dans `mcpServers` définit un serveur MCP. Claude Code démarre ces processus automatiquement au lancement d'une session. Le `command` est l'exécutable, `args` les arguments passés au démarrage, et `env` les variables d'environnement injectées dans le processus du serveur.
+
+**Exemple complet avec plusieurs serveurs :**
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_votre_token_ici"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/vous/projets",
+        "/home/vous/documents"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://user:pass@localhost:5432/mabd"
+      }
+    }
+  }
+}
+```
+
+**Important :** ne mettez jamais de secrets dans `settings.json` committé dans git. Utilisez `settings.local.json` (qui est dans `.gitignore`) ou référencez des variables d'environnement déjà définies dans votre shell.
+
+---
+
+## Serveurs MCP populaires
+
+### GitHub
+
+Le serveur MCP GitHub est probablement le plus utile pour les développeurs. Il permet à Claude Code d'interagir avec GitHub sans passer par le CLI `gh` — et avec un niveau de contrôle plus fin.
+
+```json
+"github": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+  }
+}
+```
+
+Avec ce serveur, Claude Code peut : créer et commenter des issues, ouvrir des PRs, lire le contenu de fichiers dans n'importe quel dépôt accessible, chercher dans le code, lire les commentaires de révision.
+
+### Filesystem
+
+Bien que Claude Code ait déjà accès à votre système de fichiers via bash, le serveur MCP filesystem expose des opérations de fichiers structurées avec un contrôle précis sur quels répertoires sont accessibles.
+
+```json
+"filesystem": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/home/vous/projets"
+  ]
+}
+```
+
+Utile pour restreindre l'accès de Claude Code à des répertoires spécifiques, ou pour exposer des chemins réseau montés.
+
+### Slack
+
+```json
+"slack": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-slack"],
+  "env": {
+    "SLACK_BOT_TOKEN": "xoxb-votre-token",
+    "SLACK_TEAM_ID": "T0XXXXXXX"
+  }
+}
+```
+
+Claude Code peut rechercher des messages, lire des fils de discussion, et publier des mises à jour. Pratique pour des workflows qui combinent du travail de code avec de la communication d'équipe.
+
+### Bases de données PostgreSQL / SQLite
+
+```json
+"postgres": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-postgres"],
+  "env": {
+    "DATABASE_URL": "postgresql://user:pass@localhost/mabd"
+  }
+},
+"sqlite": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-sqlite", "/chemin/vers/base.db"]
+}
+```
+
+Ces serveurs permettent à Claude Code d'explorer le schéma de votre base de données, exécuter des requêtes SELECT, et comprendre la structure de vos données sans avoir besoin d'un accès shell.
+
+### Brave Search (recherche web)
+
+```json
+"brave-search": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+  "env": {
+    "BRAVE_API_KEY": "votre-clé-api"
+  }
+}
+```
+
+Permet à Claude Code de chercher sur le web pour trouver de la documentation, des exemples de code, ou des solutions à des erreurs.
+
+---
+
+## Créer un serveur MCP personnalisé en Node.js
+
+Si aucun serveur existant ne répond à vos besoins — par exemple pour accéder à une API interne de votre entreprise — vous pouvez créer le vôtre. C'est plus simple qu'il n'y paraît.
+
+### Installation des dépendances
+
+```bash
+npm init -y
+npm install @modelcontextprotocol/sdk
+```
+
+### Structure de base
+
+```javascript
+// mon-serveur-mcp.js
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+
+const server = new Server(
+  {
+    name: "mon-serveur-interne",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Définir les outils disponibles
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "obtenir_statut_deploiement",
+        description: "Obtient le statut du dernier déploiement pour un environnement",
+        inputSchema: {
+          type: "object",
+          properties: {
+            environnement: {
+              type: "string",
+              enum: ["dev", "staging", "production"],
+              description: "L'environnement à vérifier",
+            },
+          },
+          required: ["environnement"],
+        },
+      },
+    ],
+  };
+});
+
+// Gérer les appels d'outils
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === "obtenir_statut_deploiement") {
+    const env = request.params.arguments.environnement;
+    
+    // Votre logique métier ici — appel API interne, base de données, etc.
+    const statut = await verifierStatutDeploiement(env);
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(statut, null, 2),
+        },
+      ],
+    };
+  }
+  
+  throw new Error(`Outil inconnu : ${request.params.name}`);
+});
+
+async function verifierStatutDeploiement(env) {
+  // Exemple : appel à votre API interne
+  const reponse = await fetch(`https://api.interne.exemple.com/deployments/${env}`);
+  return reponse.json();
+}
+
+// Démarrer le serveur
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+### Enregistrement dans settings.json
+
+```json
+{
+  "mcpServers": {
+    "interne": {
+      "command": "node",
+      "args": ["/chemin/absolu/vers/mon-serveur-mcp.js"],
+      "env": {
+        "API_INTERNE_URL": "https://api.interne.exemple.com",
+        "API_INTERNE_CLE": "${API_INTERNE_CLE}"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Sécurité des serveurs MCP
+
+Les serveurs MCP étendent les capacités de Claude Code — et donc aussi sa surface d'attaque potentielle. Quelques principes à respecter :
+
+**Principe du moindre privilège.** Configurez chaque serveur avec les permissions minimales nécessaires. Un token GitHub qui n'a besoin que de lire les issues ne devrait pas avoir accès en écriture aux paramètres de l'organisation.
+
+**Ne commitez jamais de secrets.** Utilisez `settings.local.json` (exclu de git) pour les tokens et mots de passe. Ou mieux, référencez des variables d'environnement déjà définies dans votre shell :
+
+```json
+"env": {
+  "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+}
+```
+
+Cette notation `${VAR}` fonctionne dans `settings.json` — Claude Code résout la variable au moment du démarrage.
+
+**Validez les entrées dans vos serveurs personnalisés.** Si votre serveur exécute des requêtes SQL ou appelle des APIs internes, validez et assainissez les paramètres reçus. Claude Code envoie des entrées bien formées, mais une défense en profondeur reste bonne pratique.
+
+**Auditez les outils exposés.** Quand vous configurez un nouveau serveur MCP, vérifiez exactement quels outils il expose — certains serveurs de la communauté exposent plus de capacités que ce dont vous avez besoin.
+
+**Isolez par projet.** Utilisez `.claude/settings.json` au niveau projet plutôt que le `settings.json` global quand un serveur n'est pertinent que pour un projet spécifique. Ça limite l'exposition.
+
+---
+
+## Débogage des connexions MCP
+
+Quand un serveur MCP ne fonctionne pas, le diagnostic peut être frustrant. Voici une approche méthodique.
+
+### Vérifier que le serveur démarre
+
+Testez d'abord que le serveur peut démarrer indépendamment :
+
+```bash
+# Tester le démarrage manuel
+npx -y @modelcontextprotocol/server-github
+# Le serveur devrait démarrer et attendre des entrées sur stdin
+# Ctrl+C pour arrêter
+```
+
+Si le serveur plante au démarrage, la sortie d'erreur vous donnera le problème (token manquant, dépendance absente, etc.).
+
+### Activer les logs MCP
+
+Claude Code enregistre les activités MCP quand vous démarrez avec le flag `--mcp-debug` :
+
+```bash
+claude --mcp-debug
+```
+
+Vous verrez les tentatives de connexion, les erreurs d'initialisation, et les appels d'outils dans la sortie de débogage.
+
+### Erreurs courantes et solutions
+
+**"Server failed to start"** — Le `command` ou les `args` dans votre configuration sont incorrects. Testez la commande directement dans votre terminal.
+
+**"Tool not found"** — Le nom de l'outil dans votre prompt ne correspond pas exactement à celui exposé par le serveur. Demandez à Claude : « Quels outils MCP sont disponibles? » pour voir la liste réelle.
+
+**"Authentication failed"** — Variable d'environnement manquante ou token expiré. Vérifiez que la variable existe dans votre shell avec `echo $NOM_VARIABLE`.
+
+**Serveur se déconnecte pendant l'utilisation** — Souvent un problème de timeout. Certains serveurs ont des délais d'inactivité. Vérifiez la configuration du serveur.
+
+**"Permission denied"** — Claude Code doit avoir la permission d'exécuter le serveur MCP. Vérifiez dans les paramètres de permission que les appels d'outils MCP sont autorisés.
+
+### Inspecter les outils disponibles
+
+Pendant une session Claude Code, vous pouvez demander directement :
+
+```
+Quels serveurs MCP sont connectés et quels outils exposent-ils?
+```
+
+Claude Code listera les serveurs actifs et leurs outils disponibles, ce qui vous aide à confirmer que la configuration fonctionne comme prévu.
+
+---
+
+## Meilleures pratiques
+
+**Commencez avec un serveur à la fois.** Quand vous ajoutez MCP pour la première fois, configurez un seul serveur et vérifiez qu'il fonctionne avant d'en ajouter d'autres. Les problèmes sont plus faciles à diagnostiquer en isolation.
+
+**Documentez dans CLAUDE.md.** Indiquez quels serveurs MCP sont configurés pour le projet et ce qu'ils font :
+
+```markdown
+## Serveurs MCP configurés
+
+- **github** : accès en lecture/écriture aux issues et PRs du dépôt principal
+- **postgres** : accès en lecture seule à la BD de développement (pas de prod)
+- **interne** : API de déploiement interne — statuts et déclenchements de pipelines
+```
+
+Claude Code utilisera cette information pour savoir quand et comment utiliser chaque serveur.
+
+**Testez les permissions de vos tokens.** Avant de configurer un serveur, testez manuellement que vos credentials fonctionnent avec les permissions attendues. Un token GitHub qui ne peut pas lire les issues causera des erreurs cryptiques pendant une session.
+
+**Préférez les tokens à portée limitée.** Pour GitHub, créez des fine-grained personal access tokens avec exactement les permissions requises plutôt qu'un token avec accès complet.
+
+---
+
+## Pour aller plus loin avec ClawHelp
+
+Configurer MCP correctement peut transformer radicalement ce que Claude Code peut accomplir dans votre environnement de travail — mais la configuration initiale et le débogage peuvent prendre du temps, surtout si vous intégrez des systèmes internes.
+
+Les services de consultation Claude Code de ClawHelp incluent la configuration des serveurs MCP pour votre stack, la création de serveurs MCP personnalisés pour vos APIs internes, et la mise en place de patterns de sécurité adaptés à votre organisation. Contactez-nous si vous voulez aller plus vite.

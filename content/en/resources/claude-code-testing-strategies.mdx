@@ -1,0 +1,461 @@
+---
+slug: claude-code-testing-strategies
+title: "Testing Strategies with Claude Code: TDD, Coverage, and Regression Prevention"
+description: "How to use Claude Code for test-driven development, write comprehensive test suites for existing code, hit coverage targets, prevent regressions with hooks, and work effectively with Jest, pytest, Go test, and RSpec."
+category: guide
+schema: Article
+tags: [testing, tdd, coverage, regression, jest, pytest, go-test, rspec, hooks, ci]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 13
+seoTitle: "Testing with Claude Code: TDD, Coverage Targets & Regression Prevention | ClawHelp"
+seoDescription: "Master testing with Claude Code — TDD red-green-refactor cycle, writing tests for existing code, coverage targets, regression prevention with hooks, and framework-specific patterns for Jest, pytest, Go test, and RSpec."
+---
+
+# Testing Strategies with Claude Code: TDD, Coverage, and Regression Prevention
+
+Testing is one of the highest-leverage tasks to hand to Claude Code. Claude understands test frameworks deeply, can reason about edge cases you haven't thought of, and writes tests at a pace that outpaces manual authoring by a wide margin. But getting good results requires a clear strategy — throwing "write tests for this file" at Claude produces mediocre coverage. Structured prompting and workflow discipline produce test suites that actually prevent bugs.
+
+This guide covers the full testing lifecycle: driving new code with TDD, retrofitting tests onto existing code, hitting specific coverage targets, preventing regressions, and enforcing test runs automatically through hooks.
+
+---
+
+## Using Claude Code for Test-Driven Development
+
+TDD's red-green-refactor cycle maps naturally to Claude Code sessions. The key is keeping each phase distinct.
+
+### The RED Phase: Writing the Failing Test First
+
+Before writing any implementation code, describe the behavior you want and ask Claude to write a failing test for it.
+
+**Prompt pattern:**
+
+```
+I'm adding a passwordStrength(password: string) function to src/utils/validation.ts.
+It should return:
+- "weak" for passwords under 8 characters
+- "medium" for passwords 8+ characters with only letters or only numbers
+- "strong" for passwords 8+ characters with mixed letters, numbers, and at least one special character
+
+Write a failing test in tests/utils/validation.test.ts. The function doesn't exist yet
+— the test should fail with "not a function" or similar. Use the existing Jest setup
+in this project (look at tests/utils/format.test.ts for the pattern).
+```
+
+Claude reads the existing test file for patterns and produces a test that's consistent with your project's style:
+
+```typescript
+// tests/utils/validation.test.ts
+import { passwordStrength } from "../../src/utils/validation";
+
+describe("passwordStrength", () => {
+  describe("weak passwords", () => {
+    it("returns 'weak' for a 7-character password", () => {
+      expect(passwordStrength("abc1234")).toBe("weak");
+    });
+    it("returns 'weak' for an empty string", () => {
+      expect(passwordStrength("")).toBe("weak");
+    });
+  });
+
+  describe("medium passwords", () => {
+    it("returns 'medium' for 8+ all-letter password", () => {
+      expect(passwordStrength("abcdefgh")).toBe("medium");
+    });
+    it("returns 'medium' for 8+ all-numeric password", () => {
+      expect(passwordStrength("12345678")).toBe("medium");
+    });
+  });
+
+  describe("strong passwords", () => {
+    it("returns 'strong' for 8+ chars with mixed case, numbers, and special char", () => {
+      expect(passwordStrength("Abc123!x")).toBe("strong");
+    });
+    it("returns 'strong' for a long complex password", () => {
+      expect(passwordStrength("correct-Horse-Battery9")).toBe("strong");
+    });
+  });
+});
+```
+
+Run the tests — they should fail. If they pass, something is wrong with the test setup or there's already an implementation.
+
+### The GREEN Phase: Minimum Implementation
+
+Now ask Claude to write the minimum code to make the tests pass:
+
+```
+The tests in tests/utils/validation.test.ts are failing because passwordStrength
+doesn't exist. Write the implementation in src/utils/validation.ts — just enough
+to make the tests pass, nothing more. Run the tests after writing the implementation
+and confirm they all pass.
+```
+
+Claude writes the implementation and runs `npm test -- --testPathPattern=validation` to verify. The constraint "just enough to make the tests pass" prevents Claude from gold-plating the implementation in this phase.
+
+### The REFACTOR Phase: Improve Without Breaking
+
+With a green test suite, you can safely refactor:
+
+```
+The passwordStrength tests are all passing. The implementation works but the
+regex patterns are duplicated. Refactor src/utils/validation.ts to clean up
+the implementation — extracted constants, clearer variable names, single regex
+per concern. Run the tests after each change to confirm nothing breaks.
+```
+
+Claude makes incremental changes, running tests between each one. If a test breaks, it fixes it before moving on.
+
+---
+
+## Writing Tests for Existing Code
+
+Retrofitting tests onto untested code is a common task. Claude Code handles it well when you give it enough context about what the code does and what kinds of failures you're protecting against.
+
+**The "coverage map" prompt:**
+
+```
+Read all files in src/services/PaymentService.ts and src/services/OrderService.ts.
+For each exported function and method:
+1. Summarize what it does
+2. Identify the 3-5 most important behaviors to test (happy path, error cases, edge cases)
+3. Do NOT write any tests yet — just give me the coverage map
+
+I'll review the map and then ask you to write the tests.
+```
+
+The coverage map review step is valuable — it catches cases where Claude misunderstands the intended behavior before investing in tests. Once you confirm the map is correct:
+
+```
+The coverage map looks accurate. Now write the full test suite for PaymentService.ts
+only. For each behavior you identified, write one or more tests. Use Jest with
+the existing test infrastructure (look at tests/services/UserService.test.ts
+for the database mock setup pattern). Aim for branch coverage of every if/else path.
+Run the tests when you're done and report coverage.
+```
+
+### Prompts That Produce Good Tests
+
+These prompt patterns consistently produce higher-quality test suites:
+
+**Force error path coverage:**
+```
+Write tests for src/api/routes/payments.ts. Include at minimum: one test for every
+HTTP error status code the route can return (check the source for throw statements
+and error conditions). Don't just test the happy path.
+```
+
+**Specify what to mock:**
+```
+Write tests for src/services/EmailService.ts. The service calls:
+- nodemailer's sendMail (mock this — we don't want real emails in tests)
+- the UserRepository (mock this with jest.mock)
+- Date.now() (mock with jest.useFakeTimers so time-based assertions are stable)
+Verify that sendMail is called with the correct template and recipient.
+```
+
+**Require boundary testing:**
+```
+Write tests for the pagination helper in src/utils/pagination.ts.
+Pay attention to boundary conditions: page 0, page 1, last page, page beyond last,
+pageSize of 1, pageSize larger than total results, total of 0 results.
+```
+
+---
+
+## Achieving Coverage Targets
+
+When a project has a specific coverage target (e.g., 80% line coverage enforced in CI), Claude Code can be pointed directly at the gap.
+
+**Find and fill coverage gaps:**
+
+```bash
+# Run coverage report first
+npm test -- --coverage --coverageReporters=json-summary
+```
+
+```
+Read the coverage report at coverage/coverage-summary.json.
+Identify every file with less than 80% line coverage.
+For the three files with the lowest coverage, write additional tests to bring
+them above 80%. Add the tests to the existing test files for those modules
+(look for the corresponding file in tests/ or __tests__/).
+Run coverage again after writing the tests and report the new numbers.
+```
+
+Claude reads the JSON coverage report, identifies the gaps, and fills them systematically.
+
+**Framework-specific coverage commands:**
+
+```bash
+# Jest
+npx jest --coverage --coverageThreshold='{"global":{"lines":80}}'
+
+# pytest
+pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+
+# Go
+go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out
+
+# RSpec
+bundle exec rspec --format progress --require spec_helper \
+  $(find spec -name '*_spec.rb') && \
+  bundle exec simplecov-result-check 80
+```
+
+Pass these commands to Claude and let it run them directly rather than asking it to interpret coverage tables manually.
+
+---
+
+## Regression Test Automation
+
+Regression tests catch bugs that have been fixed and shouldn't reappear. Claude Code is effective at writing regression tests from bug reports and production incidents.
+
+**Prompt pattern for bug-driven regression tests:**
+
+```
+We had a production bug: when a user's account balance was exactly $0.00,
+the overdraft check was returning true (incorrectly flagging it as overdraft).
+The fix was merged in commit abc123 — read that commit to understand the fix.
+
+Write a regression test in tests/services/AccountService.test.ts that would
+have caught this bug before the fix. The test should:
+1. Set up an account with exactly $0.00 balance
+2. Call the overdraft check
+3. Assert it returns false
+4. Have a comment referencing the bug (e.g., "// Regression: GH-1842 zero balance false positive")
+```
+
+Regression tests with bug references are searchable. When a similar issue is reported later, `grep -r "GH-1842"` finds the related test immediately.
+
+**Building a regression suite from incident history:**
+
+```
+Read the git log for the past 90 days: git log --since="90 days ago" --oneline --grep="fix"
+For each commit that looks like a bug fix (not a feature), read the commit diff
+and write a regression test that would have caught the bug. Output the tests
+grouped by file — I'll add them to the test suite manually after review.
+```
+
+---
+
+## Using Hooks to Enforce Test Runs Before Commits
+
+Claude Code's hooks system can enforce that tests pass before Claude commits code — turning a best practice into a hard gate.
+
+**Pre-commit test hook configuration in `.claude/settings.json`:**
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if echo \"$CLAUDE_TOOL_INPUT\" | grep -q \"git commit\"; then npm test -- --passWithNoTests --silent || exit 1; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This hook intercepts any `Bash` tool call, checks if it contains `git commit`, and if so runs the test suite. If the tests fail, the hook exits with code 1, which blocks the tool call — Claude cannot complete the commit until tests pass.
+
+**A more targeted approach — hook on Write tool calls:**
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if echo \"$CLAUDE_TOOL_OUTPUT_PATH\" | grep -q \"src/\"; then npm test -- --passWithNoTests --testPathPattern=$(dirname $CLAUDE_TOOL_OUTPUT_PATH) --silent 2>&1 | tail -5; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This post-Write hook runs tests for the directory Claude just wrote to — providing immediate feedback after each file write without running the full suite on every change.
+
+**Hook for coverage enforcement:**
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE \"git (commit|push)\"; then npm test -- --coverage --coverageThreshold={\\\"global\\\":{\\\"lines\\\":75}} --silent 2>&1; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Framework-Specific Patterns
+
+### Jest (JavaScript/TypeScript)
+
+Claude Code works well with Jest. Key patterns to include in prompts:
+
+```
+Use jest.mock() for module-level mocks.
+Use jest.spyOn() when you need to mock a method on an existing object while
+keeping other methods intact.
+Use jest.useFakeTimers() for any code involving setTimeout, setInterval, or Date.
+Use supertest for HTTP endpoint tests — look at existing test files for the
+express app setup pattern.
+```
+
+**Snapshot testing for React components:**
+
+```
+Write snapshot tests for the components in src/components/forms/.
+Use @testing-library/react. For each component:
+1. Render it with its default/minimal props
+2. Take a snapshot
+3. Add one test for the main interactive behavior (button click, input change)
+Do not snapshot entire page components — only leaf components under src/components/forms/.
+```
+
+### pytest (Python)
+
+```
+Write pytest tests for src/services/user_service.py.
+Use pytest fixtures for database setup (look at tests/conftest.py for existing fixtures).
+Use pytest.mark.asyncio for any async functions.
+Use unittest.mock.patch for external service calls.
+Group tests in classes named after the method being tested (e.g., class TestCreateUser).
+```
+
+**Parametrize for data-driven tests:**
+
+```
+The validate_email function handles many input formats. Write a parametrized pytest
+test using @pytest.mark.parametrize that covers: valid emails, emails missing @,
+emails with invalid TLDs, emails with subdomains, empty string, None input, and
+emails with plus-addressing. Each case should have a clear ID.
+```
+
+### Go Test
+
+```
+Write Go tests for the handlers in internal/api/handlers.go.
+Use httptest.NewRecorder() and httptest.NewRequest() for HTTP handler tests.
+Use table-driven tests for functions with multiple input/output combinations.
+Use testify/assert for readable assertions — look at existing test files for
+the import pattern. Do not use any third-party mock framework; use interface
+mocking with test doubles defined in the _test.go file.
+```
+
+### RSpec (Ruby on Rails)
+
+```
+Write RSpec tests for app/services/payment_processor.rb.
+Use FactoryBot for test data (look at spec/factories/ for existing factories,
+create new ones if needed).
+Use VCR cassettes for any external HTTP calls — look at spec/support/vcr.rb for config.
+Use shared_examples where you see repeated assertion patterns.
+Follow the existing spec structure: describe the class, context blocks for
+different scenarios, it blocks for individual behaviors.
+```
+
+---
+
+## Integration Test Patterns
+
+Unit tests are fast but miss integration bugs. Claude Code can generate integration test suites that test component boundaries.
+
+**API integration test prompt:**
+
+```
+Write integration tests for the /api/orders endpoints. These are full stack tests:
+- Real database (use the test database configured in .env.test)
+- Real HTTP requests via supertest
+- No mocked service layer — test the full request→service→database→response path
+- Seed data: use the existing seed helpers in tests/helpers/seed.ts
+
+Cover: create order (happy path), create order with invalid product ID,
+get order by ID, get order with wrong user ID (should return 403),
+list orders with pagination.
+Run the tests with: npm test -- --testPathPattern=integration
+```
+
+**Database migration integration tests:**
+
+```
+Write tests that verify the migration in db/migrations/0024_add_user_preferences.sql
+is correct. The tests should:
+1. Run against a clean database
+2. Apply all migrations up to and including 0024
+3. Assert the expected columns exist with correct types and defaults
+4. Assert existing data is not corrupted (insert a test row before migration, verify it after)
+Use the migration test helper in tests/db/migrationHelper.ts.
+```
+
+---
+
+## Snapshot Testing for UIs
+
+UI snapshot tests catch unintended visual regressions. The challenge is keeping snapshots meaningful — too broad and every PR touches them, making them noise.
+
+**Targeted snapshot testing prompt:**
+
+```
+Write snapshot tests for src/components/Button.tsx.
+Test each variant: primary, secondary, danger, disabled, loading.
+Test each size: sm, md, lg.
+Use @testing-library/react render, not shallow rendering.
+Store snapshots in __snapshots__/ next to the test file.
+Do NOT snapshot the entire App or any container component — only this one component.
+```
+
+When snapshots need updating after intentional changes:
+
+```
+The Button component has been redesigned. The existing snapshots in
+src/components/__snapshots__/Button.test.tsx.snap are now outdated.
+Run: npx jest --updateSnapshot --testPathPattern=Button
+Then review the diff and confirm the updated snapshots match the intended new design.
+```
+
+---
+
+## Putting It Together: A Testing Sprint Workflow
+
+When bringing an undertested codebase up to acceptable coverage quickly:
+
+1. **Audit**: `npm test -- --coverage` — identify files under threshold
+2. **Prioritize**: Ask Claude to rank undertested files by "how critical is this code to the application's core behavior"
+3. **Unit test sprint**: Target the top 5 files, one at a time, using the coverage-gap prompt above
+4. **Regression sweep**: Ask Claude to read recent git history for bug-fix commits and write regression tests for each
+5. **Integration layer**: Write integration tests for the primary API surface
+6. **Enforce**: Add a hooks-based pre-commit test gate so coverage doesn't regress
+
+Claude Code compresses each of these steps substantially. The bottleneck becomes your review time, not test authoring time.
+
+---
+
+## Related Resources
+
+- [Claude Code Hooks Guide](/en/resources/claude-code-hooks-guide) — configure pre/post-commit test gates with the hooks system
+- [Claude Code Git Workflow](/en/resources/claude-code-git-workflow) — integrating test runs into the commit workflow
+- [GitHub Actions CI/CD with Claude Code](/en/resources/claude-code-github-actions-ci-cd) — running tests in CI pipelines
+- [Claude Code Debugging Workflow](/en/resources/claude-code-debugging-workflow) — what to do when tests uncover bugs

@@ -1,0 +1,334 @@
+---
+slug: claude-code-claude-md-advanced
+title: "Advanced CLAUDE.md Patterns: Project Memory and Team Conventions"
+description: "Go beyond the basics with CLAUDE.md — hierarchical config files, what to actually put in them, templates for different stack types, and how to share them effectively across a team."
+category: guide
+schema: Article
+tags: [claude-md, project-memory, team, conventions, configuration, best-practices]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 12
+seoTitle: "Advanced CLAUDE.md Patterns: Project Memory & Team Conventions | ClawHelp"
+seoDescription: "Master CLAUDE.md for Claude Code — hierarchical config, what to include and exclude, templates for React/TypeScript, Python/FastAPI, Node.js microservices, and team sharing via git."
+---
+
+# Advanced CLAUDE.md Patterns: Project Memory and Team Conventions
+
+Every Claude Code session starts fresh. Claude doesn't remember what you built last week, the naming conventions your team agreed on, or why you made that architectural decision six months ago. `CLAUDE.md` is the mechanism for changing that — it's a Markdown file that Claude reads at the start of every session in your project, giving it persistent context that survives across sessions and across the entire team.
+
+This guide covers what CLAUDE.md actually is at a protocol level, how to use the hierarchical system effectively, what content makes sessions dramatically better versus what's just noise, and templates you can adapt for your specific stack.
+
+---
+
+## CLAUDE.md as Persistent Memory for Claude Code
+
+When Claude Code starts, it looks for and reads `CLAUDE.md` files before accepting your first prompt. This makes CLAUDE.md the closest thing Claude has to long-term memory at the project level.
+
+What Claude does with CLAUDE.md content:
+
+- **Incorporates it into the working context** before any conversation begins, so it informs everything from the first response
+- **Uses it to make decisions** about which tools to use, what coding patterns to apply, what to avoid
+- **Defers to it over defaults** — if your CLAUDE.md says to use `pnpm`, Claude won't suggest `npm`; if it says `snake_case` for variables, Claude won't write `camelCase`
+
+The practical effect: a well-written CLAUDE.md turns the first 5 minutes of every session (where you'd otherwise re-explain your project context) into zero minutes. Claude opens knowing what it needs to know.
+
+---
+
+## Hierarchical CLAUDE.md Files
+
+Claude Code reads multiple CLAUDE.md files with a clear precedence order:
+
+```
+~/.claude/CLAUDE.md          ← global defaults (all projects)
+  {project-root}/CLAUDE.md   ← project-level (most important)
+    {subdirectory}/CLAUDE.md  ← subdirectory-level overrides
+```
+
+**Global CLAUDE.md (`~/.claude/CLAUDE.md`)**
+
+Your personal preferences that apply everywhere: preferred shell, default code style, how you want Claude to communicate, which tools are always available on your machine. This is a good place for things like:
+
+```markdown
+## Personal Defaults
+- I use zsh on macOS with brew-installed tools
+- Always use pnpm for Node.js projects unless the project specifies otherwise
+- I prefer explicit TypeScript types over `any` and `unknown` everywhere
+- When suggesting commands, always include the full command — never abbreviate with "..."
+```
+
+**Project-level CLAUDE.md (`{project-root}/CLAUDE.md`)**
+
+The main file. Contains everything specific to this project: tech stack, architecture, team conventions, deployment info, what to avoid. This is what you commit to git so the whole team benefits. More on what to put here below.
+
+**Subdirectory CLAUDE.md files**
+
+For monorepos or large projects, you can put additional CLAUDE.md files in subdirectories. When Claude is working within that directory, it reads both the project-root CLAUDE.md and the subdirectory one, with the subdirectory file's content taking precedence for conflicts.
+
+Example use case: a monorepo with `apps/frontend/` and `apps/backend/` can have separate CLAUDE.md files for each app, specifying their different tech stacks and conventions without cluttering the root file.
+
+---
+
+## What to Put in CLAUDE.md
+
+The goal is to give Claude the context a new team member would need after their first week on the project. Not everything — just what's non-obvious, project-specific, or important enough that getting it wrong would cause problems.
+
+### Tech Stack and Architecture
+
+```markdown
+## Stack
+- **Frontend**: React 18, TypeScript 5.4, Vite, Tailwind CSS 3.x
+- **Backend**: FastAPI (Python 3.12), SQLAlchemy 2.0, Alembic for migrations
+- **Database**: PostgreSQL 16 (dev: port 5433, prod: RDS)
+- **Auth**: Clerk for user management, JWT for API auth
+- **Infra**: Docker Compose locally, Fly.io for production
+
+## Architecture
+This is a monorepo. `apps/web` is the React frontend, `apps/api` is the FastAPI backend,
+`packages/shared` contains TypeScript types shared between them.
+
+The API uses repository pattern — never put business logic in route handlers,
+always go through a service class.
+```
+
+### Conventions and Patterns
+
+Be specific. Vague conventions ("write clean code") are useless. Specific rules save Claude from making decisions that are technically valid but wrong for your project:
+
+```markdown
+## Code Conventions
+
+### Naming
+- Files: `kebab-case.ts` for all TypeScript files
+- Components: `PascalCase` named exports, never default exports
+- Functions: `camelCase`, prefer descriptive names over short names
+- Database columns: `snake_case` always
+
+### Error Handling
+- Never swallow errors silently
+- API errors must return `{ error: string, code: string }` shape — never `{ message: string }`
+- Frontend must show user-facing errors via the `<Toast>` component, never `alert()`
+
+### State Management
+- Zustand for global state (store files in `apps/web/src/stores/`)
+- React Query for server state — never manually fetch in components
+- No Redux, no Context for data (Context only for UI preferences like theme)
+
+### Testing
+- Unit tests alongside source files: `foo.ts` and `foo.test.ts`
+- Integration tests in `tests/integration/`
+- Minimum 80% branch coverage enforced in CI
+- Use `vi.mock()` for mocking (Vitest), not jest.mock()
+```
+
+### Team Preferences and Workflows
+
+```markdown
+## Workflow
+- Branch naming: `feat/`, `fix/`, `chore/`, `docs/` prefixes required
+- PRs require at least one reviewer before merge — never self-merge to main
+- Commit messages follow Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`
+- Squash merges only — we don't want individual commit history on main
+
+## Deployment
+- Dev server: `pnpm dev` from root (runs both frontend and backend via turbo)
+- Production deploys automatically on merge to main via GitHub Actions
+- Manual deploy: `fly deploy --app myapp-api` (requires fly CLI)
+- Never directly edit production environment variables — use Fly.io dashboard
+```
+
+### Banned Patterns
+
+Explicitly calling out what not to do is often the most valuable part of CLAUDE.md:
+
+```markdown
+## Do NOT Do These Things
+
+- Do not use `any` type in TypeScript — if you can't type it, use `unknown` and narrow it
+- Do not use `console.log` for debugging in production code — use the `logger` utility
+- Do not write raw SQL — always use SQLAlchemy ORM or the query builder
+- Do not create new npm/pip packages without checking if one already exists in the monorepo
+- Do not modify `schema.prisma` manually — changes go through migration files
+- Do not commit API keys, tokens, or secrets — use environment variables only
+- Do not use `setTimeout` for polling — use proper event-driven patterns or React Query's `refetchInterval`
+```
+
+### Important Files and Their Purpose
+
+```markdown
+## Key Files
+- `apps/api/core/config.py` — all configuration, including environment variable loading
+- `apps/api/core/deps.py` — FastAPI dependency injection setup
+- `apps/web/src/lib/api.ts` — typed API client (all API calls go through here, never raw fetch)
+- `packages/shared/src/types.ts` — shared types between frontend and backend
+- `docker-compose.yml` — local dev services (Postgres, Redis, MinIO)
+- `.github/workflows/ci.yml` — CI pipeline definition
+```
+
+---
+
+## What NOT to Put in CLAUDE.md
+
+**Secrets and credentials**
+
+Never. CLAUDE.md is a committed file — anything in it is in version control history forever and visible to anyone with repo access. API keys, tokens, passwords, and internal URLs all belong in environment variables and `.env` files (which are gitignored).
+
+**Highly volatile information**
+
+If information changes weekly, it shouldn't be in CLAUDE.md — it'll be stale before anyone notices. Things like "the staging server is currently down" or "we're migrating from X to Y this sprint" should live in your team's chat or project management tool, not in a file that Claude will treat as ground truth.
+
+**Information already in the codebase**
+
+If the information is obvious from reading the code — the framework, the file structure, which library is imported — you don't need to repeat it in CLAUDE.md. Claude reads the codebase too. CLAUDE.md is for what's non-obvious: the conventions, the decisions, the forbidden patterns.
+
+**Very long documentation**
+
+CLAUDE.md content goes into Claude's context window. An extremely long CLAUDE.md file crowds out space for the actual code and conversation. Keep it focused. Aim for under 500 lines; under 300 is ideal. If something needs more space, link to an external doc or a separate file.
+
+---
+
+## CLAUDE.md Templates
+
+Here are starting templates for three common project types. Adapt them to your reality — delete sections that don't apply, add sections that do.
+
+### React / TypeScript Project
+
+```markdown
+# Project: [App Name]
+
+## Stack
+- React 18, TypeScript 5, Vite, Tailwind CSS, shadcn/ui
+- State: Zustand (global), React Query (server)
+- Testing: Vitest + React Testing Library
+- Linting: ESLint + Prettier (auto-formatted on save)
+
+## Commands
+- `pnpm dev` — start dev server (localhost:5173)
+- `pnpm test` — run test suite
+- `pnpm build` — production build
+- `pnpm lint` — lint and type-check
+
+## Conventions
+- Components in `src/components/`, pages in `src/pages/`
+- Named exports only — no default exports
+- Each component gets its own directory with `index.tsx` and `Component.test.tsx`
+- Tailwind for all styling — no CSS modules, no styled-components
+- `cn()` utility from `lib/utils.ts` for conditional class names
+
+## Do Not
+- Do not use `any` type
+- Do not import directly from node_modules for UI — always go through components/
+- Do not add inline styles — use Tailwind classes
+- Do not use `useEffect` for data fetching — use React Query
+```
+
+### Python / FastAPI Project
+
+```markdown
+# Project: [API Name]
+
+## Stack
+- Python 3.12, FastAPI, SQLAlchemy 2.0 (async), Alembic, PostgreSQL
+- Dependency management: uv (not pip, not poetry)
+- Testing: pytest + httpx (async test client)
+- Task queue: Celery + Redis
+
+## Commands
+- `uv run uvicorn app.main:app --reload` — dev server (localhost:8000)
+- `uv run pytest` — run tests
+- `uv run alembic upgrade head` — apply migrations
+- `uv run alembic revision --autogenerate -m "description"` — generate migration
+
+## Architecture
+- `app/routers/` — route handlers (thin, no business logic)
+- `app/services/` — business logic layer
+- `app/models/` — SQLAlchemy models
+- `app/schemas/` — Pydantic request/response schemas
+- `app/core/` — config, deps, security
+
+## Conventions
+- All routes are async — no sync route handlers
+- Use `Annotated` for dependency injection
+- Schemas are separate from models — never return ORM objects from routes
+- Database sessions managed via `get_db` dependency in `core/deps.py`
+
+## Do Not
+- Do not use `session.query()` (old-style) — use `select()` statement style
+- Do not put logic in `__init__.py` files
+- Do not use `print()` for debugging — use `logging.getLogger(__name__)`
+- Do not access `settings` directly — inject via `get_settings()` dependency
+```
+
+### Node.js Microservices
+
+```markdown
+# Project: [Service Name]
+
+## Context
+This is the [service description] microservice. It [what it does].
+Related services: [list], [list] — their API contracts are in `docs/contracts/`.
+
+## Stack
+- Node.js 22, TypeScript 5, Fastify, Prisma, PostgreSQL
+- Message queue: BullMQ + Redis
+- Testing: Jest + Supertest
+- Package manager: pnpm
+
+## Commands
+- `pnpm dev` — start with hot reload
+- `pnpm test` — run tests
+- `pnpm test:integration` — integration tests (requires running Docker services)
+- `docker-compose up -d` — start Postgres + Redis for dev
+
+## API Conventions
+- All endpoints versioned: `/v1/...`
+- Error responses: `{ error: { code: string, message: string, details?: unknown } }`
+- Authentication via `Authorization: Bearer <jwt>` header
+- Pagination: `{ data: T[], meta: { total: number, page: number, limit: number } }`
+
+## Service Boundaries
+- This service owns: [list the tables/domains]
+- Does NOT handle: [what is handled by other services]
+- Events this service emits: [list]
+- Events this service consumes: [list]
+
+## Do Not
+- Do not access other services' databases directly — use their APIs or message queue
+- Do not use `require()` — ES modules only
+- Do not catch errors in middleware silently — always log at error level
+```
+
+---
+
+## Testing CLAUDE.md Effectiveness
+
+After writing your CLAUDE.md, test it with a fresh session:
+
+1. Start a new Claude Code session
+2. Without explaining your project, ask Claude a question that requires context from CLAUDE.md: "What command do I run to start the dev server?" or "How should I add a new API endpoint?"
+3. If Claude's answer matches your conventions without you prompting, CLAUDE.md is working
+4. If Claude gets it wrong, your CLAUDE.md either doesn't cover that topic or covers it unclearly
+
+The best test is asking Claude to implement a small feature. Watch whether it naturally follows your naming conventions, uses the right patterns, and avoids the banned approaches. If it doesn't, you've identified a gap to fill.
+
+---
+
+## Sharing CLAUDE.md Across Teams with Git
+
+Commit `CLAUDE.md` to your repository. Everyone who clones the repo and uses Claude Code automatically gets the same context. This is one of the highest-value things you can do for a team using Claude Code — it eliminates the "I have to re-explain our conventions every session" problem for everyone simultaneously.
+
+**Team workflow for CLAUDE.md:**
+
+- Treat it like any other important config file — changes go through PR review
+- When you discover a pattern Claude gets wrong (or right), update CLAUDE.md and commit
+- Include CLAUDE.md updates in the same PR as the code changes that introduced a new convention
+- Review CLAUDE.md quarterly to remove outdated content
+
+**What to gitignore:**
+
+Personal preferences that don't apply to the whole team belong in `~/.claude/CLAUDE.md`, not the project CLAUDE.md. If you want personal overrides for a project without affecting teammates, use `.claude/settings.local.json` for settings-level configuration.
+
+---
+
+A well-maintained CLAUDE.md is an investment with compounding returns: every new team member, every session, every task runs on shared context without any manual re-explanation. It's worth spending an hour to get right.
+
+Need help auditing your CLAUDE.md or designing conventions for your team's Claude Code workflow? ClawHelp specializes in making Claude Code work for engineering teams at scale. [Talk to us about a consultation](/en/contact).

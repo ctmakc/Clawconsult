@@ -1,0 +1,446 @@
+---
+slug: claude-code-hooks
+title: "Hooks Claude Code : automatiser des actions sur les événements"
+description: "Guide complet sur les hooks Claude Code — comment configurer les hooks UserPromptSubmit, PreToolCall, PostToolCall, SessionStart et SessionEnd avec des exemples concrets."
+category: how-to
+lang: "fr"
+tags: [hooks, automatisation, paramètres, claude-code, configuration]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 11
+relatedServices: [claude-code-setup]
+seoTitle: "Hooks Claude Code : guide de configuration complet 2026 | ClawHelp"
+seoDescription: "Configurez les hooks Claude Code pour automatiser des actions sur les événements. Guide complet des 5 types de hooks avec exemples settings.json, scripts concrets et meilleures pratiques."
+schema: HowTo
+---
+
+# Hooks Claude Code : automatiser des actions sur les événements
+
+Les hooks Claude Code sont des commandes shell qui s'exécutent automatiquement quand des événements Claude Code se produisent — avant l'appel d'un outil, après l'écriture d'un fichier, au démarrage d'une session ou à sa fin. Ils vous permettent d'appliquer des politiques, d'effectuer des validations, de déclencher des systèmes externes et d'automatiser tout ce qui nécessiterait autrement une étape manuelle.
+
+Les hooks sont configurés dans `~/.claude/settings.json` et s'exécutent sur votre machine locale. Claude Code voit leur sortie sur stdout, ce qui permet aux hooks de transmettre des informations au modèle.
+
+---
+
+## Ce que sont les hooks
+
+Un hook est une commande shell (ou un chemin vers un script) associé à un événement Claude Code. Quand cet événement se déclenche, Claude Code exécute votre commande de façon synchrone, capture sa sortie, et selon le type de hook, transmet cette sortie au modèle ou utilise le code de sortie pour décider s'il faut continuer.
+
+Les hooks ne sont pas des plugins ou des extensions — ce sont de simples commandes shell. Tout ce que vous pouvez exécuter en bash, vous pouvez l'utiliser comme hook.
+
+Cas d'utilisation :
+- **Analyse de sécurité** — bloquer les commandes bash qui correspondent à des modèles dangereux avant leur exécution.
+- **Formatage du code** — formater automatiquement les fichiers après que Claude les a modifiés.
+- **Journal d'audit** — journaliser chaque appel d'outil dans un fichier pour révision ultérieure.
+- **Auto-commit** — committer les modifications dans git à la fin de chaque session.
+- **Notifications** — publier un message Slack ou jouer un son quand une longue session se termine.
+- **Injection de contexte** — ajouter des informations au contexte du modèle au démarrage d'une session.
+
+---
+
+## Types de hooks
+
+Claude Code déclenche cinq types d'événements distincts.
+
+### UserPromptSubmit
+
+S'exécute quand l'utilisateur soumet un prompt (appuie sur Entrée), avant que le modèle le traite. Utilisez ce hook pour injecter du contexte supplémentaire, assainir l'entrée ou journaliser les prompts à des fins d'audit.
+
+- **Peut modifier le prompt ?** Non. La sortie du hook est montrée à Claude comme contexte additionnel, mais le prompt original n'est pas remplacé.
+- **Peut bloquer l'exécution ?** Non. Les codes de sortie non nuls sont journalisés mais n'empêchent pas le traitement du prompt.
+- **Moment d'exécution :** Avant que le modèle voie le prompt.
+
+### PreToolCall
+
+S'exécute immédiatement avant l'appel d'un outil. Le hook reçoit des informations sur l'outil qui va s'exécuter et avec quels arguments (via des variables d'environnement). Si le hook se termine avec un statut non nul, l'appel d'outil est **bloqué** — Claude Code n'exécutera pas l'outil et indiquera au modèle que l'appel a été rejeté.
+
+C'est le type de hook le plus puissant. Utilisez-le pour :
+- Bloquer les commandes bash dangereuses (`rm -rf`, `curl | bash`, etc.)
+- Appliquer des politiques d'accès aux fichiers (empêcher la lecture de certains répertoires)
+- Exiger une confirmation pour les actions irréversibles
+
+### PostToolCall
+
+S'exécute après la complétion d'un appel d'outil, avant que le résultat soit retourné au modèle. Le hook reçoit le nom de l'outil, ses arguments et la sortie de l'outil. La sortie stdout du hook est préfixée au résultat de l'outil montré au modèle.
+
+Utilisez ce hook pour :
+- Exécuter des linters ou des formateurs après les écritures de fichiers
+- Valider la sortie de l'outil avant que le modèle la voie
+- Journaliser les résultats des outils en externe
+
+### SessionStart
+
+S'exécute une fois au démarrage d'une session Claude Code. Utilisez-le pour injecter du contexte spécifique au projet, vérifier que les dépendances sont disponibles ou journaliser le démarrage de la session.
+
+- **Sortie :** Montrée au modèle comme ajout au message système initial.
+- **Code de sortie :** Un code non nul est journalisé comme avertissement mais n'empêche pas le démarrage de la session.
+
+### SessionEnd
+
+S'exécute une fois quand une session Claude Code se termine (l'utilisateur tape `exit`, appuie sur Ctrl+C ou la session expire). Utilisez-le pour le nettoyage, la journalisation finale ou le commit automatique des modifications.
+
+- **Sortie :** Affichée dans le terminal après la fin de la session.
+- **Code de sortie :** Journalisé mais sans effet (la session est déjà terminée).
+
+---
+
+## Configuration dans settings.json
+
+Les hooks sont définis dans `~/.claude/settings.json` sous la clé `hooks`. Le fichier de paramètres global s'applique à tous les projets ; vous pouvez aussi placer des hooks dans un `.claude/settings.json` au niveau du projet pour un comportement spécifique à ce projet.
+
+Structure de base :
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "command": "/chemin/vers/votre/script.sh"
+      }
+    ],
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "command": "/home/utilisateur/.claude/hooks/pre-bash-check.sh"
+      }
+    ],
+    "PostToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "command": "/home/utilisateur/.claude/hooks/post-edit-format.sh"
+      }
+    ],
+    "SessionStart": [
+      {
+        "command": "/home/utilisateur/.claude/hooks/session-start.sh"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "command": "/home/utilisateur/.claude/hooks/session-end-commit.sh"
+      }
+    ]
+  }
+}
+```
+
+Chaque entrée de hook est un objet avec :
+- **`command`** — la commande shell à exécuter. Peut être une commande en ligne ou un chemin vers un script.
+- **`matcher`** (PreToolCall et PostToolCall uniquement) — un modèle regex correspondant au nom de l'outil. Si omis, le hook s'exécute pour chaque appel d'outil.
+
+Plusieurs hooks peuvent être enregistrés pour le même événement — ils s'exécutent dans l'ordre.
+
+---
+
+## Syntaxe du matcher
+
+Le champ `matcher` pour `PreToolCall` et `PostToolCall` est une expression régulière appliquée à la chaîne du nom de l'outil. Les noms d'outils dans Claude Code suivent le modèle `NomOutil(argument)` — par exemple, `Bash(npm test)`, `Edit(/src/auth.ts)`, `Read(/etc/passwd)`.
+
+Le matcher est appliqué à la chaîne complète de l'appel d'outil, pas seulement au nom de l'outil. Cela vous permet de cibler à la fois l'outil et ses arguments.
+
+```json
+"matcher": "Bash"
+```
+Correspond à tout appel de l'outil Bash.
+
+```json
+"matcher": "Edit|Write"
+```
+Correspond aux appels Edit ou Write (n'importe quel fichier).
+
+```json
+"matcher": "Bash(rm )"
+```
+Correspond aux commandes bash contenant `rm ` — utile pour détecter les opérations de suppression.
+
+```json
+"matcher": "Read(/etc/)"
+```
+Correspond à toute tentative de lecture d'un fichier sous `/etc/`.
+
+```json
+"matcher": ".*"
+```
+Correspond à tout appel d'outil (identique à l'omission du matcher).
+
+---
+
+## Variables d'environnement dans les hooks
+
+Claude Code définit des variables d'environnement que votre script hook peut lire :
+
+| Variable | Disponible dans | Contenu |
+|---|---|---|
+| `CLAUDE_TOOL_NAME` | PreToolCall, PostToolCall | Nom de l'outil appelé (ex. : `Bash`) |
+| `CLAUDE_TOOL_INPUT` | PreToolCall, PostToolCall | Arguments de l'outil encodés en JSON |
+| `CLAUDE_TOOL_OUTPUT` | PostToolCall | Résultat de l'outil encodé en JSON |
+| `CLAUDE_SESSION_ID` | Tous | Identifiant unique de la session en cours |
+| `CLAUDE_PROJECT_DIR` | Tous | Chemin absolu vers le répertoire du projet |
+| `CLAUDE_MODEL` | Tous | Nom du modèle utilisé (ex. : `claude-sonnet-4-5`) |
+
+Utilisez ces variables pour écrire des hooks qui agissent sur des entrées d'outils spécifiques sans avoir à analyser la ligne de commande.
+
+---
+
+## Écrire un script hook
+
+Voici un script bash hook complet qui exécute une analyse de sécurité semgrep avant toute commande bash :
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/pre-bash-check.sh
+# Bloque les commandes bash contenant des modèles dangereux.
+# Un code de sortie 1 bloque l'appel d'outil.
+
+set -euo pipefail
+
+TOOL_INPUT="${CLAUDE_TOOL_INPUT:-}"
+COMMAND=$(echo "$TOOL_INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('command',''))" 2>/dev/null || echo "")
+
+# Bloquer les commandes de type pipe-vers-shell
+if echo "$COMMAND" | grep -qE 'curl .* \| (bash|sh)|wget .* \| (bash|sh)'; then
+  echo "BLOQUÉ : Les modèles pipe-vers-shell ne sont pas autorisés. Téléchargez d'abord le script, examinez-le, puis exécutez-le."
+  exit 1
+fi
+
+# Bloquer les suppressions récursives
+if echo "$COMMAND" | grep -qE 'rm -rf /|rm -rf \$HOME|rm -rf ~'; then
+  echo "BLOQUÉ : La suppression récursive du répertoire racine ou personnel n'est pas autorisée."
+  exit 1
+fi
+
+# Autoriser tout le reste
+exit 0
+```
+
+Rendez le script exécutable :
+
+```bash
+chmod +x ~/.claude/hooks/pre-bash-check.sh
+```
+
+Puis enregistrez-le dans `~/.claude/settings.json` :
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "command": "/home/votrenom/.claude/hooks/pre-bash-check.sh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Exemple concret : Auto-commit à la fin de session
+
+Ce hook crée un commit git avec tout ce que Claude a modifié pendant la session, vous donnant toujours un point de contrôle :
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/session-end-commit.sh
+
+cd "${CLAUDE_PROJECT_DIR}" || exit 0
+
+# Committer seulement s'il y a des modifications
+if git diff --quiet && git diff --staged --quiet; then
+  echo "Aucune modification à committer."
+  exit 0
+fi
+
+git add -A
+git commit -m "Claude Code session ${CLAUDE_SESSION_ID}: point de contrôle automatique" \
+  --no-verify \
+  --author="Claude Code <claude@anthropic.com>" \
+  2>&1
+
+echo "Modifications committées. Exécutez 'git log -1' pour réviser."
+```
+
+Enregistrez-le :
+
+```json
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "command": "/home/votrenom/.claude/hooks/session-end-commit.sh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Exemple concret : Formatage à l'écriture
+
+Après que Claude écrit ou modifie un fichier TypeScript, exécutez automatiquement Prettier :
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/post-edit-format.sh
+
+TOOL_INPUT="${CLAUDE_TOOL_INPUT:-}"
+FILE=$(echo "$TOOL_INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('file_path', d.get('path','')))" 2>/dev/null || echo "")
+
+if [[ -z "$FILE" ]]; then
+  exit 0
+fi
+
+# Formater uniquement les fichiers TypeScript/JavaScript
+if [[ "$FILE" =~ \.(ts|tsx|js|jsx)$ ]]; then
+  if command -v prettier &>/dev/null; then
+    prettier --write "$FILE" 2>&1
+    echo "Formaté : $FILE"
+  fi
+fi
+
+exit 0
+```
+
+Enregistrez-le :
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "command": "/home/votrenom/.claude/hooks/post-edit-format.sh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Exemple concret : Analyse de sécurité avant bash
+
+Exécutez semgrep sur le répertoire courant avant toute commande bash, en bloquant l'exécution si de nouveaux constats de haute sévérité apparaissent :
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/pre-bash-semgrep.sh
+
+cd "${CLAUDE_PROJECT_DIR}" || exit 0
+
+# Exécuter semgrep avec un ensemble de règles léger — assez rapide pour un hook
+FINDINGS=$(semgrep --config=p/security-audit --severity=ERROR --quiet --json 2>/dev/null \
+  | python3 -c "import sys,json; r=json.load(sys.stdin); print(len(r.get('results',[])))" 2>/dev/null || echo "0")
+
+if [[ "$FINDINGS" -gt 0 ]]; then
+  echo "AVERTISSEMENT : semgrep a trouvé $FINDINGS problème(s) de haute sévérité dans le code source courant."
+  echo "Consultez avec : semgrep --config=p/security-audit --severity=ERROR"
+  # Ne bloque pas — avertit seulement. Changez exit 0 en exit 1 pour bloquer.
+fi
+
+exit 0
+```
+
+---
+
+## Sortie des hooks
+
+**stdout** — Retourné à Claude Code. Pour les hooks PreToolCall qui passent, le stdout est montré au modèle comme contexte additionnel sur l'appel d'outil. Pour PostToolCall, le stdout est préfixé au résultat de l'outil. Pour SessionStart, le stdout est affiché comme message de contexte initial. Cela permet d'injecter des informations dans le raisonnement du modèle.
+
+**stderr** — Va dans le journal de Claude Code (non montré au modèle). Utilisez stderr pour les sorties de débogage que vous ne voulez pas que le modèle voie.
+
+**Code de sortie :**
+- `0` — succès ; continuez normalement.
+- Non nul pour `PreToolCall` — **bloque l'appel d'outil**. Claude Code indique au modèle que l'appel d'outil a été rejeté et inclut tout stdout du hook comme raison. C'est ainsi que vous appliquez des politiques.
+- Non nul pour tous les autres types de hooks — journalisé comme avertissement ; l'exécution continue.
+
+---
+
+## Débogage des hooks
+
+### Testez les hooks manuellement avant de les enregistrer
+
+```bash
+# Simuler un environnement PreToolCall
+export CLAUDE_TOOL_NAME="Bash"
+export CLAUDE_TOOL_INPUT='{"command": "rm -rf /tmp/test"}'
+export CLAUDE_SESSION_ID="session-test"
+export CLAUDE_PROJECT_DIR="/home/utilisateur/mon-projet"
+
+bash ~/.claude/hooks/pre-bash-check.sh
+echo "Code de sortie : $?"
+```
+
+### Consultez le journal de Claude Code
+
+Claude Code écrit les erreurs et avertissements des hooks dans son fichier journal. Sous Linux/macOS :
+
+```bash
+tail -f ~/.claude/logs/claude.log | grep -i hook
+```
+
+### Ajoutez set -x pour un traçage détaillé des hooks
+
+Ajoutez temporairement `set -x` au début d'un script hook pour voir chaque commande qu'il exécute :
+
+```bash
+#!/usr/bin/env bash
+set -x   # retirez après le débogage
+...
+```
+
+La trace va sur stderr, qui apparaît dans le journal de Claude Code.
+
+---
+
+## Meilleures pratiques
+
+**Gardez les hooks rapides.** Les hooks PreToolCall bloquent l'exécution — une analyse de sécurité de 5 secondes avant chaque commande bash rendra Claude Code lent. Effectuez des vérifications légères directement ; déportez les analyses lourdes vers PostToolCall ou SessionEnd où elles ne bloquent pas.
+
+**Rendez les hooks idempotents.** Claude Code peut réessayer des appels d'outils ou redéclencher des événements dans des cas limites. Un hook qui crée un commit git à chaque appel créera des doublons. Protégez avec des vérifications comme `git diff --quiet`.
+
+**Ne bloquez jamais sans raison.** Si votre hook PreToolCall se termine avec le code 1, Claude Code indique au modèle « l'appel d'outil a été rejeté ». Incluez une explication claire dans stdout pour que le modèle puisse s'ajuster :
+
+```bash
+echo "BLOQUÉ : Les modifications directes des fichiers generated/ ne sont pas autorisées. Modifiez plutôt les templates sources."
+exit 1
+```
+
+**Utilisez des chemins absolus dans les scripts.** Les hooks s'exécutent dans un environnement minimal. Les chemins relatifs vers d'autres scripts ou binaires peuvent ne pas se résoudre. Utilisez toujours des chemins complets :
+
+```bash
+/home/votrenom/.local/bin/semgrep  # pas seulement : semgrep
+```
+
+**Séparez les préoccupations.** Écrivez un script par préoccupation plutôt qu'un seul script géant qui fait tout. Il est plus facile d'activer/désactiver les hooks individuels en les commentant dans `settings.json`.
+
+**Journalisez les identifiants de session.** Chaque hook a accès à `CLAUDE_SESSION_ID`. Incluez-le dans tout journal d'audit pour pouvoir corréler les événements de hooks avec la session qui les a déclenchés.
+
+---
+
+## Prochaines étapes
+
+- [Création de sous-agents](/skills/build-subagent) — combinez les hooks avec l'orchestration de sous-agents pour une automatisation avancée
+- [Guide d'installation complet](/skills/install-claude-code) — configurez Claude Code si vous ne l'avez pas encore fait
+- [Guide d'installation Windows](/skills/install-claude-code-windows) — scripts hook PowerShell sous Windows
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Hooks Claude Code : automatiser des actions sur les événements",
+  "description": "Configurer les hooks Claude Code pour automatiser des actions sur les événements UserPromptSubmit, PreToolCall, PostToolCall, SessionStart et SessionEnd",
+  "step": [
+    { "@type": "HowToStep", "name": "Choisir un type de hook", "text": "Décidez à quel événement réagir : PreToolCall pour bloquer des actions, PostToolCall pour valider les résultats, SessionEnd pour le nettoyage." },
+    { "@type": "HowToStep", "name": "Écrire un script hook", "text": "Créez un script bash qui lit les variables d'environnement CLAUDE_TOOL_INPUT et CLAUDE_TOOL_NAME. Sortie 0 pour autoriser, sortie 1 pour bloquer (PreToolCall uniquement)." },
+    { "@type": "HowToStep", "name": "Rendre le script exécutable", "text": "Exécutez : chmod +x ~/.claude/hooks/votre-hook.sh" },
+    { "@type": "HowToStep", "name": "Enregistrer dans settings.json", "text": "Ajoutez la commande hook et le matcher optionnel à la section hooks de ~/.claude/settings.json." },
+    { "@type": "HowToStep", "name": "Tester manuellement", "text": "Exportez les variables d'environnement CLAUDE_TOOL_* et exécutez le script directement pour vérifier son comportement avant de vous y fier en session." }
+  ]
+}
+*/}

@@ -1,0 +1,238 @@
+---
+slug: project-kickstart
+title: "Project Kickstart Prompt Template for Claude Code"
+description: "A structured prompt template for starting a new project with Claude Code — covers architecture decisions, file structure, tooling setup, and the first working commit."
+category: template
+tags: [prompts, project-setup, new-project, workflow, templates]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 9
+lang: "en"
+relatedServices: [claude-code-setup, agent-development]
+seoTitle: "Project Kickstart Prompt Template for Claude Code | ClawHelp"
+seoDescription: "Structured prompt template to kick off any new project with Claude Code. Covers stack decisions, file layout, tooling, CLAUDE.md creation, and the first working commit — copy and fill in the blanks."
+schema: HowTo
+---
+
+# Project Kickstart Prompt Template for Claude Code
+
+Starting a new project with Claude Code from a blank directory often produces inconsistent results — Claude makes reasonable but arbitrary decisions about structure, tooling, and conventions that may not match how you actually work.
+
+This template gives you a structured kickstart prompt that forces the important decisions upfront, documents them in `CLAUDE.md`, and gets to a first working commit with the right foundation in place.
+
+Use it at the start of any greenfield project, or when onboarding an existing project into Claude Code for the first time.
+
+---
+
+## When to Use This Template
+
+- **New greenfield project** — starting from `mkdir my-project`
+- **Existing project, first Claude Code session** — you need Claude to understand your current setup before making changes
+- **Resuming after a long gap** — re-anchoring Claude to the current state of the project
+- **Handing off to a colleague** — they open the project and run this prompt to get oriented fast
+
+---
+
+## The Kickstart Prompt
+
+Copy the block below, fill in the `[BRACKET]` sections, and paste it as your first message in a new Claude Code session.
+
+```
+You are starting work on a new project. Before writing any code, complete the following setup sequence in order. Do not skip steps.
+
+## Project Overview
+
+Project name: [PROJECT_NAME]
+What it does: [ONE SENTENCE: what the product/tool/service does and who uses it]
+Primary users: [target users — e.g., "small business owners", "backend engineers at SaaS companies"]
+Success metric: [how we know the project succeeded — e.g., "user can create an account and submit a form"]
+
+## Tech Stack
+
+Use the following stack. Do not suggest alternatives unless a listed tool is incompatible with another.
+
+- Language: [TypeScript / Python / Go / Rust / other]
+- Framework: [Next.js 15 / FastAPI / Express / other or "none — CLI tool"]
+- Database: [PostgreSQL / SQLite / none] via [Prisma / Drizzle / SQLAlchemy / other]
+- Auth: [NextAuth.js / Clerk / none]
+- Testing: [Vitest + Playwright / pytest / Go test / other]
+- Package manager: [pnpm / npm / yarn / pip / go mod]
+- Deployment target: [Vercel / Railway / Fly.io / Docker / other]
+
+## Constraints
+
+- [CONSTRAINT 1 — e.g., "no paid third-party APIs — use open-source or free tiers only"]
+- [CONSTRAINT 2 — e.g., "must work offline / no external network calls at runtime"]
+- [CONSTRAINT 3 — e.g., "single binary deployment — no containerization"]
+- (delete this line if no constraints)
+
+## Setup Sequence
+
+Complete these steps in order. After each step, pause and confirm what was done before proceeding to the next.
+
+### Step 1 — Scaffold the project
+
+Initialize the project with the package manager and framework listed above. Create the directory structure. Install dependencies. Do not write any feature code yet.
+
+Expected output: a working scaffold with `[dev command]` starting without errors.
+
+### Step 2 — Configure tooling
+
+Set up:
+- Linting: ESLint (or equivalent) with the project's language defaults
+- Formatting: Prettier (or equivalent) — config committed, not just installed
+- Type checking: tsc --strict (or equivalent)
+- Git: initialize repo if not already a repo, create .gitignore
+
+Expected output: `[lint command]` and `[typecheck command]` run without errors on the empty scaffold.
+
+### Step 3 — Write CLAUDE.md
+
+Create a `CLAUDE.md` at the project root documenting:
+- The exact stack (with versions)
+- The directory structure and what goes where
+- Every dev command (start, test, lint, build, typecheck, migrate)
+- Coding conventions we'll use in this project
+- Any off-limits files or directories
+- The domain vocabulary for this project
+
+CLAUDE.md must be complete enough that a fresh Claude Code session starting from it could work on this codebase without additional explanation.
+
+### Step 4 — First working feature
+
+Implement the minimal version of this feature to prove the scaffold works end-to-end:
+
+[DESCRIBE THE FIRST FEATURE — e.g., "A /health endpoint that returns { status: 'ok', timestamp: ISO8601 }" or "A CLI command `init` that creates a config file in the current directory"]
+
+This feature must:
+- Be implemented in the right place according to the structure in CLAUDE.md
+- Have at least one passing test
+- Pass lint and typecheck
+
+### Step 5 — First commit
+
+After Step 4 is complete and passing:
+- Stage all files
+- Create a commit with message: `feat: initial project scaffold with [FIRST FEATURE NAME]`
+- Show me the git log and the test output so I can confirm everything is in order
+
+---
+
+After completing all five steps, give me a brief summary:
+- What was set up
+- Where the key files are
+- What the next natural development task would be
+- Any decisions you made that I should know about
+```
+
+---
+
+## How to Adapt the Template
+
+### For an existing project
+
+Replace Steps 1–2 with:
+
+```
+### Step 1 — Orient yourself
+
+Read the existing project structure. Run the existing tests. Check that lint and typecheck pass.
+Report:
+- What the project does (inferred from code/README)
+- The current stack with versions
+- Any failing tests or lint errors
+- Files that look auto-generated or off-limits
+
+Do not make any changes yet.
+```
+
+Then continue from Step 3 (write CLAUDE.md based on what you found).
+
+### For a solo MVP
+
+Reduce Step 4 to a single end-to-end happy path:
+
+```
+### Step 4 — Smoke test path
+
+Implement just enough to run one end-to-end user flow manually:
+[describe the flow]
+
+No tests required at this stage. We will add them in the next session.
+```
+
+### For a team project
+
+Add to Step 3:
+
+```
+In CLAUDE.md, include a "Team" section listing:
+- Who owns the backend / DB / infra / frontend
+- How PRs are reviewed (1 reviewer? 2?)
+- Branch naming convention
+- What CI must pass before merge
+```
+
+---
+
+## What to Do After the Kickstart
+
+Once the kickstart prompt completes and you have a first working commit:
+
+1. **Read the CLAUDE.md Claude wrote.** Correct anything wrong. This is the document that all future sessions will use.
+2. **Add your real domain vocabulary.** The first session produces generic terms; replace them with your actual business terminology.
+3. **Set up hooks.** Use the [hooks configuration template](/templates/hooks-config) to add auto-format and session backup immediately.
+4. **Write your first real task as a scoped prompt.** Use the conventions from CLAUDE.md to write a prompt that names the files, defines acceptance criteria, and specifies constraints. See [effective Claude Code practices](/skills/effective-claude-code) for guidance.
+
+---
+
+## Common Mistakes to Avoid
+
+**Skipping Step 3 (CLAUDE.md).** This is the most common mistake. The kickstart is worth little if it doesn't produce a CLAUDE.md — every subsequent session will start cold.
+
+**Choosing too large a "first feature" for Step 4.** The first feature should be the smallest thing that proves the scaffold works end-to-end. If the first feature takes more than 30 minutes to implement, it's too big. Pick something trivial.
+
+**Not reviewing Claude's stack decisions.** Claude will make reasonable choices for anything you left unspecified. Review them in the CLAUDE.md it creates — it's easier to correct now than after 20 commits.
+
+**Running the kickstart in a dirty directory.** Start from a clean `mkdir my-project && cd my-project`. Running the kickstart in a directory with existing files confuses the scaffold step.
+
+---
+
+## Template Variables Reference
+
+| Variable | What to put here |
+|---|---|
+| `[PROJECT_NAME]` | The name of the project — used in commit messages and CLAUDE.md |
+| `[ONE SENTENCE]` | What the product does and who uses it — 15 words max |
+| `[CONSTRAINT N]` | Hard constraints Claude must respect — not preferences, actual constraints |
+| `[dev command]` | The command to start the dev server (e.g., `pnpm dev`) |
+| `[lint command]` | The lint command (e.g., `pnpm lint`) |
+| `[DESCRIBE THE FIRST FEATURE]` | The minimal end-to-end feature that proves the scaffold works |
+| `[FIRST FEATURE NAME]` | Short name for the commit message (e.g., `health endpoint`) |
+
+---
+
+## Next Steps
+
+- [CLAUDE.md starter template](/templates/claude-md-starter) — detailed CLAUDE.md template once the kickstart generates the first version
+- [Hooks configuration template](/templates/hooks-config) — set up auto-format, security check, and session backup
+- [Effective Claude Code practices](/skills/effective-claude-code) — how to write strong prompts for subsequent development sessions
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Kick Off a New Project with Claude Code",
+  "description": "Use a structured prompt to initialize a new project with Claude Code, covering scaffold, tooling, CLAUDE.md, first feature, and first commit.",
+  "step": [
+    { "@type": "HowToStep", "name": "Fill in the template", "text": "Copy the kickstart prompt template and replace all [BRACKET] values with your project's details: name, stack, constraints, and first feature." },
+    { "@type": "HowToStep", "name": "Paste into a new Claude Code session", "text": "Start Claude Code in an empty directory and paste the filled-in prompt as your first message." },
+    { "@type": "HowToStep", "name": "Review each step output", "text": "Claude will pause after each of the five steps. Review the output before saying 'proceed' — this is your chance to correct decisions cheaply." },
+    { "@type": "HowToStep", "name": "Review and correct CLAUDE.md", "text": "After Step 3, read the generated CLAUDE.md carefully. Fix any incorrect assumptions about your stack or conventions." },
+    { "@type": "HowToStep", "name": "Confirm the first commit", "text": "After Step 5, verify git log and test output are as expected. You now have a solid foundation for the project." }
+  ]
+}
+*/}

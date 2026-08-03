@@ -40,6 +40,7 @@ export type ResourceCategory =
   | 'security'
   | 'case-study'
   | 'anti-pattern'
+  | 'comparison'
 export type ContentStatus = 'draft' | 'published'
 
 // ---- Service ------------------------------------------------

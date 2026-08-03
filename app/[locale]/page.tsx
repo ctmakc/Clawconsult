@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
+import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
 import {
   ArrowRight, Shield, Zap, Search, Settings, HeadphonesIcon,
@@ -45,6 +46,17 @@ function HeroSection() {
         <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-blue-500 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-blue-700 blur-3xl" />
       </div>
+
+      {/* AI agent network illustration */}
+      <Image
+        src="/images/hero-network.png"
+        alt=""
+        fill
+        priority
+        aria-hidden
+        sizes="100vw"
+        className="object-cover object-right opacity-60 mix-blend-screen pointer-events-none select-none"
+      />
 
       <div className="container-site relative z-10">
         <div className="max-w-3xl">

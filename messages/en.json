@@ -427,7 +427,8 @@
       "strategy": "Strategy",
       "security": "Security",
       "case-study": "Case Study",
-      "anti-pattern": "Anti-Pattern"
+      "anti-pattern": "Anti-Pattern",
+      "comparison": "Comparison"
     },
     "noArticles": "No articles published yet.",
     "article": {

@@ -1,0 +1,450 @@
+---
+slug: claude-code-project-memory-guide
+title: "Claude Code Memory System: Persisting Context Across Sessions"
+description: "A practical guide to Claude Code's memory system — the /memory command, memory file format, what to store and what to avoid, memory vs CLAUDE.md vs Tasks, auto-memory, portability, and privacy controls."
+category: guide
+schema: Article
+tags: [memory, sessions, context, persistence, claude-md, workflow, preferences, privacy]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+seoTitle: "Claude Code Memory System: Persist Context Across Sessions | ClawHelp"
+seoDescription: "Master Claude Code's memory system — the /memory command, memory file format, what to store, memory vs CLAUDE.md vs Tasks, auto-memory behavior, portability across machines, and privacy controls."
+---
+
+# Claude Code Memory System: Persisting Context Across Sessions
+
+Every Claude Code session starts without memory of the previous one. Open a new session tomorrow and Claude doesn't remember the debugging approach you settled on yesterday, the fact that your team uses pnpm not npm, or that you're a senior Go developer who doesn't need basic language explanations.
+
+Claude Code provides several mechanisms for persistence. Understanding which mechanism to use for what kind of information — and how they interact — is the key to building a setup where Claude consistently behaves as a knowledgeable collaborator rather than a blank slate.
+
+---
+
+## The Three Memory Layers
+
+Claude Code has three distinct persistence layers, each suited for different kinds of information:
+
+### Layer 1: Conversation Context (Session-Scoped)
+
+Everything Claude knows within a session — your prompts, its responses, files it has read, commands it has run. This is the "working memory" of an active session. It does not persist when the session ends.
+
+This layer is what most people experience by default. When you say "use the function from the last file you read" in the middle of a session, Claude can do that. When you start a new session the next day and say the same thing, Claude has no context at all.
+
+Session context is finite — it lives in the context window, which has a token limit. See [Claude Code Session Management](/en/resources/claude-code-session-management) for strategies to extend long sessions via `/compact`.
+
+### Layer 2: CLAUDE.md Files (Project and Global Persistent Instructions)
+
+CLAUDE.md files are Markdown files Claude reads at the start of every session. They provide persistent project context and instructions that survive across sessions and, when committed to git, across your entire team.
+
+CLAUDE.md is designed for **project context and team conventions** — the things every session in that project needs to know. It's manually maintained (you edit it like any other file), committed to version control, and visible to everyone with repo access.
+
+For a deep dive into CLAUDE.md, see [CLAUDE.md Advanced Patterns](/en/resources/claude-md-advanced-patterns).
+
+### Layer 3: ~/.claude/memory/ (User-Level Persistent Facts)
+
+The memory system — accessible via the `/memory` slash command — lets you store facts, preferences, and context as plain Markdown files in `~/.claude/memory/`. These files are automatically loaded by Claude Code at session start, providing persistent personal context across all your projects and sessions.
+
+Unlike CLAUDE.md, memory is personal (not team-shared), applies across all projects, and can be updated by Claude Code itself through conversation.
+
+---
+
+## The /memory Command
+
+The `/memory` command is the primary interface for working with Claude Code's persistent memory.
+
+### Viewing Memory
+
+```
+/memory
+```
+
+Running `/memory` without arguments displays the current contents of all memory files. Claude Code shows what it's loaded from `~/.claude/memory/` — the facts, preferences, and context that are active in this session.
+
+In larger setups, this might show multiple files organized by topic. In a fresh install, it shows an empty or near-empty memory store.
+
+### Adding to Memory
+
+```
+/memory add I prefer TypeScript interfaces over type aliases
+/memory add This project uses pnpm — never suggest npm install commands
+/memory add I'm a senior Go developer. Don't explain basic language syntax.
+/memory add When suggesting database queries, assume PostgreSQL 16 with uuid primary keys
+```
+
+Each `/memory add` command appends the fact to your memory store. Claude Code writes it to `~/.claude/memory/` (typically to a `preferences.md` or similar file) and confirms what was saved.
+
+You can also ask Claude to remember something conversationally:
+
+```
+Remember that I prefer verbose error messages over terse ones
+Remember that this project's API base URL in development is http://localhost:8080/api/v2
+```
+
+Claude will typically confirm what it's storing and use `/memory add` to persist it.
+
+### Removing from Memory
+
+To remove specific memories, you can either edit the memory files directly:
+
+```bash
+# Open the memory file in your editor
+nano ~/.claude/memory/preferences.md
+```
+
+Or ask Claude to remove it:
+
+```
+Forget that I prefer TypeScript interfaces over type aliases
+Remove the memory about the API base URL
+```
+
+Claude will update the memory file accordingly.
+
+---
+
+## Memory File Format
+
+Memory files are plain Markdown stored in `~/.claude/memory/`. You can open, read, edit, and version-control them like any other Markdown file.
+
+A typical memory file looks like:
+
+```markdown
+# Developer Preferences
+
+## Coding Style
+- Prefer TypeScript interfaces over type aliases for object shapes
+- Always use explicit return types on functions
+- Prefer `const` over `let`; never use `var`
+- Verbose error messages preferred over terse ones
+
+## Environment
+- Primary machine: Linux (Ubuntu 22.04)
+- Shell: zsh with starship prompt
+- Node.js via nvm; Python via pyenv; Go installed system-wide
+- Available tools: rg (ripgrep), fd, jq, gh CLI, fzf
+
+## Communication Preferences
+- Senior engineer — skip introductory explanations
+- When implementing something complex, state the approach before writing code
+- Flag architectural implications rather than just implementing the obvious thing
+- Keep responses concise; expand only when I ask follow-up questions
+
+## Long-Term Project Context
+- I'm the primary maintainer of the Acme platform
+- Primary languages: TypeScript (frontend + API), Python (ML), Go (infrastructure tooling)
+- We use PostgreSQL everywhere; no MySQL, no SQLite in production
+```
+
+Claude Code reads this file at the start of every session. All of these facts are available to Claude from the first prompt, without you having to re-state them.
+
+You can organize memory into multiple files:
+
+```
+~/.claude/memory/
+  preferences.md     ← coding and communication preferences
+  projects.md        ← long-term project context
+  stack.md           ← known tools and environment facts
+  learning.md        ← things you're currently learning (Claude adjusts explanations)
+```
+
+Claude Code loads all Markdown files in the memory directory.
+
+---
+
+## What to Store in Memory
+
+Memory is most valuable for facts that:
+- Stay true across many sessions and projects
+- Are personal to you (not team conventions — those go in CLAUDE.md)
+- Would take time to re-establish if Claude didn't know them
+
+### High-Value Memory Content
+
+**Personal coding preferences**
+```
+I prefer named exports over default exports in TypeScript
+I prefer functional components over class components
+I prefer explicit error types over generic Error throws
+```
+
+**Technical background and experience level**
+```
+I'm a senior Rust engineer learning TypeScript. Explain unfamiliar JS/TS patterns in detail.
+I'm comfortable with async/await but always confuse reduce() — explain it if you use it.
+```
+
+**Persistent environment facts**
+```
+My development machine runs Linux (not macOS). Don't suggest macOS-specific commands.
+I don't have Docker available on this machine — suggest alternatives that don't require it.
+My Python is 3.12. Suggest syntax and features available in 3.12+.
+```
+
+**Cross-project conventions**
+```
+I always use pnpm, not npm or yarn
+I always use conventional commits format for commit messages
+I always prefer reading the implementation over reading docs when understanding a library
+```
+
+**Long-term project awareness**
+```
+I'm the maintainer of three related services: auth-api, user-api, and billing-api. They share a PostgreSQL cluster.
+The main monorepo I work in is at /home/user/projects/acme — it uses Turborepo.
+```
+
+**Learning context**
+```
+I'm currently learning Kubernetes. Explain k8s concepts when they come up; don't assume I know them.
+I'm migrating from REST to GraphQL. Flag when patterns should differ between the two.
+```
+
+---
+
+## What NOT to Store in Memory
+
+Memory has costs: it consumes context window space in every session, and stale or wrong memory is worse than no memory (Claude will act on incorrect facts).
+
+**Don't store ephemeral task state**
+```
+# BAD — this will be wrong next session
+Remember that I'm currently implementing the user-preferences feature in branch feat/user-prefs
+```
+Task state belongs in a task tracker, a notes file, or the [TodoRead/TodoWrite tools](/en/resources/claude-code-slash-commands) within a session.
+
+**Don't store secrets or credentials**
+```
+# NEVER — memory files are plaintext
+Remember that my database password is hunter2
+Remember that my Anthropic API key is sk-ant-...
+```
+Memory files are stored in your home directory as plaintext. Anyone with access to your machine can read them. Use environment variables and a secrets manager for credentials.
+
+**Don't store things better in CLAUDE.md**
+```
+# BAD in memory — this is team context, belongs in the project's CLAUDE.md
+Remember that this project uses Drizzle not Prisma
+Remember that the API uses Fastify not Express
+```
+Project-specific conventions that should apply to everyone on your team belong in the committed CLAUDE.md, not in your personal memory. Memory is for you; CLAUDE.md is for the team.
+
+**Don't store highly volatile information**
+```
+# BAD — will be wrong soon
+Remember that we're currently migrating to the v2 API
+Remember that the staging server is currently down
+```
+Volatile facts that change frequently clutter memory and create incorrect context. Keep memory to stable, long-term facts.
+
+---
+
+## Memory vs CLAUDE.md vs Tasks: The Right Tool for Each Concern
+
+This distinction comes up repeatedly. Here's the clearest way to think about it:
+
+| What you want to persist | Where it belongs |
+|--------------------------|-----------------|
+| Personal coding preferences | `~/.claude/memory/` via `/memory` |
+| Your technical background and experience level | `~/.claude/memory/` via `/memory` |
+| Cross-project personal conventions | `~/.claude/memory/` via `/memory` |
+| Project tech stack and architecture | Project `CLAUDE.md` (committed to git) |
+| Team conventions and banned patterns | Project `CLAUDE.md` (committed to git) |
+| Personal project-specific overrides | `~/.claude/CLAUDE.md` or subdirectory CLAUDE.md |
+| Current task state and subtasks | TodoRead/TodoWrite (session-scoped) |
+| Work tracking across sessions | External task tracker + notes in CLAUDE.md |
+
+**The CLAUDE.md vs memory mental model:**
+
+Think of CLAUDE.md as "what any engineer on this team needs to know to work effectively in this codebase" — it's onboarding documentation for Claude. Think of memory as "what Claude needs to know about me specifically to work effectively with me" — it's your personal persistent profile.
+
+---
+
+## Auto-Memory: When Claude Saves Things Automatically
+
+In some configurations and workflows, Claude Code will proactively save facts to memory without an explicit `/memory add` command. This happens when Claude determines something you've mentioned is worth persisting.
+
+For example, if you tell Claude "by the way, I always use `uv` instead of `pip` for Python projects" in the middle of a session, it may automatically save that preference to memory and confirm:
+
+```
+I've saved that to your memory: "Use uv instead of pip for Python projects."
+```
+
+**How to control auto-memory:**
+
+You can review everything Claude has saved automatically by running `/memory` — you'll see the full contents of your memory files. If something was saved that you don't want persisted, delete it from the file directly or ask Claude to remove it.
+
+Auto-memory is intentionally conservative — Claude shouldn't be saving ephemeral task context or sensitive information. If you see memory entries that shouldn't be there, clean them out:
+
+```bash
+# Review all memory files
+ls ~/.claude/memory/
+cat ~/.claude/memory/preferences.md
+
+# Edit directly to remove unwanted entries
+nano ~/.claude/memory/preferences.md
+```
+
+---
+
+## Memory Portability: Sync Across Machines
+
+Memory files in `~/.claude/memory/` are plain Markdown. They have no binary components, no database, no proprietary format. This makes them straightforward to manage as part of your dotfiles:
+
+### Using a Dotfiles Repository
+
+If you manage your dotfiles with git (common for engineers who work across multiple machines), you can include your Claude memory directory:
+
+```bash
+# Add to your dotfiles repo
+cd ~/dotfiles
+mkdir -p claude/memory
+cp ~/.claude/memory/*.md claude/memory/
+
+# Symlink on each machine
+ln -s ~/dotfiles/claude/memory ~/.claude/memory
+```
+
+On a new machine, cloning your dotfiles and setting up the symlink gives you your full Claude memory context immediately.
+
+### Manual Sync
+
+For occasional sync without a dotfiles repo:
+
+```bash
+# Back up memory to a safe location
+cp -r ~/.claude/memory/ ~/Documents/claude-memory-backup/
+
+# Restore on another machine
+cp -r ~/Documents/claude-memory-backup/ ~/.claude/memory/
+```
+
+### rsync for Active Sync
+
+```bash
+# Sync memory from your work machine to your personal machine
+rsync -av ~/.claude/memory/ user@personal-machine:~/.claude/memory/
+```
+
+**What gets synced:**
+- All your personal preferences and context
+- Long-term project awareness
+- Communication preferences
+
+**What doesn't sync (and shouldn't):**
+- Session-scoped context (not in memory files)
+- CLAUDE.md files (those live in project directories)
+- Settings files with machine-specific paths or permissions
+
+---
+
+## Practical Setup: Building a Useful Memory Profile
+
+Here's a process for setting up memory effectively when you start using Claude Code seriously:
+
+### Step 1: Start with Communication Preferences
+
+These have immediate impact on every session:
+
+```
+/memory add I'm a senior engineer. Skip introductory explanations and go straight to the point.
+/memory add When implementing something non-trivial, briefly state the approach before writing code.
+/memory add Keep responses concise. Expand only when I ask follow-up questions.
+```
+
+### Step 2: Add Environment Facts
+
+```
+/memory add My shell is zsh on Linux (Ubuntu 22.04)
+/memory add I use nvm for Node.js and pyenv for Python
+/memory add Available tools: ripgrep (rg), fd, jq, gh CLI — use these instead of slower alternatives
+/memory add I use pnpm for all Node.js projects, uv for Python
+```
+
+### Step 3: Add Stable Coding Preferences
+
+```
+/memory add I prefer TypeScript interfaces over type aliases for object types
+/memory add I prefer explicit function return types, not inferred
+/memory add I prefer named exports everywhere — never default exports
+/memory add Error handling: always explicit try/catch or Result types. No silent swallowing.
+```
+
+### Step 4: Add Contextual Learning Notes
+
+```
+/memory add I'm currently learning Rust. Explain ownership and borrowing concepts when they come up.
+/memory add I'm comfortable with React hooks but often forget useCallback/useMemo semantics — explain when you use them.
+```
+
+### Step 5: Test the Memory
+
+Start a new Claude Code session. Without any initial context-setting, ask a question that should be answered differently based on your memory:
+
+```
+What package manager should I use to install lodash?
+```
+
+If memory is working: Claude answers "pnpm add lodash" without you having to say anything.
+
+If memory isn't loaded: Claude gives a generic "npm install lodash" answer.
+
+Run `/memory` if something seems wrong — it shows exactly what Claude has loaded.
+
+---
+
+## Privacy: What Memory Contains and How to Audit It
+
+Memory files are plaintext Markdown in `~/.claude/memory/`. This means:
+
+- **They're readable by any process with your user permissions** — don't store secrets
+- **They're not encrypted at rest** — they're as secure as other files in your home directory
+- **They're visible to Claude in every session** — review periodically to ensure they're current and relevant
+
+**Regular audit process:**
+
+```bash
+# View all memory files and their sizes
+ls -la ~/.claude/memory/
+
+# Review contents
+cat ~/.claude/memory/preferences.md
+
+# Look for outdated or sensitive entries
+grep -i "password\|key\|token\|secret" ~/.claude/memory/ 2>/dev/null
+```
+
+If you find anything sensitive, remove it immediately:
+
+```bash
+# Edit the file to remove the sensitive line
+nano ~/.claude/memory/preferences.md
+
+# Or delete a specific memory file entirely
+rm ~/.claude/memory/projects.md
+```
+
+**How to delete specific memories via Claude:**
+
+```
+Forget that I prefer TypeScript interfaces over type aliases
+Remove all memories related to the Acme project
+Clear my memory of environment-specific facts
+```
+
+Claude will update the memory files accordingly and confirm what was removed.
+
+**How to clear all memory:**
+
+```bash
+# Nuclear option — wipe all memory
+rm -rf ~/.claude/memory/
+mkdir ~/.claude/memory/
+```
+
+After this, you start fresh with no persistent memory. Claude will behave as if it has never worked with you before until you add new memory entries.
+
+---
+
+For configuring project-level persistent instructions that work for your entire team rather than just you, see [CLAUDE.md Advanced Patterns](/en/resources/claude-md-advanced-patterns). For understanding how context accumulates and expires within a session, see [Claude Code Session Management](/en/resources/claude-code-session-management).
+
+Want help designing a memory architecture that makes Claude Code genuinely context-aware from day one? ClawHelp provides Claude Code onboarding consulting — from memory setup to CLAUDE.md architecture and hook configuration. [Reach out for a consultation](/en/contact).

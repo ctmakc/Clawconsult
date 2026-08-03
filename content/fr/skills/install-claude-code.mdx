@@ -1,0 +1,223 @@
+---
+slug: install-claude-code
+title: "Comment installer Claude Code — Guide complet"
+description: "Guide étape par étape pour installer Claude Code sur n'importe quel système, avec les prérequis, la vérification et la configuration initiale."
+category: how-to
+tags: [installation, configuration, claude-code, cli]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [claude-code-setup]
+seoTitle: "Comment installer Claude Code : Guide complet 2026 | ClawHelp"
+seoDescription: "Installez Claude Code en 5 minutes. Guide étape par étape pour macOS, Windows et Linux avec prérequis, vérification et corrections des erreurs courantes."
+schema: HowTo
+---
+
+# Comment installer Claude Code — Guide complet
+
+Claude Code est l'interface en ligne de commande officielle d'Anthropic pour interagir avec Claude en mode agentique — il lit des fichiers, exécute des commandes, édite du code et accomplit des tâches complexes de manière autonome. Voici comment l'installer correctement.
+
+## Prérequis
+
+Avant de commencer, vérifiez que votre système répond aux exigences suivantes.
+
+### Node.js 18 ou supérieur
+
+Claude Code nécessite Node.js 18+ (LTS recommandé). Vérifiez votre version :
+
+```bash
+node --version
+# Doit afficher v18.x.x, v20.x.x, v22.x.x ou supérieur
+```
+
+Si Node.js n'est pas installé ou si votre version est trop ancienne, installez-le via **nvm** (Node Version Manager) — la méthode recommandée sur macOS et Linux :
+
+```bash
+# Installer nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+
+# Recharger le shell
+source ~/.bashrc   # ou ~/.zshrc sur macOS
+
+# Installer la dernière LTS
+nvm install --lts
+nvm use --lts
+```
+
+Sur Windows, utilisez [nvm-windows](https://github.com/coreybutler/nvm-windows) ou l'installateur officiel Node.js.
+
+### npm (inclus avec Node.js)
+
+npm est installé automatiquement avec Node.js. Vérifiez :
+
+```bash
+npm --version
+# Doit afficher 9.x.x ou supérieur
+```
+
+### Un abonnement Claude ou une clé API
+
+Claude Code fonctionne avec :
+- **Claude.ai Pro** ($20/mois) — la méthode recommandée pour les particuliers
+- **Claude.ai Max** — pour une utilisation intensive
+- **Clé API Anthropic** — pour une utilisation avancée ou en équipe
+
+## Installation
+
+L'installation est simple via npm :
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+L'option `-g` installe Claude Code globalement, ce qui le rend disponible depuis n'importe quel répertoire.
+
+Si vous obtenez une erreur de permission (`EACCES`), consultez la section de dépannage ci-dessous.
+
+## Vérification de l'installation
+
+Une fois l'installation terminée, vérifiez qu'elle s'est correctement effectuée :
+
+```bash
+claude --version
+# Exemple : claude 1.8.2
+```
+
+Si la commande `claude` n'est pas trouvée, rechargez votre profil shell :
+
+```bash
+source ~/.bashrc
+# ou
+source ~/.zshrc
+```
+
+## Première utilisation et authentification
+
+Lancez Claude Code dans un répertoire de projet :
+
+```bash
+cd ~/mon-projet
+claude
+```
+
+Lors du premier lancement, Claude Code vous demandera de vous authentifier. Deux options :
+
+**Option 1 — Via Claude.ai (recommandé) :**
+Un lien s'affichera dans le terminal. Ouvrez-le dans votre navigateur, connectez-vous à votre compte Claude.ai et autorisez l'accès.
+
+**Option 2 — Via clé API :**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-votre-cle-ici
+claude
+```
+
+Pour rendre la clé API permanente, ajoutez-la à votre profil shell (`~/.bashrc` ou `~/.zshrc`) :
+```bash
+echo 'export ANTHROPIC_API_KEY=sk-ant-votre-cle-ici' >> ~/.zshrc
+source ~/.zshrc
+```
+
+## Configuration initiale (~/.claude/)
+
+Claude Code crée un répertoire de configuration dans votre dossier personnel :
+
+```
+~/.claude/
+├── CLAUDE.md          # Instructions globales pour tous les projets
+├── settings.json      # Configuration globale (hooks, permissions, modèle)
+└── plugins/           # Dossier des skills
+```
+
+**Configurer `~/.claude/CLAUDE.md`** pour donner à Claude des instructions qui s'appliquent à tous vos projets — vos préférences de style de code, les frameworks que vous utilisez, votre processus de commit, etc. :
+
+```markdown
+# Mes instructions globales Claude Code
+
+- Langue des commentaires et messages de commit : français
+- Framework de test : Vitest pour les projets JS/TS
+- Style de code : ESLint Airbnb
+- Toujours écrire des tests avant d'implémenter (TDD)
+```
+
+## CLAUDE.md dans vos projets
+
+En plus du CLAUDE.md global, créez un `CLAUDE.md` dans chaque projet pour le contexte spécifique :
+
+```bash
+# Dans votre répertoire de projet
+cat > CLAUDE.md << 'EOF'
+# Mon Projet — Context Claude Code
+
+## Stack
+- Next.js 15, TypeScript strict
+- Supabase (Postgres + Auth)
+- Tailwind CSS + shadcn/ui
+
+## Statut actuel
+- Auth : TERMINÉ ✅
+- Dashboard : EN COURS
+- Paiements : NON COMMENCÉ
+
+## Décisions importantes
+- Zustand pour le state management (pas Redux)
+- API routes dans /app/api/ (pas de /pages/api/)
+EOF
+```
+
+Claude lit ce fichier automatiquement à chaque session dans ce répertoire.
+
+## Erreurs courantes et solutions
+
+### EACCES : permission refusée lors de l'installation globale npm
+
+**Cause :** npm essaie d'écrire dans un répertoire système protégé.
+
+**Solution recommandée — utiliser nvm :** nvm installe Node.js dans votre dossier personnel, évitant les problèmes de permissions.
+
+**Solution alternative — configurer le préfixe npm :**
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.profile
+source ~/.profile
+npm install -g @anthropic-ai/claude-code
+```
+
+### La commande `claude` n'est pas trouvée après installation
+
+```bash
+# Vérifier où npm installe les binaires globaux
+npm config get prefix
+# Ajouter /bin à votre PATH si nécessaire
+echo 'export PATH=$(npm config get prefix)/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Erreur d'authentification
+
+Si l'authentification échoue, déconnectez-vous et recommencez :
+```bash
+claude /logout
+claude
+```
+
+### Mise à jour vers la dernière version
+
+```bash
+npm update -g @anthropic-ai/claude-code
+claude --version   # vérifier la nouvelle version
+```
+
+## Prochaines étapes
+
+Claude Code est installé et configuré. Voici comment aller plus loin :
+
+- **[Installation sur macOS →](/skills/install-claude-code-mac/)** — Notes spécifiques à macOS et Apple Silicon
+- **[Installation sur Windows →](/skills/install-claude-code-windows/)** — Guide WSL2 et Windows natif
+- **[Claude Code Hooks →](/skills/claude-code-hooks/)** — Automatiser des actions sur événements
+- **[Construire des sous-agents →](/skills/build-subagent/)** — Déléguer des tâches à des agents parallèles
+- **[Configurer Claude Code pour votre équipe →](/services/team-onboarding/)** — Service ClawHelp
+
+---
+
+*Vous avez des difficultés à installer Claude Code ? [Réservez une session de configuration →](/services/claude-code-setup/) — nous faisons tout ça pour vous.*

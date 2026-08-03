@@ -1,0 +1,133 @@
+---
+slug: mcp-integration
+title: "Custom MCP Server Integration"
+description: "We build and configure custom MCP servers that connect Claude Code to your databases, APIs, and internal tools."
+category: service
+tags: [mcp, integration, custom-tools, consulting]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+seoTitle: "Custom MCP Server Integration | ClawHelp"
+seoDescription: "Expert claude code mcp setup and custom mcp server integration. We connect Claude Code to Postgres, Notion, REST APIs, and your internal tools."
+---
+
+# Custom MCP Server Integration
+
+Claude Code is powerful out of the box. With the right MCP servers, it becomes something else entirely — an AI that can query your production database, create Notion tickets, call your internal APIs, and push code to GitHub, all from a single conversation.
+
+**Model Context Protocol (MCP)** is the open standard that makes this possible. It lets you expose any data source or tool as a structured interface that Claude can call during a session. We design, build, and configure custom MCP servers so Claude Code can reach the systems that matter to your team.
+
+## What We Build
+
+### Database MCP Servers
+
+The most common and highest-value integration. We build MCP servers that give Claude Code read (and optionally write) access to your databases with proper safety guardrails.
+
+**Postgres MCP** — schema inspection, read-only query execution, row-count estimates, index analysis. Claude can understand your data model and generate migrations, optimized queries, and ORM code that actually matches your schema.
+
+**SQLite MCP** — ideal for local dev databases, mobile apps, and embedded analytics. Works offline with no network configuration.
+
+**MySQL / MariaDB MCP** — for teams still on MySQL-family databases.
+
+**MongoDB MCP** — collection inspection, document sampling, aggregation pipeline assistance.
+
+All database MCP servers ship with configurable safety rules: which schemas are visible, whether writes are allowed, and query timeout limits.
+
+### Internal API MCP Servers
+
+If your team has internal REST or GraphQL APIs — a data platform, a feature flag service, an internal CMS, a deployment API — we wrap them in an MCP server so Claude can call them naturally during development.
+
+Example: a developer asks Claude to "add the new `dark_mode` feature flag for the mobile beta group." Claude calls your feature flag API, creates the flag, and confirms the ID — no browser required, no copy-pasting.
+
+We handle authentication (Bearer tokens, OAuth, API keys), request validation, and response parsing. The resulting MCP server is documented, tested, and maintainable.
+
+### Notion MCP
+
+Connect Claude Code to your Notion workspace for:
+
+- Creating and updating project tickets from code comments
+- Reading architecture decision records and requirements docs during coding sessions
+- Auto-populating sprint boards when features are committed
+- Generating meeting notes from session summaries
+
+We configure page-level permissions so Claude only sees the databases and pages relevant to engineering.
+
+### GitHub / GitLab MCP
+
+Go beyond what the official GitHub CLI offers. We configure the GitHub MCP server with:
+
+- PR review and inline comment posting
+- Issue creation with correct labels, milestones, and assignees
+- Repository search and cross-repo navigation
+- GitHub Actions status checking
+
+### Custom REST API MCP
+
+For any other HTTP API — internal or third-party — we build a lightweight MCP wrapper. Common examples include:
+
+- Stripe: checking subscription status, looking up customer records during support sessions
+- Jira: creating and updating tickets from code context
+- PagerDuty: triggering and resolving incidents from runbook scripts
+- Custom analytics APIs: pulling metrics during a performance investigation
+
+## Use Cases by Role
+
+**Backend engineers** use database MCP servers to explore schema, debug queries, and generate migrations without switching context.
+
+**DevOps engineers** use deployment API MCP servers to check infrastructure state and trigger pipelines from the same session where they're writing runbooks.
+
+**Full-stack teams** use Notion + GitHub MCP together so Claude can trace a feature from ticket to PR without leaving the terminal.
+
+**Data scientists** use database MCP servers to pull sample rows, inspect column distributions, and generate analysis code calibrated to real data.
+
+## The Process
+
+### Step 1 — Audit and Scope (1 hour)
+
+We review the APIs, databases, and tools you use daily and identify which MCP integrations will have the highest impact. We produce a ranked integration plan with effort estimates.
+
+### Step 2 — Build and Test (1–5 days depending on scope)
+
+We build each MCP server, write tests for the tool handlers, and validate behavior against your actual systems in a staging environment. You review and approve before anything touches production.
+
+### Step 3 — Deployment and Documentation
+
+We deploy the MCP servers (local process, Docker container, or hosted endpoint — your choice), configure them in your `~/.claude/settings.json`, and deliver full documentation: what each tool does, what inputs it accepts, and how to extend it.
+
+## Pricing
+
+| Package | What's Included | Price |
+|---------|----------------|-------|
+| **Single Integration** | One MCP server (database or API), tested + documented | from $499 |
+| **Integration Bundle** | Up to 4 MCP servers, shared auth layer, full team config | from $1,499 |
+| **Custom Build** | Fully custom MCP server with novel transport or protocol | Contact us |
+
+Prices are in USD. Includes 30 days of bug-fix support post-delivery.
+
+## Frequently Asked Questions
+
+**Do MCP servers run on my machine or in the cloud?**
+
+Both options are supported. Local process MCP servers (stdio transport) run on the developer's machine with zero network exposure. Hosted MCP servers (HTTP/SSE transport) can run on your infrastructure and be shared across a team. We help you choose the right transport for your security requirements.
+
+**Can I add new tools to an existing MCP server later?**
+
+Yes. MCP servers are designed to be extended. We build them with clean separation between transport, routing, and tool handlers so adding a new tool is straightforward. We can do it for you or document the pattern so your team can extend it independently.
+
+**How does authentication work? Are my credentials safe?**
+
+Credentials are stored in environment variables on your machine or in your team's secrets manager — never hardcoded in the MCP server source. We follow the principle of least privilege: the MCP server only requests the permissions it needs.
+
+**What if my API doesn't have a stable schema?**
+
+We build in versioning and graceful error handling so that API changes don't crash the MCP server. For highly dynamic APIs we use a generic HTTP tool pattern that Claude can adapt to, rather than hardcoded method bindings.
+
+**Can you build MCP servers for APIs under NDA?**
+
+Yes. We sign NDAs before any internal API review. All work product is yours — we don't retain code or API schemas after delivery.
+
+## Start the Conversation
+
+Tell us which systems you want Claude Code to reach and we'll scope an integration plan.
+
+[**Book a free audit call**](/contact?service=mcp) — 60 minutes, we'll walk through your stack and tell you exactly what's possible.

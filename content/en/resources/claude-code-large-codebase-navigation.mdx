@@ -1,0 +1,512 @@
+---
+slug: claude-code-large-codebase-navigation
+title: "Navigating and Working in Large Codebases with Claude Code"
+description: "Practical techniques for using Claude Code effectively in large repositories — CLAUDE.md setup for big codebases, context management with /compact, project memory files, grep and glob patterns, subagent dispatch for isolated edits, monorepo conventions, and large-scale refactoring patterns."
+category: guide
+schema: Article
+tags: [large-codebase, context-management, claude-md, monorepo, refactoring, subagents, navigation, grep]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 14
+seoTitle: "Working in Large Codebases with Claude Code: Context, Navigation & Refactoring | ClawHelp"
+seoDescription: "Master Claude Code for large repos — CLAUDE.md structure, context management with /compact, glob and grep patterns, subagent dispatch, monorepo conventions, and cross-file refactoring at scale."
+---
+
+# Navigating and Working in Large Codebases with Claude Code
+
+A fresh Claude Code session on a small project is forgiving — Claude can read the entire codebase in a few tool calls and hold it all in context. Large codebases break this model. A repository with 500 TypeScript files, a Go monorepo spanning 30 services, or a Rails application that has grown over eight years requires deliberate strategy: what to load into context, when to use subagents, how to structure CLAUDE.md so Claude navigates efficiently rather than thrashing.
+
+This guide covers the full toolkit for working productively in large codebases, from initial CLAUDE.md setup through large-scale multi-file refactors.
+
+---
+
+## Why Large Codebases Are Different
+
+Claude Code's context window is large but not infinite. In a large codebase, the challenge is not "can Claude read this file" — it's "can Claude hold the right files in context simultaneously while doing useful work."
+
+Three things degrade in large codebases without deliberate management:
+
+**Context overflow**: Loading too many files exhausts the context window. Claude starts dropping earlier content, which means it may "forget" a file it read earlier in the session and make inconsistent changes.
+
+**Navigation overhead**: Without guidance, Claude uses broad searches to orient itself, loading many files it doesn't need. This wastes context and slows down each task.
+
+**Coherence across files**: Large refactors touch dozens of files. Without structured checkpoints, Claude can lose track of what it has and hasn't changed, producing inconsistent output.
+
+The tools to address these are: a well-structured CLAUDE.md, context management discipline, grep-first navigation, and subagent delegation for isolated work.
+
+---
+
+## CLAUDE.md Setup for Large Repositories
+
+`CLAUDE.md` is Claude Code's entry point to your codebase. For small projects, a brief CLAUDE.md is enough. For large ones, it becomes a navigation index — a map Claude reads before doing anything else.
+
+### Layered CLAUDE.md Structure
+
+For large repos, use nested CLAUDE.md files rather than one giant root file:
+
+```
+/CLAUDE.md                    ← Root: project overview, stack, conventions, how to navigate
+/src/auth/CLAUDE.md           ← Auth module: what it owns, key files, patterns
+/src/payments/CLAUDE.md       ← Payments: what it owns, external dependencies, PCI notes
+/src/api/CLAUDE.md            ← API layer: routing conventions, middleware chain
+/packages/shared/CLAUDE.md    ← Shared package: what's in here, import patterns
+```
+
+Claude Code reads the root CLAUDE.md on session start. When Claude navigates into a subdirectory, it automatically reads any CLAUDE.md file there. This means module-level context is loaded on demand, not all at once.
+
+### Root CLAUDE.md Template for Large Repos
+
+```markdown
+# Project: [Name]
+
+## What This Is
+[2-3 sentences. What the system does, who uses it, what scale.]
+
+## Stack
+- Language/runtime: Node.js 20, TypeScript 5.3
+- Framework: NestJS (API), Next.js 14 (web)
+- Database: PostgreSQL 15 via Prisma ORM
+- Test runner: Jest
+- Monorepo tool: Turborepo
+
+## Repository Map
+| Directory | What lives there |
+|-----------|-----------------|
+| `apps/api/` | NestJS API server — REST + WebSocket |
+| `apps/web/` | Next.js frontend |
+| `packages/shared/` | Shared types, utilities, validation schemas |
+| `packages/db/` | Prisma schema, migrations, seed scripts |
+| `packages/email/` | Transactional email templates and sending |
+| `infrastructure/` | Terraform, Docker configs, CI definitions |
+
+## Where Things Are
+- API routes: `apps/api/src/modules/*/[module].controller.ts`
+- Database schema: `packages/db/prisma/schema.prisma`
+- Shared types: `packages/shared/src/types/`
+- Feature flags: `packages/shared/src/config/featureFlags.ts`
+- Environment variables: documented in `apps/api/.env.example`
+
+## Conventions
+- Controllers handle HTTP only — business logic goes in services
+- Services are the unit of injection and the unit of testing
+- All database access goes through repositories, never raw Prisma in services
+- Use shared Zod schemas from `packages/shared` for validation — don't duplicate
+- New migrations: `cd packages/db && npx prisma migrate dev --name [name]`
+
+## Before Making Changes
+1. Read the module's CLAUDE.md if one exists
+2. Find the relevant service file first, not the controller
+3. Check for existing tests in `apps/api/src/modules/[module]/__tests__/`
+4. Run `npm test -- --testPathPattern=[module]` before and after changes
+
+## Running the Project
+- Start all services: `turbo dev`
+- Run tests: `turbo test`
+- Build: `turbo build`
+```
+
+This structure gives Claude a map before it touches any code. It knows where things live, how things are organized, and what the conventions are — without reading every file.
+
+### Module-Level CLAUDE.md
+
+Each major module's CLAUDE.md provides deep context when Claude navigates there:
+
+```markdown
+# Module: Payments
+
+## Responsibility
+Handles subscription billing, one-time charges, and refunds via Stripe.
+Does NOT own user authentication — defers to the auth module for identity.
+
+## Key Files
+- `payments.service.ts` — core business logic, all billing operations
+- `payments.controller.ts` — HTTP endpoints, thin layer over service
+- `stripe.client.ts` — Stripe SDK wrapper, retry logic, idempotency keys
+- `webhooks.controller.ts` — Stripe webhook handler (separate from main controller)
+
+## External Dependencies
+- Stripe API (SDK: `stripe` npm package)
+- SendGrid for payment receipts (via `packages/email`)
+- Database tables: `subscriptions`, `invoices`, `payment_methods`
+
+## Critical Notes
+- ALL Stripe calls must go through `stripe.client.ts` — never import Stripe SDK directly
+- Idempotency keys are required for charge operations — see existing patterns
+- Webhook signature verification is in `webhooks.middleware.ts` — do not bypass
+- PCI note: card numbers never touch our servers; Stripe handles tokenization
+
+## Test Setup
+Integration tests require STRIPE_TEST_KEY in .env.test (not the live key).
+Use the Stripe test card `4242 4242 4242 4242` in test fixtures.
+```
+
+This level of specificity prevents Claude from making common mistakes (calling Stripe directly, bypassing idempotency keys) and points it at the right files immediately.
+
+---
+
+## Context Management: /compact and Session Discipline
+
+### When to Use /compact
+
+The `/compact` command summarizes the current conversation and replaces the full history with a condensed version, freeing up context window space. Use it:
+
+- After completing a discrete task (you've finished adding a feature, now you're starting a different one)
+- When you see Claude starting to repeat itself or miss earlier context (a sign of context pressure)
+- Before starting a large file-reading operation
+
+```
+/compact
+```
+
+After compacting, verify Claude still has the context it needs for the next task:
+
+```
+Before we continue: confirm you know the current state of src/payments/payments.service.ts
+and what changes we made in the last task.
+```
+
+### What NOT to Load Into Context
+
+In a large codebase, Claude will sometimes try to read everything related to a feature. This burns context. Redirect explicitly:
+
+```
+Don't read the entire payments module. Read only:
+- packages/db/prisma/schema.prisma (just the Subscription and Invoice models)
+- apps/api/src/modules/payments/payments.service.ts
+
+That's all you need for this task.
+```
+
+### File Reading Strategy
+
+For large-codebase sessions, establish a file-reading order at the start:
+
+```
+For this task (adding webhook retry logic), read files in this order:
+1. apps/api/src/modules/payments/CLAUDE.md (if it exists)
+2. apps/api/src/modules/payments/stripe.client.ts
+3. apps/api/src/modules/payments/webhooks.controller.ts
+
+Do NOT read payments.service.ts or any other file unless you need them to
+answer a specific question that arises.
+```
+
+This pattern prevents exploratory reads from filling the context before the actual work begins.
+
+---
+
+## Grep and Glob Patterns for Navigation
+
+For large codebases, grep-based navigation is faster and more context-efficient than exploratory reads. Claude Code's Bash tool runs grep directly.
+
+### Finding Usages Before Making Changes
+
+Before modifying any function or interface, find all call sites:
+
+```
+Run: grep -r "createInvoice" apps/api/src --include="*.ts" -l
+Then read only the files that use it.
+```
+
+This tells Claude exactly which files need to change before it reads any of them.
+
+### Useful Navigation Commands
+
+```bash
+# Find all files that import from a specific module
+grep -r "from '@/payments'" apps/api/src --include="*.ts" -l
+
+# Find all usages of a specific type
+grep -r "PaymentStatus" packages/shared/src --include="*.ts" -n
+
+# Find all API route definitions
+grep -r "@(Get|Post|Put|Delete|Patch)" apps/api/src --include="*.ts" -n
+
+# Find all files modified in the last week
+find apps/api/src -name "*.ts" -newer apps/api/src/main.ts -type f
+
+# Find files above a size threshold (likely complex files worth reading carefully)
+find apps/api/src -name "*.ts" -size +20k -type f
+
+# Find all TODO and FIXME comments
+grep -r "TODO\|FIXME\|HACK\|XXX" apps/api/src --include="*.ts" -n
+```
+
+**Prompt pattern that uses grep efficiently:**
+
+```
+I need to rename the PaymentStatus enum from 3 values to 5. Before making changes:
+1. Run: grep -r "PaymentStatus" . --include="*.ts" -l
+2. List every file that uses it
+3. Then read the files that actually import and use the enum (not just mention it in comments)
+4. Make all the changes in one pass, file by file
+```
+
+---
+
+## Spawning Subagents for Isolated File Edits
+
+When a refactor affects many files independently, subagents are the right tool. Each subagent handles a bounded slice of the work in isolation.
+
+### The Isolation Principle
+
+Subagents are appropriate when:
+- The changes to each file are independent (file A's changes don't depend on file B's changes)
+- You can write a self-contained prompt for each file or group of files
+- You want to parallelize work rather than run it sequentially
+
+Subagents are NOT appropriate when:
+- The changes are tightly coupled across files
+- You need Claude to reason about the system as a whole to make the right decisions
+- The refactor requires a single coherent architectural decision applied consistently
+
+### Parallel Subagent Pattern for Multi-File Changes
+
+Example: updating all API controllers to add a new `X-Request-ID` header to every response.
+
+```
+I need to add X-Request-ID header injection to every controller. The pattern is:
+add `@Headers('x-request-id') requestId: string` to each handler's parameters
+and pass it to the service method. The service methods already accept an optional
+`requestId?: string` parameter — look at payments.service.ts for the existing pattern.
+
+Spawn parallel subagents for:
+- apps/api/src/modules/users/users.controller.ts
+- apps/api/src/modules/orders/orders.controller.ts
+- apps/api/src/modules/products/products.controller.ts
+
+Each subagent should:
+1. Read the controller file
+2. Add the requestId parameter to each handler
+3. Pass it through to the service call
+4. Run the tests for that module: npm test -- --testPathPattern=[module]
+5. Report what it changed
+```
+
+The main agent dispatches three parallel subagents. Each operates on a different file with no overlap. Total time is roughly that of the slowest single edit.
+
+### Worktree Isolation for Large Parallel Refactors
+
+When subagents need to write to potentially overlapping files (e.g., both might need to update a shared utility), use worktree isolation:
+
+```json
+{
+  "tool": "Task",
+  "parameters": {
+    "description": "Migrate payments module to repository pattern",
+    "prompt": "Refactor apps/api/src/modules/payments/ to use repository pattern...",
+    "run_in_background": true,
+    "isolation": "worktree"
+  }
+}
+```
+
+Each worktree-isolated subagent gets its own clean copy of the repository. The main agent reviews each worktree's diff and merges the non-conflicting parts.
+
+---
+
+## Monorepo Conventions
+
+Monorepos add a navigation challenge: there are more CLAUDE.md files to maintain, package boundaries to respect, and build tooling to understand.
+
+### Monorepo CLAUDE.md Additions
+
+Add a section to your root CLAUDE.md for monorepo-specific guidance:
+
+```markdown
+## Monorepo Rules
+- Each `packages/` package has its own package.json and tsconfig — check these before imports
+- Do NOT import from `apps/` in `packages/` — packages must be importable standalone
+- Shared types live in `packages/shared` — add types there, not in app code
+- Run commands from the root with `turbo`: `turbo test --filter=api`
+- To add a dependency to a specific workspace: `pnpm add lodash --filter @myapp/api`
+
+## Package Ownership
+| Package | Owner team | Import path |
+|---------|-----------|-------------|
+| `packages/shared` | Platform | `@myapp/shared` |
+| `packages/db` | Platform | `@myapp/db` |
+| `packages/email` | Notifications | `@myapp/email` |
+| `packages/ui` | Frontend | `@myapp/ui` |
+
+## Cross-Package Changes
+If a change touches both a package and an app that consumes it:
+1. Make the package change first
+2. Run `turbo build --filter=[package]` to rebuild it
+3. Then make the app change
+4. Run `turbo test` from root to verify the full tree
+```
+
+### Service Boundary Discipline in Monorepos
+
+Claude will sometimes reach across package boundaries incorrectly. Prevent this in prompts:
+
+```
+This change is in apps/api only. Do NOT modify anything in packages/.
+If you find that packages/shared/src/types/Order.ts needs updating,
+stop and tell me — don't do it yourself. I'll handle cross-package changes separately.
+```
+
+---
+
+## Handling Large Refactors Across Hundreds of Files
+
+### Phase 1: Plan Before Touching Code
+
+For refactors touching 50+ files, always start with a plan phase:
+
+```
+I need to rename the User entity to Account throughout the codebase.
+Do NOT make any changes yet.
+
+First:
+1. grep -r "User" apps/ packages/ --include="*.ts" -l | wc -l (count affected files)
+2. Categorize the files: which are type definitions, which are service files,
+   which are controller files, which are test files
+3. Identify any files where "User" is used in a generic sense (not our entity)
+4. Produce a numbered plan: what to change first, what depends on what,
+   what can be done in parallel
+
+Output only the plan. I'll review and approve before you start.
+```
+
+### Phase 2: Atomic Checkpoints
+
+For large refactors, work in checkpoints with a git commit after each logical group:
+
+```
+Execute the User→Account rename in this order:
+1. First: packages/shared/src/types/ — rename all type definitions
+   Run: npm run typecheck after this group. Fix any type errors before moving on.
+   Commit: "refactor: rename User types to Account in shared package"
+
+2. Second: packages/db/prisma/schema.prisma — rename the model
+   Run: cd packages/db && npx prisma generate
+   Commit: "refactor: rename User model to Account in Prisma schema"
+
+3. Third: apps/api/src/modules/users/ → apps/api/src/modules/accounts/
+   Run: npm test -- --testPathPattern=accounts after renaming
+   Commit: "refactor: rename users module to accounts"
+
+Stop after each commit and wait for my confirmation before proceeding to the next group.
+```
+
+Breaking large refactors into committed checkpoints means you can bisect if something goes wrong. The full refactor is recoverable at each commit boundary.
+
+### Avoiding Context Overflow on Large Tasks
+
+For a refactor touching 200 files, loading all 200 files would overflow context. Structure the work so Claude never needs all files simultaneously:
+
+```
+For the User→Account rename in apps/api/src/modules/:
+Process one module directory at a time.
+For each module:
+1. grep -r "User" apps/api/src/modules/[module]/ --include="*.ts" -n
+2. Read only the files that have hits
+3. Make the changes
+4. Run tests for that module
+5. Commit
+6. Move to the next module
+
+Current module: users/
+After finishing users/, move to orders/, then products/, etc.
+```
+
+This sliding-window approach keeps context usage bounded per module while covering the full codebase systematically.
+
+---
+
+## Project-Level Memory Files
+
+Beyond CLAUDE.md, large codebases benefit from supplemental memory files for specific concerns.
+
+### Architecture Decision Records
+
+```markdown
+# .claude/decisions.md
+
+## ADR-001: Repository Pattern for Database Access (2025-03)
+All database access goes through repository classes. Services never call Prisma directly.
+Repos live in `src/modules/[module]/[module].repository.ts`.
+Rationale: testability, swap-ability of storage layer.
+Status: ACTIVE — enforce in all new code.
+
+## ADR-004: No Direct External HTTP in Services (2025-07)
+Services must not make HTTP calls directly. External APIs are wrapped in
+client classes in `src/clients/`. Services inject clients via constructor.
+Rationale: testability, centralized retry logic.
+Status: ACTIVE.
+```
+
+Reference this in your CLAUDE.md:
+
+```markdown
+## Architecture Decisions
+Read .claude/decisions.md for binding architectural decisions before making structural changes.
+```
+
+### Known Complexity Map
+
+```markdown
+# .claude/complexity-map.md
+
+## Files That Are Hard to Change
+- `src/modules/billing/invoice.service.ts` — 800 lines, many edge cases, full test coverage required
+- `src/core/event-bus.ts` — central to all async flows; changes break subtly; read all consumers first
+- `packages/db/prisma/schema.prisma` — migration dependencies; coordinate with DB team before changes
+
+## Files With Known Tech Debt
+- `src/modules/legacy-import/` — original import code, not unit tested, slated for Q3 rewrite
+- `src/utils/date-helpers.ts` — inconsistent timezone handling, multiple open issues
+
+## Dangerous Patterns
+- Do not add indexes to the `events` table — it's append-only and index updates cause lock contention
+- The `UserService.deleteUser()` method has a soft-delete vs hard-delete flag — double-check callers
+```
+
+Loading this into context before architectural work prevents Claude from unknowingly touching landmines.
+
+---
+
+## Prompts for Common Large-Codebase Tasks
+
+**"Where does X happen in this codebase?"**
+
+```
+I need to understand how email sending works in this system.
+1. Search for email-related files: find . -name "*.ts" | xargs grep -l "sendMail\|nodemailer\|sendgrid" 2>/dev/null
+2. Read the top 3 most relevant files
+3. Trace the call chain from where an email is triggered to where it's sent
+Do not read more than 5 files total.
+```
+
+**"What would break if I change X?"**
+
+```
+I'm changing the signature of UserRepository.findById() to return User | null
+instead of throwing when not found.
+1. Find all callers: grep -r "findById" apps/ --include="*.ts" -n
+2. For each caller, identify: does it handle the throw case? Will it break?
+3. List every change needed across all callers before I start
+```
+
+**"Clean up dead code in a large module"**
+
+```
+Find unused exports in apps/api/src/modules/payments/:
+1. List all exported symbols: grep -r "^export" apps/api/src/modules/payments/ --include="*.ts" -n
+2. For each exported symbol, check if it's imported anywhere outside its own file:
+   grep -r "[SymbolName]" apps/ packages/ --include="*.ts" -l
+3. Report which exports have zero external consumers
+Do this analysis only — do not delete anything yet.
+```
+
+---
+
+## Related Resources
+
+- [Claude Code Project Memory Guide](/en/resources/claude-code-project-memory-guide) — in-depth CLAUDE.md patterns and the memory system
+- [CLAUDE.md Advanced Patterns](/en/resources/claude-code-claude-md-advanced) — structured CLAUDE.md for complex projects
+- [Multi-Agent Orchestration with Claude Code](/en/resources/claude-code-multi-agent-orchestration) — parallel subagent patterns for large tasks
+- [Claude Code Session Management](/en/resources/claude-code-session-management) — managing context and resuming long sessions
+- [Claude Code Worktrees Guide](/en/resources/claude-code-worktrees-guide) — worktree isolation for parallel work streams

@@ -1,0 +1,169 @@
+---
+slug: permission-denied-error
+title: "Erreur Permission Denied dans Claude Code — Causes et Solutions"
+description: "Comment diagnostiquer et corriger l'erreur de permission refusée dans Claude Code. Couvre les permissions npm, les problèmes du répertoire ~/.claude/ et les outils bash bloqués."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, permissions, bash, errors]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 3
+lang: "fr"
+seoTitle: "Erreur Permission Denied Claude Code — Corriger le Problème | ClawHelp"
+seoDescription: "Corrigez l'erreur permission denied de Claude Code. Solutions étape par étape pour les erreurs de permission npm, les problèmes du répertoire ~/.claude et l'accès à l'outil bash bloqué."
+---
+
+# Erreur Permission Denied dans Claude Code
+
+**Problème** : Claude Code retourne une erreur « Permission denied » lors de l'exécution de commandes bash, de l'installation de paquets, de la modification de fichiers, ou de l'accès au répertoire `~/.claude/`.
+
+C'est l'un des problèmes les plus courants chez les nouveaux utilisateurs de Claude Code. L'erreur pointe généralement vers l'une des trois causes principales — et chacune a une solution claire.
+
+---
+
+## Cause 1 : Permissions globales npm
+
+C'est le déclencheur le plus fréquent. Lorsque Claude Code tente d'installer ou d'exécuter un paquet npm de manière globale et que votre répertoire npm système appartient à root, vous obtenez :
+
+```
+Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/...'
+```
+
+ou depuis la sortie de Claude Code :
+
+```
+Bash tool error: permission denied running npm install -g ...
+```
+
+### Solution
+
+La bonne approche consiste à reconfigurer npm pour utiliser un répertoire accessible en écriture par l'utilisateur — pas `sudo npm`. Utiliser sudo avec npm brise la sécurité des paquets et crée davantage de problèmes de permission en aval.
+
+**Étape 1** : Créez un répertoire pour les paquets npm globaux :
+```bash
+mkdir -p ~/.npm-global
+```
+
+**Étape 2** : Configurez npm pour l'utiliser :
+```bash
+npm config set prefix '~/.npm-global'
+```
+
+**Étape 3** : Ajoutez-le à votre PATH. Dans `~/.bashrc` ou `~/.zshrc` :
+```bash
+export PATH="$HOME/.npm-global/bin:$PATH"
+```
+
+**Étape 4** : Rechargez votre shell :
+```bash
+source ~/.bashrc   # ou ~/.zshrc
+```
+
+Après cela, les installations globales npm s'exécutent sans root et sans sudo. Claude Code peut les exécuter librement.
+
+**Vérification** : Lancez `npm install -g cowsay && cowsay "ça fonctionne"` sans sudo. Si ça réussit, la correction est complète.
+
+---
+
+## Cause 2 : Permissions du répertoire `~/.claude/`
+
+Si votre répertoire `~/.claude/` ou son contenu a été créé par un autre utilisateur (ce qui peut arriver après avoir exécuté Claude Code avec sudo, ou après une restauration système), Claude Code ne peut pas lire ni écrire ses propres paramètres.
+
+Le symptôme : Claude Code démarre mais échoue immédiatement à lire les paramètres, ou les modifications de paramètres ne persistent pas.
+
+```bash
+ls -la ~/.claude/
+```
+
+Recherchez les fichiers appartenant à `root` ou à un autre utilisateur plutôt qu'à votre propre nom d'utilisateur.
+
+### Solution
+
+**Option A** : Si le répertoire appartient à root :
+```bash
+sudo chown -R $(whoami):$(whoami) ~/.claude/
+```
+
+**Option B** : Si des fichiers individuels ont des permissions incorrectes :
+```bash
+chmod -R u+rw ~/.claude/
+```
+
+**Option C** (nucléaire, uniquement si rien d'autre ne fonctionne) : Sauvegardez d'abord vos paramètres, puis supprimez et laissez Claude Code recréer le répertoire :
+```bash
+cp -r ~/.claude/ ~/claude-backup/
+rm -rf ~/.claude/
+# Redémarrez Claude Code — il recréera le répertoire avec les permissions correctes
+```
+
+Après avoir corrigé la propriété, redémarrez Claude Code et confirmez qu'il lit vos paramètres en vérifiant que vos outils configurés apparaissent dans une nouvelle session.
+
+---
+
+## Cause 3 : Outil Bash bloqué dans les paramètres
+
+L'outil bash de Claude Code peut être explicitement bloqué dans votre `~/.claude/settings.json` ou dans un `.claude/settings.json` au niveau du projet. C'est un comportement intentionnel quand le paramètre est configuré, mais cela arrive souvent accidentellement.
+
+Symptômes :
+- Claude Code dit qu'il exécute une commande mais rien ne se passe
+- Vous voyez un message comme « Bash tool is not allowed for this session »
+- Les commandes fonctionnent dans un projet mais pas dans un autre
+
+### Solution
+
+**Étape 1** : Vérifiez vos paramètres globaux :
+```bash
+cat ~/.claude/settings.json
+```
+
+Recherchez un tableau `blockedTools` ou une section `permissions.deny` qui inclut `Bash` :
+
+```json
+{
+  "permissions": {
+    "deny": ["Bash"]
+  }
+}
+```
+
+**Étape 2** : Supprimez la restriction Bash. La correction minimale :
+```json
+{
+  "permissions": {
+    "allow": ["Bash"],
+    "deny": []
+  }
+}
+```
+
+**Étape 3** : Vérifiez également le fichier de paramètres au niveau du projet s'il en existe un :
+```bash
+cat .claude/settings.json
+```
+
+Les paramètres de projet remplacent les paramètres globaux, donc un blocage au niveau du projet empêchera bash même si le paramètre global l'autorise.
+
+**Étape 4** : Redémarrez Claude Code et testez avec une commande simple :
+> « Lance `echo hello` en bash »
+
+Si l'outil Bash était le problème, cela fonctionnera maintenant.
+
+---
+
+## Conseils de prévention
+
+**Ne jamais lancer `claude` avec `sudo`** : Cela crée des fichiers dans `~/.claude/` appartenant à root, ce qui brise les exécutions ultérieures en tant qu'utilisateur normal. Si vous avez accidentellement lancé avec sudo, voir la Cause 2 ci-dessus.
+
+**Utilisez les paramètres par projet pour les restrictions** : Si vous souhaitez limiter l'accès bash dans un dépôt spécifique (travail adjacent à la production, par exemple), placez la restriction dans `.claude/settings.json` à l'intérieur de ce dépôt — pas dans vos paramètres globaux.
+
+**Auditez les permissions après une restauration système** : Si vous avez restauré votre répertoire home depuis une sauvegarde, vérifiez la propriété de `~/.claude/` avant de démarrer Claude Code.
+
+**Utilisez la liste `allowedTools` pour les autorisations, pas une liste de blocage** : Plutôt que de tout bloquer et d'autoriser des outils spécifiques, il est plus propre de définir quelles commandes bash sont autorisées en utilisant le modèle `permissions.allow` avec des modèles de commandes explicites.
+
+---
+
+## Ressources connexes
+
+- [MCP ne se connecte pas](/resources/mcp-not-connecting) — si votre serveur MCP est la source des erreurs de permission
+- [Service de configuration Claude Code](/services/claude-code-setup) — configuration professionnelle qui évite ces problèmes dès le départ
+- [Erreurs de limite de débit Claude Code](/resources/rate-limit) — une classe d'erreurs différente qui peut sembler similaire en sortie

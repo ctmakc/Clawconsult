@@ -1,0 +1,128 @@
+---
+slug: data-science
+title: "Claude Code for Data Science"
+description: "How data scientists use Claude Code to automate EDA, generate notebook code, debug pipelines, and optimize SQL queries."
+category: use-case
+tags: [data-science, python, notebooks, sql, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 4
+seoTitle: "Claude Code for Data Science — AI Data Analysis Automation | ClawHelp"
+seoDescription: "Use Claude Code for data science workflows — EDA automation, notebook code generation, data pipeline debugging, and SQL query optimization."
+---
+
+# Claude Code for Data Science
+
+Data scientists spend a disproportionate amount of time on work that doesn't require their expertise: writing boilerplate EDA code, reformatting datasets, debugging dependency conflicts, translating analytical intent into working SQL. Claude Code absorbs that overhead.
+
+This page covers practical ways data scientists use Claude Code to accelerate real work — not toy examples, but the messy, iterative, deadline-driven work that fills most data science weeks.
+
+## Core Use Cases
+
+### Exploratory Data Analysis Automation
+
+EDA is valuable but tedious. Claude Code can read a CSV or Parquet file, inspect the schema, and produce a comprehensive EDA notebook covering:
+
+- Null value counts and imputation strategies per column
+- Distribution plots for numeric features (histogram + KDE)
+- Cardinality counts for categorical features
+- Correlation matrix with annotation of high-correlation pairs
+- Outlier detection using IQR and Z-score methods
+- Class imbalance summary for target variables
+
+The generated notebook includes code and markdown cells with observations, so it's ready to share — not just a code dump.
+
+**Prompt pattern**:
+```
+Here is a CSV file: [attach or paste schema]. 
+Generate a complete EDA notebook. Highlight any data quality issues, 
+unexpected distributions, or features that likely need transformation before modeling.
+```
+
+### Notebook Code Generation
+
+When you know what analysis you need but don't want to write the boilerplate, Claude Code writes it. Examples:
+
+- "Generate a scikit-learn pipeline with StandardScaler, SMOTE for class imbalance, and a RandomForest classifier with 5-fold cross-validation"
+- "Write a plotly dashboard with dropdowns for feature selection and a scatter plot comparing actual vs. predicted values"
+- "Generate code to run a chi-square test for independence between all categorical feature pairs and output significant pairs as a DataFrame"
+
+Claude Code also reads existing notebooks to understand your conventions and generates new code in the same style — using your preferred plotting library, naming patterns, and documentation format.
+
+### Data Pipeline Debugging
+
+Data pipelines fail in predictable ways: schema mismatches, unexpected nulls, type coercions, memory issues on large joins, non-deterministic sort orders. Claude Code helps you diagnose them faster.
+
+Paste your error traceback and the relevant pipeline code. Claude identifies:
+
+- The line that raised the error
+- Why it happened (schema evolution, upstream data change, library version change)
+- The fix
+- A defensive check you can add to catch the same issue earlier next time
+
+For Airflow and Prefect DAGs, paste the task log and Claude diagnoses the failure without needing to understand your full orchestration setup.
+
+**Prompt pattern**:
+```
+This pipeline is failing with the following error: [traceback].
+Here is the relevant code: [snippet].
+The pipeline runs daily against a Postgres database. 
+Diagnose the root cause and suggest a fix and a guard clause.
+```
+
+### SQL Query Optimization
+
+Claude Code is a strong SQL partner. Common patterns:
+
+**Query generation**: describe the business question in plain language and get a correct SQL query back. "For each customer who purchased in the last 90 days, show their first purchase date, total spend, and most common product category." Claude writes the query, explains the joins, and notes any assumptions about your schema.
+
+**Query optimization**: paste a slow query and the EXPLAIN output. Claude identifies missing indexes, unnecessary full table scans, inefficient correlated subqueries, and N+1 patterns in ORM-generated SQL.
+
+**Query translation**: translate between SQL dialects (PostgreSQL → BigQuery, MySQL → Snowflake) with correct function name substitutions, date arithmetic, and window function syntax differences.
+
+**Schema design**: describe the entities and relationships in your data model. Claude generates a normalized schema with appropriate indexes, constraints, and comments.
+
+With a [database MCP server](/services/mcp-integration), Claude can read your actual schema during the session — no more pasting table definitions. It generates queries calibrated to your real column names, data types, and existing indexes.
+
+### Feature Engineering Assistance
+
+Claude Code helps translate domain intuition into feature code:
+
+- "Create lag features for the sales_amount column at 7, 14, and 28 day intervals, per customer_id"
+- "Encode this date column into cyclical features using sine/cosine transformation"
+- "Extract email domain from the email column and create a binary flag for business vs. personal domains"
+
+For NLP features: text cleaning, TF-IDF vectorization, embedding generation, entity extraction setup.
+
+## Example Workflow: Customer Churn Analysis
+
+**Situation**: A data scientist needs to build a churn prediction model for a SaaS product. The data is in Postgres.
+
+**Session with Claude Code + database MCP**:
+
+1. "Inspect the users, subscriptions, and events tables and describe the data available for churn prediction." — Claude reads the actual schema and summarizes.
+2. "Write a SQL query to create a feature matrix: one row per user, with usage metrics from the last 30, 60, and 90 days, subscription tier, and a churn label." — Claude generates the query using the real column names.
+3. "Generate an EDA notebook for this feature matrix." — Claude writes the notebook.
+4. "Build a scikit-learn pipeline with feature preprocessing appropriate to each column type and a gradient boosting classifier. Include SHAP value calculation." — Claude writes the modeling code.
+
+Result: a working churn model baseline in an afternoon, with documentation, rather than two days of boilerplate writing.
+
+## Prompt Patterns for Data Science
+
+**For EDA:**
+> "Analyze [dataset/schema]. Generate a comprehensive EDA covering distributions, missing values, outliers, and notable patterns. Flag anything that would affect modeling."
+
+**For debugging:**
+> "This pipeline fails with [error]. Code: [snippet]. Diagnose and fix."
+
+**For SQL:**
+> "Generate a SQL query for [business question]. Schema: [tables and columns]. Optimize for [Postgres/BigQuery/Snowflake]."
+
+**For modeling:**
+> "Build a [model type] pipeline for [target variable]. Features are [list]. Include [cross-validation / feature importance / evaluation metrics]."
+
+## Getting Started
+
+Claude Code works well with Jupyter (via the terminal), VS Code notebooks, and pure script-based workflows. For teams where the data lives in a database, a [database MCP integration](/services/mcp-integration) delivers the biggest productivity gain — Claude reads your real schema and data samples instead of working from descriptions.
+
+For setup help specific to data science environments (conda, virtualenv, JupyterHub, or cloud notebooks), see our [Claude Code setup service](/services/claude-code-setup).

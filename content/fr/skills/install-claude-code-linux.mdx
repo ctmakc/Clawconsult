@@ -1,0 +1,331 @@
+---
+slug: install-claude-code-linux
+title: "Installer Claude Code sur Linux"
+description: "Installez Claude Code sur Ubuntu, Debian, Fedora et Arch Linux avec nvm pour Node.js et les bonnes permissions npm globales."
+category: how-to
+lang: "fr"
+tags: [installation, linux, ubuntu, debian, arch, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 7
+relatedServices: [claude-code-setup]
+seoTitle: "Installer Claude Code sur Linux : guide Ubuntu, Fedora, Arch | ClawHelp"
+seoDescription: "Installation de Claude Code étape par étape pour les distributions Linux. Couvre Ubuntu, Debian, Fedora, Arch — avec nvm, permissions npm et intégration VS Code."
+schema: HowTo
+---
+
+# Installer Claude Code sur Linux
+
+Linux est la plateforme la plus simple pour Claude Code. La chaîne d'outils correspond directement à ce qu'Anthropic utilise en développement, et les hooks bash fonctionnent sans aucune couche de traduction. Ce guide couvre l'installation de Node.js avec nvm (universelle) ainsi que des notes spécifiques à Ubuntu/Debian, Fedora/RHEL et Arch Linux.
+
+Pour un survol multi-plateformes, consultez le [guide d'installation complet](/skills/install-claude-code).
+
+---
+
+## Étape 1 — Installer Node.js via nvm (universel)
+
+Évitez d'installer Node.js depuis le gestionnaire de paquets de votre distribution. Les dépôts des distributions fournissent souvent des versions de Node dépassées (le dépôt apt par défaut d'Ubuntu 22.04 fournit Node 12, bien en dessous du requis 18+). nvm vous donne la bonne version quelle que soit la distribution.
+
+```bash
+# Installer nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# L'installateur ajoute l'initialisation de nvm à ~/.bashrc (bash) ou ~/.zshrc (zsh)
+# Rechargez votre shell courant :
+source ~/.bashrc   # ou source ~/.zshrc
+
+# Confirmer que nvm est disponible
+nvm --version
+
+# Installer le dernier Node LTS
+nvm install --lts
+nvm use --lts
+nvm alias default node   # faire du LTS le défaut pour tous les nouveaux shells
+
+# Vérifier
+node --version   # v22.x.x ou similaire
+npm --version    # 10.x.x ou similaire
+```
+
+Si curl n'est pas disponible, installez-le d'abord :
+
+```bash
+# Debian/Ubuntu
+sudo apt install curl -y
+
+# Fedora/RHEL
+sudo dnf install curl -y
+
+# Arch
+sudo pacman -S curl
+```
+
+---
+
+## Étape 2 — Installer Claude Code
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Vérifiez :
+
+```bash
+claude --version
+# Claude Code 1.x.x
+```
+
+Si `claude: commande introuvable`, le répertoire bin de Node géré par nvm n'est pas dans le PATH de ce shell. Exécutez `source ~/.bashrc` (ou `~/.zshrc`) et réessayez. Si ça ne règle pas le problème, vérifiez le PATH manuellement :
+
+```bash
+echo $PATH | tr ':' '\n' | grep nvm
+# Devrait afficher une ligne comme : /home/votrenom/.nvm/versions/node/v22.x.x/bin
+```
+
+---
+
+## Ubuntu et Debian — Notes spécifiques
+
+Ubuntu et Debian sont les environnements Linux les plus courants pour Claude Code et offrent la voie la plus simple. Quelques points à connaître :
+
+### N'utilisez pas le nodejs d'apt
+
+Les dépôts apt par défaut d'Ubuntu fournissent Node.js v12.x, trop ancien. Même `nodejs` depuis `ppa:chris-lea/node.js` ou le PPA NodeSource peut prendre du retard. nvm est le seul moyen fiable d'obtenir Node 18+ de façon cohérente sur Ubuntu 20.04, 22.04 et 24.04.
+
+Si vous avez déjà installé Node via apt, vous n'avez pas besoin de le supprimer — nvm gère ses propres copies séparées et `nvm use` prend la priorité dans votre PATH.
+
+```bash
+# Vérifier quel binaire node est actif
+which node
+# /home/utilisateur/.nvm/versions/node/v22.x.x/bin/node  ← géré par nvm (correct)
+# /usr/bin/node  ← node système via apt (incorrect — exécutez nvm use --lts pour remplacer)
+```
+
+### Outils de compilation pour les modules natifs
+
+Certains paquets npm compilent des modules natifs C++. Installez les outils de compilation pour éviter des erreurs cryptiques plus tard :
+
+```bash
+sudo apt install build-essential -y
+```
+
+### VS Code installé via snap sur Ubuntu
+
+Si vous avez installé VS Code via snap, son terminal intégré hérite d'un environnement restreint et peut ne pas voir les modifications de PATH de nvm depuis `.bashrc`. Corrigez en ajoutant explicitement le bloc d'initialisation de nvm au profil du terminal intégré de VS Code :
+
+Dans les paramètres VS Code (`Ctrl+,`), recherchez `terminal.integrated.env.linux` et ajoutez :
+
+```json
+{
+  "terminal.integrated.env.linux": {
+    "NVM_DIR": "/home/votrenom/.nvm"
+  }
+}
+```
+
+Puis dans `terminal.integrated.profiles.linux`, assurez-vous que le profil shell source `.bashrc` (c'est le cas par défaut sur Ubuntu, mais l'isolation snap peut briser cela).
+
+---
+
+## Fedora et RHEL — Notes spécifiques
+
+Fedora fournit un Node.js raisonnablement récent via dnf, mais la disponibilité des versions dépend de la version de Fedora. nvm reste l'approche recommandée pour la cohérence.
+
+### Installer les prérequis
+
+```bash
+sudo dnf install curl gcc gcc-c++ make -y
+```
+
+### nvm sur Fedora
+
+Le script d'installation de nvm fonctionne sur Fedora sans modification :
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+```
+
+Fedora utilise bash par défaut. Si vous êtes passé à zsh, sourcez `~/.zshrc` à la place.
+
+### RHEL / Rocky / AlmaLinux
+
+Sur les systèmes basés sur RHEL, vous pourriez avoir besoin d'installer le dépôt EPEL pour curl et les outils de développement :
+
+```bash
+sudo dnf install epel-release -y
+sudo dnf install curl gcc gcc-c++ make -y
+```
+
+Puis suivez les mêmes étapes nvm que pour Fedora.
+
+---
+
+## Arch Linux — Notes spécifiques
+
+Les utilisateurs d'Arch peuvent installer nvm depuis l'AUR ou utiliser le script d'installation manuel. Les deux fonctionnent de façon équivalente.
+
+### Option A : nvm depuis l'AUR
+
+```bash
+# Avec yay
+yay -S nvm
+
+# Initialiser nvm dans votre shell (ajoutez à ~/.bashrc ou ~/.zshrc) :
+source /usr/share/nvm/init-nvm.sh
+
+# Puis installer Node
+nvm install --lts
+nvm use --lts
+```
+
+### Option B : Script d'installation manuel de nvm
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+```
+
+### Node.js Arch via pacman (alternative)
+
+Le paquet `nodejs` de pacman suit de près les versions en amont, donc il est généralement à jour :
+
+```bash
+sudo pacman -S nodejs npm
+node --version   # vérifiez que c'est 18+
+```
+
+S'il est en 18+, vous pouvez ignorer nvm sur Arch. Si vous avez besoin d'une version spécifique pour d'autres projets, utilisez nvm en parallèle avec la version pacman — le PATH de nvm a la priorité quand il est actif.
+
+---
+
+## Permissions npm globales sans sudo
+
+Une erreur courante sur Linux est d'exécuter `sudo npm install -g` pour éviter les erreurs de permissions. Cela crée des fichiers appartenant à root, entraîne une confusion dans le PATH et se casse lors des mises à jour suivantes. Le correctif correct est de configurer npm pour utiliser un répertoire appartenant à l'utilisateur.
+
+### Méthode 1 : Changer le préfixe npm (fonctionne avec toute installation Node)
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+
+# Ajoutez à ~/.bashrc ou ~/.zshrc :
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Installer Claude Code sans sudo
+npm install -g @anthropic-ai/claude-code
+```
+
+### Méthode 2 : Utiliser nvm (recommandé — nvm gère cela automatiquement)
+
+Quand Node est installé via nvm, le préfixe npm global est déjà dans votre répertoire personnel (`~/.nvm/versions/node/<version>/lib/node_modules`). Vous n'avez jamais besoin de sudo. Utilisez simplement `nvm install --lts` et les installations npm globales fonctionnent directement.
+
+---
+
+## Intégration VS Code sur Linux
+
+VS Code sur Linux récupère votre PATH utilisateur depuis `.bashrc` ou `.profile`, donc `claude` est disponible dans le terminal intégré après l'installation. Aucune extension particulière n'est nécessaire.
+
+Si VS Code ne voit pas `claude` :
+
+```bash
+# Dans le terminal intégré VS Code :
+which claude
+# Si vide :
+source ~/.bashrc
+which claude
+```
+
+Pour que VS Code source toujours `.bashrc` dans son terminal, assurez-vous que VS Code est lancé depuis le terminal (pas depuis un lanceur de bureau) :
+
+```bash
+code /chemin/vers/votre/projet
+```
+
+Les lanceurs de bureau de certaines distributions n'héritent pas de l'environnement utilisateur complet.
+
+---
+
+## Exécuter Claude Code comme service systemd (serveurs sans interface graphique)
+
+Sur un serveur Linux sans interface graphique ou une machine IC, vous voudrez peut-être que Claude Code s'exécute de façon non interactive avec une clé API définie via une variable d'environnement. Créez un service utilisateur systemd :
+
+```ini
+# ~/.config/systemd/user/claude-agent.service
+[Unit]
+Description=Agent Claude Code
+After=network.target
+
+[Service]
+Type=simple
+Environment="ANTHROPIC_API_KEY=sk-ant-api03-VOTRE_CLE_ICI"
+Environment="PATH=/home/votrenom/.nvm/versions/node/v22.x.x/bin:/usr/local/bin:/usr/bin:/bin"
+WorkingDirectory=/home/votrenom/mon-projet
+ExecStart=/home/votrenom/.nvm/versions/node/v22.x.x/bin/claude --print "Exécute la suite de tests et rapporte les échecs"
+Restart=no
+
+[Install]
+WantedBy=default.target
+```
+
+Activez et démarrez :
+
+```bash
+systemctl --user daemon-reload
+systemctl --user start claude-agent
+journalctl --user -u claude-agent -f   # suivre la sortie
+```
+
+Remplacez le prompt `ExecStart` par la tâche que vous voulez que Claude Code exécute. Pour les tâches récurrentes, associez ceci à un timer systemd ou une entrée cron.
+
+---
+
+## Vérification
+
+Exécutez la suite de vérification complète :
+
+```bash
+node --version          # v18.x.x ou supérieur
+npm --version           # 8.x.x ou supérieur
+claude --version        # Claude Code 1.x.x
+
+# Test en conditions réelles
+mkdir /tmp/claude-test && cd /tmp/claude-test
+git init
+claude "Liste les fichiers dans ce répertoire"
+```
+
+Claude Code devrait répondre en décrivant le dépôt vide. Tapez `exit` pour quitter.
+
+---
+
+## Prochaines étapes
+
+- [Guide d'installation complet (toutes plateformes)](/skills/install-claude-code)
+- [Guide d'installation Windows (WSL2 et natif)](/skills/install-claude-code-windows)
+- [Guide d'installation macOS](/skills/install-claude-code-mac)
+- [Hooks Claude Code](/skills/claude-code-hooks) — exécutez des scripts bash sur les appels d'outils et les événements de session
+- [Création de sous-agents](/skills/build-subagent) — instanciez des agents parallèles pour des tâches indépendantes
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Installer Claude Code sur Linux",
+  "description": "Installer Claude Code sur Ubuntu, Debian, Fedora et Arch Linux avec nvm et les bonnes permissions npm",
+  "totalTime": "PT10M",
+  "step": [
+    { "@type": "HowToStep", "name": "Installer nvm", "text": "Exécutez le script d'installation de nvm : curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash" },
+    { "@type": "HowToStep", "name": "Installer Node.js LTS", "text": "Exécutez : nvm install --lts && nvm use --lts" },
+    { "@type": "HowToStep", "name": "Installer Claude Code", "text": "Exécutez : npm install -g @anthropic-ai/claude-code" },
+    { "@type": "HowToStep", "name": "Vérifier", "text": "Exécutez : claude --version" },
+    { "@type": "HowToStep", "name": "S'authentifier", "text": "Exécutez claude dans un répertoire de projet et complétez le flux OAuth ou la clé API" }
+  ]
+}
+*/}

@@ -1,0 +1,137 @@
+---
+slug: claude-code-setup
+title: "Claude Code Setup Service"
+description: "Professional Claude Code installation and configuration for individuals and teams."
+category: service
+tags: [setup, consulting, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+seoTitle: "Claude Code Setup Service | ClawHelp"
+seoDescription: "Professional Claude Code setup service — installation, ~/.claude/ config, MCP servers, custom skills, and hooks. Book a session from $299."
+---
+
+# Claude Code Setup Service
+
+Getting Claude Code installed is the easy part. Getting it configured to actually transform your workflow — that takes experience. Our **Claude Code setup service** handles everything from first install to a fully tuned, team-ready environment so you can skip the trial-and-error and start shipping faster from day one.
+
+Whether you're a solo developer experimenting with AI-assisted coding or an engineering lead rolling out Claude Code across a team of 20, we build the configuration layer that makes it stick.
+
+## What's Included
+
+### Installation and Base Configuration
+
+We verify that Claude Code is installed correctly across your operating system (macOS, Linux, or WSL2 on Windows), resolve any Node.js version conflicts, and wire up the Anthropic API key or your enterprise authentication. We confirm the CLI is responsive and covers any proxy or firewall requirements your network may have.
+
+### `~/.claude/` Directory Setup
+
+The `~/.claude/` directory is the brain of your Claude Code environment. We build out:
+
+- **`settings.json`** — permissions, allowed tools, bash command allowlists, and environment variables scoped correctly to global vs. per-project levels
+- **`CLAUDE.md`** — your global instruction file that primes Claude with your preferred stack, style guide, commit conventions, and escalation rules
+- **Project-level `CLAUDE.md` files** — one per active repository, covering repo-specific context, architecture notes, and team agreements
+
+### MCP Server Integration
+
+Model Context Protocol servers extend what Claude Code can see and do. We install and configure the MCP servers that fit your workflow:
+
+- **Filesystem MCP** — fine-grained read/write access scoped to your project roots
+- **GitHub MCP** — PR review, issue triage, and repo browsing inside the conversation
+- **Browser automation MCP** — for teams doing web scraping, QA, or UI testing
+- **Database MCP** (Postgres, SQLite) — run queries and inspect schemas without leaving the terminal
+- **Custom REST API MCP** — if you have internal APIs we configure a lightweight MCP wrapper
+
+### Sample Skills Library
+
+We install a starter set of reusable skills matched to your workflow:
+
+- `commit-commands` — standardized commit + PR flow
+- `systematic-debugging` — structured bug investigation protocol
+- `test-driven-development` — TDD enforcement loop
+- `verification-before-completion` — prevents premature success claims
+- Custom domain-specific skills for your tech stack
+
+### Hooks Configuration
+
+Hooks fire automatically before or after Claude Code actions. We configure:
+
+- Pre-commit hooks that run linting or tests before Claude commits
+- Post-edit hooks that auto-format files after Claude modifies them
+- Notification hooks for long-running tasks
+- Safety hooks that pause before destructive operations (force-push, `rm -rf` patterns)
+
+### Team Onboarding Call
+
+For team setups, we include a 60-minute live session with your engineering team covering: what Claude Code can and cannot do, how to write effective prompts, when to invoke skills vs. freeform prompting, and how to maintain your `CLAUDE.md` files as your codebase evolves.
+
+## Deliverables
+
+- Fully functional Claude Code installation on your machine(s)
+- Configured `~/.claude/settings.json` (global) and per-repo `CLAUDE.md` files
+- MCP servers installed, tested, and documented
+- Starter skills library with usage examples
+- Hooks configured and tested end-to-end
+- Written setup summary with rationale for every configuration decision
+- 14-day async support for follow-up questions via email
+
+## Who This Is For
+
+**Solo developers** who want to stop fighting config and start using Claude Code the way power users do — with persistent memory, custom tools, and automated workflows.
+
+**Engineering leads** who need a consistent Claude Code environment across the team, with shared conventions baked into version-controlled `CLAUDE.md` files.
+
+**Agencies and consultancies** that want to add AI-assisted development to their delivery workflow without spending weeks figuring out the tooling.
+
+**Startups** moving fast who can't afford the productivity tax of ad-hoc AI tool adoption.
+
+## The Process
+
+### Step 1 — Discovery Call (30 minutes)
+
+We start with a free call to understand your stack, team size, pain points, and goals. By the end of the call you'll have a clear scope document for your setup session.
+
+### Step 2 — Setup Session (2–3 hours)
+
+A live screen-share session (or async if you prefer) where we build and test your full configuration. You watch, ask questions, and by the end you understand every file we've created and why.
+
+### Step 3 — Handoff
+
+We deliver a written summary of everything we've configured, including file paths, rationale, and instructions for maintaining or extending the setup yourself. Team setups include the onboarding call at this stage.
+
+## Pricing
+
+| Plan | What's Included | Price |
+|------|----------------|-------|
+| **Solo Setup** | 1 machine, global config, up to 3 MCP servers, starter skills | from $299 |
+| **Team Setup** | Up to 10 developers, shared CLAUDE.md templates, full skills library, team call | from $799 |
+| **Enterprise** | 10+ developers, custom MCP development, multi-repo strategy, ongoing retainer | Contact us |
+
+All prices are in USD. Solo and Team plans are one-time engagements. Enterprise includes monthly check-ins.
+
+## Frequently Asked Questions
+
+**Do I need to be technical to use this service?**
+
+You need to be comfortable with a terminal and have basic familiarity with your own codebase. You don't need to understand how MCP servers work or how to write hook scripts — that's what we handle.
+
+**How long does setup take?**
+
+The setup session itself is 2–3 hours. Most clients are fully configured and using Claude Code productively within the same day.
+
+**Will this work with my existing tools (VS Code, GitHub Actions, Jira)?**
+
+Yes. Claude Code runs alongside your existing editor — it doesn't replace VS Code, it adds a powerful terminal-based AI layer. We integrate with GitHub, Jira, and most CI/CD systems via MCP servers or hooks.
+
+**What if my team grows after the setup?**
+
+Your `CLAUDE.md` templates and settings files are version-controlled alongside your codebase. Onboarding a new developer means checking out the repo — the configuration comes with it. We also offer scaled onboarding for larger team expansions.
+
+**Is there ongoing support after the session?**
+
+Every plan includes 14 days of async email support. For ongoing help, ask about our retainer plans.
+
+## Book a Setup Call
+
+Ready to stop guessing and start working with a Claude Code environment built for how you actually develop?
+
+[**Book a free discovery call**](/contact?service=setup) — 30 minutes, no obligation, and you'll leave with a clear action plan even if you don't book a session.

@@ -1,0 +1,127 @@
+---
+slug: devops
+title: "Claude Code pour le DevOps"
+description: "Comment les ingénieurs DevOps utilisent Claude Code pour automatiser l'infrastructure, déboguer les pipelines CI/CD, générer des configurations Kubernetes et rédiger des runbooks."
+category: use-case
+tags: [devops, infrastructure, kubernetes, ci-cd, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+lang: "fr"
+seoTitle: "Claude Code pour le DevOps — Automatisation d'Infrastructure par IA | ClawHelp"
+seoDescription: "Comment les ingénieurs DevOps utilisent Claude Code pour l'automatisation DevOps par IA — génération de Dockerfile, YAML Kubernetes, débogage CI/CD, IaC et rédaction de runbooks."
+---
+
+# Claude Code pour le DevOps
+
+Le travail DevOps est répétitif, à enjeux élevés, et souvent mal documenté. Écrire le douzième variant de Dockerfile pour un nouveau service, déboguer un pipeline GitHub Actions défaillant à 23h, ou traduire un runbook verbal en YAML structuré — ces tâches ne requièrent pas une grande créativité, mais elles exigent un contexte profond. Claude Code fournit ce contexte.
+
+Cette page couvre comment les ingénieurs DevOps utilisent Claude Code dans des flux de travail réels : ce qu'il fait bien, quels prompts fonctionnent, et comment le connecter à votre infrastructure via des serveurs MCP.
+
+## Cas d'Usage Principaux
+
+### Dockerfile et Configuration de Conteneurs
+
+Claude Code lit la source de votre application — `package.json`, `requirements.txt`, `go.mod`, selon le cas — et génère un Dockerfile prêt pour la production avec des builds multi-étapes, une configuration appropriée d'utilisateur non-root, une optimisation du cache de build, et une configuration de health check.
+
+**Ce qui le rend meilleur qu'un modèle** : il examine vos dépendances réelles, identifie celles qui nécessitent des outils de build natifs, et gère la complexité (compilation de modules Node natifs, compromis Alpine vs. Debian, installation des bons paquets système) plutôt que de vous donner un point de départ générique qui fonctionne à moitié.
+
+Modèle de prompt typique :
+
+```
+Examinez l'application dans ./src/ et générez un Dockerfile prêt pour la production.
+Utilisez un build multi-étapes, exécutez en tant que non-root, et optimisez la mise 
+en cache des couches pour notre gestionnaire de paquets. Incluez une directive HEALTHCHECK.
+```
+
+### Génération de YAML Kubernetes
+
+Générer des manifestes Kubernetes corrects depuis zéro est fastidieux et sujet aux erreurs. Claude Code génère des Deployments, Services, ressources Ingress, ConfigMaps, HorizontalPodAutoscalers et PodDisruptionBudgets avec une structure correcte et des valeurs par défaut sensées.
+
+Plus important encore, il raisonne sur vos contraintes : si vous lui dites que vous fonctionnez sur un cluster à 3 nœuds avec 4 Go par nœud, il définit les demandes et limites de ressources appropriées au lieu de laisser ces champs vides.
+
+```
+Générez un Deployment Kubernetes pour le service auth.
+Il exécute 3 réplicas, nécessite 256Mi de RAM et 200m de CPU, se connecte à Postgres à 
+$DATABASE_URL (depuis un secret), et expose le port 8080.
+Incluez une liveness probe à /healthz.
+```
+
+### Débogage de Pipeline CI/CD
+
+Collez un journal GitHub Actions ou GitLab CI défaillant dans la session. Claude Code identifie l'erreur, explique pourquoi elle s'est produite, et propose une correction — généralement en quelques secondes pour les modèles d'échec courants comme les erreurs de permission, les clés de cache manquantes, les problèmes de couche Docker, ou les problèmes d'injection de secrets.
+
+Il aide également à rédiger de nouveaux pipelines : décrivez le flux de travail dont vous avez besoin (lint → test → build → déploiement en staging lors d'une fusion vers main) et il produit le YAML avec les dépendances de jobs correctes, la mise en cache, et la gestion des variables d'environnement.
+
+### Infrastructure as Code
+
+Claude Code aide avec Terraform, Pulumi, CloudFormation, et Ansible. Modèles courants :
+
+- **Terraform** : générer des blocs de ressources pour les nouveaux services, refactoriser les modules, diagnostiquer les diffs `plan` qui ne correspondent pas aux attentes, rédiger des expressions `locals` et `for_each`
+- **Ansible** : écrire des playbooks pour le provisionnement de serveurs, générer des structures de rôles, déboguer les problèmes `become` et d'idempotence
+- **CloudFormation** : convertir entre CloudFormation et CDK, générer des politiques IAM avec le principe du moindre privilège, expliquer les états `UPDATE_ROLLBACK_FAILED`
+
+Avec un [serveur MCP Terraform](/services/mcp-integration), Claude peut également lire votre état existant et générer des changements cohérents avec ce qui est déjà déployé.
+
+### Automatisation de Runbooks
+
+Les runbooks qui vivent comme pages Confluence ou docs Notion sont précieux mais rarement exécutés exactement comme écrits. Claude Code peut :
+
+- Convertir un runbook en prose en un script shell exécutable avec une gestion d'erreurs appropriée
+- Ajouter des points de contrôle d'observabilité (journaliser le résultat de chaque étape)
+- Générer une liste de vérification d'incident structurée depuis un post-mortem
+- Traduire des étapes manuelles en playbooks Ansible ou commandes kubectl
+
+Le résultat : des runbooks qui s'exécutent réellement, avec la connaissance institutionnelle préservée dans les commentaires.
+
+## Un Exemple de Flux de Travail DevOps Réel
+
+Voici comment un ingénieur DevOps pourrait utiliser Claude Code pour gérer un incident :
+
+**Situation** : Un pod Kubernetes est tué par OOM de manière répétée. PagerDuty sonne à 2h du matin.
+
+**Déroulement de la session** :
+
+1. Ouvrez Claude Code. Collez la description du pod et les journaux récents.
+2. Claude identifie que la limite mémoire est réglée à 128Mi mais que le heap JVM est configuré à 256Mi — une configuration incorrecte courante.
+3. Demandez à Claude de générer les limites de ressources corrigées et un HPA avec mise à l'échelle basée sur la mémoire.
+4. Claude écrit le YAML, explique le calcul, et note que le timeout du health check devrait également être augmenté.
+5. Appliquez via `kubectl apply`, confirmez le déploiement.
+6. Demandez à Claude de rédiger un post-mortem avec une chronologie et une cause principale.
+
+Temps total : 15 minutes au lieu de 45. Aucun onglet Stack Overflow. Aucune commutation de contexte mental.
+
+## Connecter Claude Code à votre Infrastructure
+
+Le vrai multiplicateur de puissance pour le DevOps est d'associer Claude Code à des serveurs MCP qui peuvent atteindre vos systèmes :
+
+- **kubectl / Helm MCP** — inspecter le statut des pods, lire les journaux, vérifier la progression du déploiement
+- **AWS / GCP / Azure MCP** — décrire les ressources, vérifier les alertes CloudWatch, extraire les données Cost Explorer
+- **Datadog / Grafana MCP** — extraire les métriques et les états d'alertes dans le contexte de la session
+- **Terraform Cloud MCP** — lire l'état de l'espace de travail et l'historique des exécutions
+
+Avec ces intégrations, vous ne collez pas les journaux dans la session — Claude les lit directement depuis votre stack d'observabilité. Nous construisons et configurons ces intégrations dans le cadre de notre [service d'intégration MCP](/services/mcp-integration).
+
+## Modèles de Prompts pour le DevOps
+
+**Pour la génération d'infrastructure :**
+> « Générez un [type de ressource] pour [nom du service]. Contraintes : [liste]. Doit suivre [convention]. Sortie en [format]. »
+
+**Pour le débogage :**
+> « Voici la sortie d'erreur : [coller]. Le comportement attendu est [X]. Diagnostiquez la cause principale et proposez une correction. »
+
+**Pour les révisions :**
+> « Révisez ce [Dockerfile / plan Terraform / config CI] pour les problèmes de sécurité, les problèmes de performance et les écarts par rapport aux meilleures pratiques. Soyez spécifique. »
+
+**Pour la documentation :**
+> « Convertissez ce runbook en script exécutable. Préservez toute la logique conditionnelle. Ajoutez la gestion des erreurs et les journaux. Commentez les étapes non évidentes. »
+
+## Pour Commencer
+
+Si vous êtes nouveau dans Claude Code ou souhaitez l'intégrer correctement à votre flux de travail DevOps, nous pouvons vous aider avec :
+
+- [Configuration initiale et installation](/services/claude-code-setup) pour vos machines et votre équipe
+- [Serveurs MCP personnalisés](/services/mcp-integration) pour votre stack d'infrastructure spécifique
+- [Intégration d'équipe](/services/team-onboarding) avec des sessions axées DevOps et des modèles de runbooks
+
+Claude Code pour DevOps ne vise pas à remplacer votre expertise — il s'agit d'éliminer les frictions qui vous ralentissent entre la compréhension d'un problème et sa résolution.

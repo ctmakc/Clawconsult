@@ -1,0 +1,321 @@
+---
+slug: install-claude-code-mac
+title: "Installing Claude Code on macOS"
+description: "macOS-specific guide for installing Claude Code, covering Homebrew, nvm, Apple Silicon, Rosetta, Keychain API key storage, and iTerm2 configuration."
+category: how-to
+tags: [installation, macos, apple-silicon, claude-code, homebrew]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 7
+relatedServices: [claude-code-setup]
+seoTitle: "Install Claude Code on macOS: Apple Silicon & Intel Guide 2026 | ClawHelp"
+seoDescription: "Install Claude Code on macOS step by step. Covers Homebrew, nvm, Apple Silicon Rosetta, Keychain API key storage, and permission fixes for Mac."
+schema: HowTo
+---
+
+# Installing Claude Code on macOS
+
+This guide covers everything macOS-specific for getting Claude Code running — from Node.js setup with Homebrew and nvm, to Apple Silicon compatibility, API key storage in Keychain, and terminal emulator recommendations. For the platform-agnostic overview, start with the [complete installation guide](/skills/install-claude-code).
+
+---
+
+## macOS Prerequisites Check
+
+Open Terminal (or iTerm2) and run these checks before installing anything:
+
+```bash
+# macOS version — Sonoma or Ventura recommended
+sw_vers -productVersion
+
+# Xcode Command Line Tools — required for npm native addons
+xcode-select -p
+# Should print /Library/Developer/CommandLineTools
+# If not: xcode-select --install
+
+# Check if Node.js is already installed
+node --version
+npm --version
+```
+
+If `xcode-select -p` fails, install the CLI tools first — they provide `git`, `make`, and compilers that some npm packages need:
+
+```bash
+xcode-select --install
+```
+
+A dialog will appear. Accept and wait (~5 minutes on a good connection).
+
+---
+
+## Installing Node.js on macOS
+
+### Option A: nvm (recommended)
+
+nvm lets you manage multiple Node versions without touching your system. It's the best choice for developers who work on multiple projects.
+
+```bash
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# nvm adds itself to ~/.zshrc (macOS default since Catalina) or ~/.bash_profile
+# Reload your shell:
+source ~/.zshrc   # zsh
+# or
+source ~/.bash_profile  # bash
+
+# Confirm nvm is loaded
+nvm --version
+
+# Install latest LTS Node
+nvm install --lts
+nvm use --lts
+nvm alias default node   # make LTS the default for new shells
+
+node --version   # v22.x.x or similar
+```
+
+### Option B: Homebrew
+
+If you're already a Homebrew user and prefer fewer tools:
+
+```bash
+# Install Homebrew if you don't have it
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Node.js LTS
+brew install node@22
+brew link node@22 --force
+
+node --version
+```
+
+Note: Homebrew installs a single version of Node. If you later need to switch versions for other projects, migrate to nvm.
+
+---
+
+## Apple Silicon (M1/M2/M3/M4) — What You Need to Know
+
+Claude Code runs natively on Apple Silicon and does not require Rosetta 2. However, problems arise when Node.js was installed under Rosetta (x86_64 emulation) — for example, if you had an older Node install from before your Mac was updated, or if you ran the installer inside a Rosetta terminal.
+
+### Verify your Node architecture
+
+```bash
+node -e "console.log(process.arch)"
+# arm64  ← correct for Apple Silicon
+# x64    ← running under Rosetta (may cause issues)
+```
+
+If you see `x64` on Apple Silicon, reinstall Node natively:
+
+```bash
+# Via nvm — it detects architecture automatically
+nvm install --lts
+nvm use --lts
+node -e "console.log(process.arch)"  # should now be arm64
+```
+
+### Rosetta terminal check
+
+Terminal.app and iTerm2 both support "Open with Rosetta" in Get Info. Make sure that checkbox is **unchecked** for the terminal you use with Claude Code. A Rosetta terminal will install everything as x86_64.
+
+```bash
+# Quick check — if this prints "i386" you're in a Rosetta shell
+uname -m
+# Should print: arm64
+```
+
+---
+
+## Installing Claude Code
+
+With Node.js 18+ confirmed and on arm64 (or Intel x86_64 for older Macs):
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Verify:
+
+```bash
+claude --version
+```
+
+### macOS Permission Error: EACCES
+
+If npm was installed via Homebrew without a prefix fix, you may hit:
+
+```
+npm warn checkPermissions Missing write access to /usr/local/lib/node_modules
+npm error code EACCES
+```
+
+Fix with a user-owned npm prefix:
+
+```bash
+mkdir -p "$HOME/.npm-global"
+npm config set prefix "$HOME/.npm-global"
+
+# Add to ~/.zshrc:
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# Now reinstall
+npm install -g @anthropic-ai/claude-code
+```
+
+---
+
+## Storing Your API Key in macOS Keychain
+
+Hardcoding your API key in `.env` files or shell profiles is a security risk — those files end up in backups, shell history, and sometimes git commits. macOS Keychain is a safer alternative.
+
+### Add the key to Keychain
+
+```bash
+security add-generic-password \
+  -a "$USER" \
+  -s "anthropic-api-key" \
+  -w "sk-ant-api03-YOUR_KEY_HERE"
+```
+
+### Load it in your shell profile
+
+Add this to `~/.zshrc`:
+
+```bash
+export ANTHROPIC_API_KEY=$(
+  security find-generic-password -a "$USER" -s "anthropic-api-key" -w 2>/dev/null
+)
+```
+
+Now every new shell session picks up the key from Keychain without storing it in plaintext. Claude Code reads `ANTHROPIC_API_KEY` automatically — no interactive auth prompt needed.
+
+### Verify
+
+```bash
+source ~/.zshrc
+echo $ANTHROPIC_API_KEY | cut -c1-10   # should print "sk-ant-api" without exposing the full key
+claude --version  # smoke test
+```
+
+---
+
+## macOS Gatekeeper and Security Warnings
+
+On first run, macOS Gatekeeper may show: *"claude cannot be opened because Apple cannot check it for malicious software."*
+
+This happens because the `claude` binary is a JavaScript wrapper installed by npm — not a signed macOS application bundle. It's expected behavior. Allow it through System Settings:
+
+1. Open **System Settings → Privacy & Security**.
+2. Scroll down to the "Security" section — you'll see a message like *"claude was blocked from use because it is not from an identified developer."*
+3. Click **Allow Anyway**.
+4. Re-run `claude` in the terminal and click **Open** in the confirmation dialog.
+
+This is the correct, Gatekeeper-approved path. Anthropic publishes Claude Code through npm, and macOS learns to trust it after you explicitly allow it once via System Settings.
+
+---
+
+## Terminal Recommendations for macOS
+
+### iTerm2 (recommended)
+
+[iTerm2](https://iterm2.com) is the most developer-friendly terminal for macOS. Advantages for Claude Code users:
+
+- **Split panes** — run `claude` in one pane, monitor logs or tests in another without leaving the window.
+- **Shell integration** — iTerm2 can mark command output, making it easier to scroll back through Claude's output.
+- **Profiles** — create a dedicated Claude Code profile with a larger font and wider column width (120+).
+
+Useful iTerm2 settings for Claude Code:
+
+```
+Preferences → Profiles → Terminal → Scrollback Buffer: Unlimited
+Preferences → Profiles → Terminal → Columns: 220
+Preferences → Keys → Key Bindings: bind Cmd+D to "Split Pane Vertically"
+```
+
+### Terminal.app
+
+The default macOS Terminal works fine. No special configuration required. If you use Terminal, consider setting the window size to at least 200 columns — Claude Code's output can be wide.
+
+### Warp
+
+[Warp](https://warp.dev) has native AI features that can conflict with Claude Code's interactive mode. It works, but expect some UI oddities in the interactive REPL. Disable Warp AI if you find it intercepts Claude Code's output.
+
+---
+
+## Common macOS-Specific Issues
+
+### `zsh: command not found: claude` after install
+
+Your `PATH` update hasn't been applied. Either restart the terminal or:
+
+```bash
+source ~/.zshrc
+which claude  # should print the path
+```
+
+### nvm not found after install
+
+The nvm install script modifies `~/.zshrc` but the change takes effect only in new shells:
+
+```bash
+source ~/.zshrc
+nvm --version
+```
+
+If still not found, check that `~/.zshrc` contains the nvm initialization lines:
+
+```bash
+grep -n "nvm" ~/.zshrc
+```
+
+If nothing appears, run the nvm installer again — it's idempotent.
+
+### `SyntaxError: Unexpected token` on launch
+
+This means an old Node version is being picked up. Check which `node` is in PATH:
+
+```bash
+which node
+node --version
+```
+
+If it's not the nvm-managed version, make sure nvm's `use` or `alias default` ran:
+
+```bash
+nvm use --lts
+# or
+nvm alias default node
+```
+
+Then open a new terminal window to confirm the default persists.
+
+---
+
+## Next Steps
+
+- [Complete installation guide (all platforms)](/skills/install-claude-code)
+- [Windows installation guide](/skills/install-claude-code-windows)
+- [Linux installation guide](/skills/install-claude-code-linux)
+- [Claude Code Hooks](/skills/claude-code-hooks) — automate actions on file writes, tool calls, and session events
+- [Building subagents](/skills/build-subagent) — spawn parallel agents for research and code review
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Installing Claude Code on macOS",
+  "description": "macOS-specific guide for installing Claude Code with Homebrew, nvm, and Apple Silicon support",
+  "totalTime": "PT15M",
+  "step": [
+    { "@type": "HowToStep", "name": "Install Xcode Command Line Tools", "text": "Run: xcode-select --install" },
+    { "@type": "HowToStep", "name": "Install Node.js via nvm or Homebrew", "text": "Use nvm install --lts for version management" },
+    { "@type": "HowToStep", "name": "Verify Apple Silicon architecture", "text": "Run: node -e \"console.log(process.arch)\" — should print arm64" },
+    { "@type": "HowToStep", "name": "Install Claude Code", "text": "Run: npm install -g @anthropic-ai/claude-code" },
+    { "@type": "HowToStep", "name": "Store API key in Keychain", "text": "Use security add-generic-password to store ANTHROPIC_API_KEY safely" }
+  ]
+}
+*/}

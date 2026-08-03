@@ -1,0 +1,256 @@
+---
+slug: slow-claude-code-performance
+title: "Claude Code Running Slow? Diagnosing Performance Issues"
+description: "A systematic guide to diagnosing and fixing slow Claude Code response times — from context bloat and MCP latency to model selection and rate-limit confusion."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, performance, context, mcp, model-selection]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 8
+seoTitle: "Claude Code Running Slow — Diagnose and Fix Performance Issues | ClawHelp"
+seoDescription: "Fix slow Claude Code responses. Covers context window bloat, CLAUDE.md overhead, MCP round-trips, /compact command, model selection (Sonnet vs Opus), and API latency."
+---
+
+# Claude Code Running Slow? Diagnosing Performance Issues
+
+**Problem**: Claude Code responses feel sluggish — you're waiting several seconds (or much longer) between sending a message and seeing output, or tool calls are taking far longer than they should.
+
+Slow performance in Claude Code usually has a concrete root cause. This guide walks through the most common ones in order of frequency, gives you a checklist to isolate the issue, and provides a specific fix for each.
+
+---
+
+## Symptoms
+
+- Responses take 10–30+ seconds when they used to be near-instant
+- Claude seems to "think" for a long time before producing any output
+- Tool calls (bash, file reads, MCP) feel slower than the actual operations should be
+- Streaming response starts, then stalls, then continues in bursts
+- Performance was fine on a fresh session but degraded as the session continued
+
+---
+
+## Diagnosis Checklist
+
+Run through these questions before diving into fixes:
+
+1. Did the slowdown start partway through a session (context bloat) or from the first message (config or model issue)?
+2. Are you using MCP servers? Does disabling them speed things up?
+3. What model are you on — Sonnet or Opus?
+4. How long is your CLAUDE.md file?
+5. Are you seeing actual delays in API response, or delays in Claude processing a task (it's outputting thinking steps)?
+6. Are you on a paid API plan, or using a free/trial key?
+
+---
+
+## Cause 1: Context Window Bloat
+
+**This is the most common cause of performance degradation within a session.**
+
+Claude processes every token in the conversation context on each response. As your session grows — especially if you've been pasting large files, reading multi-thousand-line code, or running many tool calls — the context window fills up. Each new response requires processing the entire accumulated context, which increases both compute time and API latency linearly.
+
+**Signs you have context bloat:**
+- Performance was fine at the start of the session
+- You've been working on the same session for 30+ minutes
+- You've asked Claude to read many large files
+
+**Fix: Run `/compact`**
+
+The `/compact` command summarizes the current conversation history into a compressed form, dramatically reducing token count while preserving the essential context of what you've been working on.
+
+```
+/compact
+```
+
+Run this command at natural breakpoints — after completing a feature, after a debugging session, or whenever you notice response times climbing. It takes a few seconds to process but can cut context size by 70–90%, immediately restoring response speed.
+
+**Additional context hygiene:**
+- Avoid pasting entire large files into the conversation. Instead, let Claude use the `Read` tool to access specific line ranges.
+- When done exploring, explicitly tell Claude: "You don't need to remember the contents of X file anymore." This signals it to drop that content from working memory on the next compact.
+
+---
+
+## Cause 2: CLAUDE.md Loading on Every Request
+
+Claude Code reads your CLAUDE.md file at the start of every interaction. A long CLAUDE.md directly adds to baseline context on every message — even short ones like "run the tests."
+
+**Signs:**
+- First response in a session is already slow, before context builds up
+- CLAUDE.md is several hundred lines or more
+
+**Fix: Keep CLAUDE.md Concise**
+
+CLAUDE.md should be a compact reference document — project context, key commands, forbidden patterns, code style rules. It should not contain:
+
+- Long prose explanations
+- Onboarding content that only new team members need
+- Commented-out old instructions
+- Task notes or status updates
+
+A well-optimized CLAUDE.md is under 100 lines. Here's a tight example structure:
+
+```markdown
+# Project: MyApp
+
+## Stack
+Node 20, TypeScript, PostgreSQL, Prisma, Next.js 14
+
+## Test Command
+pnpm test
+
+## Coding Rules
+- No `any` in TypeScript
+- All DB access through Prisma client (never raw SQL)
+- Run `pnpm lint` before committing
+
+## Forbidden
+- Never edit generated files in /generated/
+- Never commit .env files
+```
+
+If your CLAUDE.md is long because it covers many sub-projects, consider splitting it: put project-specific CLAUDE.md files in subdirectories and keep the root one minimal.
+
+---
+
+## Cause 3: MCP Server Latency
+
+Every MCP tool call adds a round-trip: Claude generates a tool call, your MCP server receives it, executes the action, and returns the result. If you have multiple MCP servers configured, Claude may call several tools in sequence, each adding latency.
+
+**Signs:**
+- Slowness happens specifically when Claude is using tools (you see tool calls in the output)
+- Performance is fine for pure text responses but degrades when Claude accesses files or external services
+
+**Diagnose which MCP server is slow:**
+
+```bash
+# Check MCP server logs (if using local servers)
+tail -f /tmp/mcp-*.log
+
+# Test MCP server response time directly
+time npx @modelcontextprotocol/inspector
+```
+
+**Fixes:**
+- Remove MCP servers you aren't actively using from your config. Each connected server adds startup overhead.
+- For local file operations, prefer Claude Code's built-in file tools over a filesystem MCP server — the built-in tools have no round-trip.
+- If a remote MCP server (e.g., a database MCP pointing to a cloud DB) is slow, check whether the underlying service is the bottleneck.
+
+---
+
+## Cause 4: Model Selection — Sonnet vs. Opus
+
+Claude Code defaults to claude-sonnet-4-5 for most tasks, but some configurations or explicit model flags may push it to Opus. The difference in response time is significant:
+
+| Model | Speed | Reasoning Depth | Best For |
+|-------|-------|-----------------|----------|
+| claude-sonnet-4-5 | Fast (2–8s typical) | Strong | Most development tasks |
+| claude-opus-4 | Slower (10–30s typical) | Deepest | Complex multi-step reasoning, architecture decisions |
+
+**Fix: Use Sonnet for speed-sensitive work**
+
+```bash
+claude --model claude-sonnet-4-5
+```
+
+Use Opus when you need maximum reasoning depth — complex algorithm design, architectural decisions, or debugging especially tricky issues. For routine file edits, test writing, and code generation, Sonnet delivers near-identical output at a fraction of the latency.
+
+---
+
+## Cause 5: Bash Command Timeout Settings
+
+When Claude runs bash commands, it waits for them to complete before proceeding. If your commands are long-running (build processes, test suites, server starts), Claude appears "frozen" while waiting.
+
+This isn't Claude being slow — it's correctly waiting for your tooling. But it can feel like poor performance.
+
+**Fix: Understand what Claude is waiting for**
+
+When you see no output for a long time, check whether Claude is running a command:
+- Look for `Bash (running...)` in the tool call display
+- The command itself may be the bottleneck (a 60-second test suite will always take 60 seconds)
+
+If you need Claude to continue working while a long process runs, use background processes:
+
+```bash
+# Tell Claude: "Start the dev server in the background, then proceed"
+npm run dev &
+```
+
+You can also adjust timeouts in your CLAUDE.md:
+
+```markdown
+## Environment Notes
+- `pnpm test` takes ~90 seconds for the full suite — this is expected
+- Use `pnpm test --testPathPattern=<file>` to run a single file
+```
+
+This context helps Claude make smarter decisions about which commands to run.
+
+---
+
+## Cause 6: API Rate Limits vs. Slow Responses
+
+Rate limit errors and slow responses look different but can be confused:
+
+- **Rate limit**: Claude Code returns an explicit error (`rate limit exceeded`) and stops
+- **Slow response**: Claude continues working, just slowly
+
+If you're hitting rate limits, see our [Rate Limit guide](/en/resources/rate-limit). But if responses are slow without an error, rate limits aren't the issue.
+
+**One exception**: If you're on a low-tier API plan, you may be subject to concurrency limits that create queuing delays without triggering a formal rate limit error. In this case, upgrading your plan or requesting a limit increase resolves it.
+
+---
+
+## Cause 7: Network Latency
+
+Claude Code communicates with Anthropic's API over HTTPS. If you're on a slow or unreliable network connection, every round-trip to the API adds latency.
+
+**Diagnose:**
+
+```bash
+# Test latency to Anthropic API
+curl -o /dev/null -s -w "Time: %{time_total}s\n" https://api.anthropic.com/
+
+# Check for packet loss
+ping -c 10 api.anthropic.com
+```
+
+If latency to the API is above 300ms or you're seeing packet loss, the network is the bottleneck. Options:
+- Use a wired connection instead of Wi-Fi
+- Switch to a different network
+- If behind a VPN, try routing API traffic outside the VPN
+
+---
+
+## Cause 8: Streaming Response Perception
+
+Claude Code streams responses as they're generated — you see tokens as they arrive rather than waiting for the complete response. This is the correct behavior. If streaming feels slow, consider:
+
+- **Is the first token slow?** This is pre-generation latency — the API processing your prompt. The fixes above (reduce context, use Sonnet) address this.
+- **Is generation itself slow once started?** This reflects model speed — Opus is slower per token than Sonnet.
+- **Is generation fast but display is choppy?** This can be a terminal rendering issue. Try a different terminal emulator or resize your terminal window.
+
+---
+
+## Summary: Performance Fix Checklist
+
+| Symptom | Most Likely Cause | Fix |
+|---------|-------------------|-----|
+| Slows down within a long session | Context bloat | `/compact` |
+| Slow from first message | Long CLAUDE.md | Trim CLAUDE.md |
+| Slow specifically during tool calls | MCP latency | Remove unused MCP servers |
+| Consistently slow regardless of session | Wrong model | `--model claude-sonnet-4-5` |
+| Appears frozen during commands | Long-running bash | Expected — check what's running |
+| Slow on all requests, no rate error | Network latency | Check `ping api.anthropic.com` |
+
+---
+
+## Still Slow After All This?
+
+If you've worked through the checklist and performance is still poor, the next step is measuring precisely where the time is going:
+
+1. Start a fresh Claude Code session (eliminates context bloat)
+2. Use a minimal CLAUDE.md (rules out CLAUDE.md overhead)
+3. Disable all MCP servers temporarily (isolates MCP as a variable)
+4. Run a simple prompt and time it: "What is 2+2?"
+
+If that simple prompt is still slow, the issue is likely API-side (rate limiting, plan tier, or regional API latency). Contact Anthropic support or reach out to us at ClawHelp for a deeper diagnosis session.

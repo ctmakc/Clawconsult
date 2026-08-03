@@ -1,0 +1,536 @@
+---
+slug: claude-code-ci-cd-integration
+lang: "de"
+title: "Claude Code in CI/CD-Pipelines: GitHub Actions, GitLab CI und Automatisierung"
+description: "Wie du Claude Code in CI/CD-Pipelines integrierst — GitHub Actions für automatisierte Code-Reviews, GitLab CI, headless Automatisierungsmuster, --print-Flag, --allowedTools und sicherheitsbewusste Pipeline-Konfiguration."
+category: guide
+schema: Article
+tags: [ci-cd, github-actions, gitlab-ci, automatisierung, pipelines, devops, code-review]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+seoTitle: "Claude Code CI/CD Integration: GitHub Actions & GitLab CI | ClawHelp"
+seoDescription: "Claude Code in CI/CD-Pipelines einbinden — GitHub Actions, GitLab CI, headless Automatisierung, --print-Flag, --allowedTools und sichere Pipeline-Konfiguration für Teams."
+---
+
+# Claude Code in CI/CD-Pipelines: GitHub Actions, GitLab CI und Automatisierung
+
+Claude Code ist nicht auf interaktive Nutzung beschränkt. Mit dem `--print`-Flag läuft es vollständig nicht-interaktiv und eignet sich damit für den Einsatz in CI/CD-Pipelines, automatisierten Code-Reviews, nächtlichen Codebase-Analysen und größeren Automatisierungs-Workflows.
+
+Dieser Leitfaden behandelt alles, was du brauchst, um Claude Code zuverlässig in deiner CI/CD-Infrastruktur zu betreiben.
+
+---
+
+## Das --print-Flag: Nicht-interaktiver Modus
+
+Der Kern der Automatisierung ist das `--print`-Flag (Kurzform: `-p`). Es weist Claude Code an, den Input zu verarbeiten, die Antwort auf stdout auszugeben und zu beenden — keine interaktive Sitzung, keine Prompts, kein Warten.
+
+```bash
+claude --print "Fasse die Änderungen in den letzten 5 Commits zusammen"
+
+# Kurzform
+claude -p "Was macht die main-Funktion in src/index.ts?"
+```
+
+**Was --print verändert:**
+
+Im interaktiven Modus pflegt Claude Code eine Sitzung, fragt vor Tool-Calls um Bestätigung und wartet auf deine Eingabe. Mit `--print`:
+- Claude Code verarbeitet den Prompt, führt erforderliche Tool-Calls aus und gibt die endgültige Antwort aus
+- Es beendet mit Code `0` bei Erfolg, nicht-null bei Fehler
+- Output geht auf stdout; Fehler auf stderr
+- Keine interaktiven Prompts — Tool-Call-Bestätigungen werden über `--allowedTools` geregelt
+
+---
+
+## --allowedTools und --disallowedTools
+
+In nicht-interaktivem Modus muss Claude Code wissen, welche Tools es ohne Rückfrage verwenden darf.
+
+### --allowedTools
+
+Spezifiziert eine Whitelist von Tools, die Claude verwenden darf:
+
+```bash
+# Nur Leseoperationen — keine Schreibvorgänge, keine Shell-Ausführung
+claude --print --allowedTools "Read,Glob,Grep" "Analysiere die Codebase-Struktur auf zirkuläre Abhängigkeiten"
+
+# Lesen und Schreiben, aber keine Shell-Ausführung
+claude --print --allowedTools "Read,Write,Edit,Glob,Grep" "Refaktoriere das Authentifizierungs-Modul"
+
+# Alles außer Bash (reine Lese/Schreib-Operationen)
+claude --print --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS" "Aktualisiere alle veralteten API-Calls"
+```
+
+**Verfügbare Tool-Namen:**
+
+| Tool | Funktion |
+|------|----------|
+| `Read` | Datei-Inhalte lesen |
+| `Write` | Dateien schreiben/erstellen |
+| `Edit` | Bestehende Dateien bearbeiten |
+| `MultiEdit` | Mehrere Bearbeitungen in einer Operation |
+| `Bash` | Shell-Befehle ausführen |
+| `Glob` | Dateien nach Mustern finden |
+| `Grep` | Datei-Inhalte durchsuchen |
+| `LS` | Verzeichnis-Inhalte auflisten |
+
+### --disallowedTools
+
+Spezifiziert zu blockierende Tools. Alles nicht in dieser Liste ist erlaubt:
+
+```bash
+# Nur Shell-Ausführung blockieren — alle Lese/Schreib-Operationen erlauben
+claude --print --disallowedTools "Bash" "Überprüfe alle TypeScript-Typfehler"
+
+# Schreiboperationen blockieren — Read-only-Modus
+claude --print --disallowedTools "Write,Edit,MultiEdit,Bash" "Analysiere Sicherheitsschwachstellen in der Codebase"
+```
+
+**Wann was verwenden:**
+
+Verwende `--allowedTools` wenn du strikte Kontrolle willst und nur einem bestimmten Satz von Operationen vertraust. Das ist die sicherere Wahl für fremden Code oder produktionsnahe Automatisierung.
+
+Verwende `--disallowedTools` wenn du eine oder zwei gefährliche Operationen blockieren, aber alles andere erlauben willst.
+
+---
+
+## Input per Pipe übergeben
+
+Du kannst Inhalte direkt in Claude Code pipen — unverzichtbar für die Verarbeitung von Dateien, Logs oder Befehlsoutput:
+
+```bash
+# Datei zur Analyse pipen
+cat src/auth/session.ts | claude --print "Überprüfe diese Datei auf Sicherheitsprobleme"
+
+# Git-Diff für eine Commit-Message pipen
+git diff --staged | claude --print "Schreibe eine prägnante Commit-Message für diese Änderungen"
+
+# Fehler-Logs zur Diagnose pipen
+cat logs/error.log | claude --print "Identifiziere die Grundursache dieser Fehler und schlage Fixes vor"
+
+# Test-Output pipen
+npm test 2>&1 | claude --print "Die Tests sind fehlgeschlagen. Identifiziere welche und warum, basierend auf diesem Output"
+```
+
+Beim Pipen wird der stdin-Inhalt dem Prompt vorangestellt. Claude Code liest sowohl den gepipten Inhalt als auch deinen Prompt-Text zusammen.
+
+---
+
+## GitHub Actions Integration
+
+### Automatisierter Code-Review bei Pull Requests
+
+```yaml
+# .github/workflows/claude-review.yml
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Vollständige History für Diff-Kontext
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Claude Code installieren
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: PR-Diff abrufen
+        run: git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
+
+      - name: Claude Code Review ausführen
+        id: claude_review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          REVIEW=$(cat /tmp/pr.diff | claude --print \
+            --allowedTools "Read,Glob,Grep" \
+            "Reviewe diesen Pull-Request-Diff. Fokus auf: Bugs, Sicherheitsprobleme, fehlende Fehlerbehandlung und Code-Qualität. Als GitHub-PR-Review-Kommentar mit Markdown formatieren.")
+          
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Review-Kommentar posten
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Claude Code Review\n\n${{ steps.claude_review.outputs.review }}`
+            })
+```
+
+### Automatisierte Sicherheitsprüfung
+
+```yaml
+# .github/workflows/claude-security.yml
+name: Claude Sicherheitsaudit
+
+on:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 6 * * 1'  # Jeden Montag um 06:00 UTC
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Claude Code installieren
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Sicherheitsaudit ausführen
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude --print \
+            --allowedTools "Read,Glob,Grep" \
+            "Führe einen Sicherheitsaudit dieser Codebase durch. Prüfe auf: hartcodierte Credentials, SQL-Injection-Schwachstellen, unsichere Abhängigkeiten, fehlende Input-Validierung, exponierte sensible Routen. Strukturierten Bericht auf Deutsch ausgeben." \
+            > security-audit.md
+
+      - name: Audit-Ergebnis als Artefakt speichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-${{ github.sha }}
+          path: security-audit.md
+          retention-days: 30
+
+      - name: Bei Befunden Issue erstellen
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const audit = fs.readFileSync('security-audit.md', 'utf8');
+            
+            if (audit.toLowerCase().includes('kritisch') || audit.toLowerCase().includes('schwachstelle')) {
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Sicherheitsaudit: Befunde vom ${new Date().toISOString().split('T')[0]}`,
+                body: audit,
+                labels: ['security', 'automated']
+              });
+            }
+```
+
+### Test-Generierung bei neuen Dateien
+
+```yaml
+# .github/workflows/claude-tests.yml
+name: Tests generieren
+
+on:
+  push:
+    branches: [feature/*, fix/*]
+
+jobs:
+  generate-tests:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[gen-tests]')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Claude Code installieren
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Tests für geänderte Dateien generieren
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          CHANGED_FILES=$(git diff HEAD~1 --name-only --diff-filter=AM | grep -E '\.(ts|tsx|js|jsx)$' | grep -v '\.test\.' | grep -v '\.spec\.')
+          
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ]; then
+              echo "Generiere Tests für $file..."
+              claude --print \
+                --allowedTools "Read,Write,Glob,Grep" \
+                "Schreibe Unit-Tests für $file. Folge den bestehenden Test-Mustern im Projekt. Erstelle die Test-Datei im passenden __tests__-Verzeichnis oder neben der Quelldatei."
+              sleep 3  # Rate-Limiting
+            fi
+          done
+
+      - name: Generierte Tests committen
+        run: |
+          git config --global user.name "Claude Code Bot"
+          git config --global user.email "claude@ci.local"
+          git add "**/*.test.*" "**/*.spec.*" 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "chore: generierte Tests hinzufügen [skip ci]"
+          git push
+```
+
+---
+
+## GitLab CI Integration
+
+```yaml
+# .gitlab-ci.yml
+
+variables:
+  NODE_VERSION: "20"
+
+claude-review:
+  stage: review
+  image: node:20
+  before_script:
+    - npm install -g @anthropic-ai/claude-code
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git diff origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD > /tmp/mr.diff
+    - |
+      REVIEW=$(cat /tmp/mr.diff | claude --print \
+        --allowedTools "Read,Glob,Grep" \
+        "Reviewe diesen Merge-Request-Diff. Identifiziere Bugs, Sicherheitsprobleme und Code-Qualitätsprobleme. Output als Markdown.")
+      echo "$REVIEW" > review-output.md
+      echo "---"
+      cat review-output.md
+  artifacts:
+    paths:
+      - review-output.md
+    expire_in: 1 week
+  only:
+    - merge_requests
+  variables:
+    ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY  # In GitLab CI/CD-Variablen setzen
+
+claude-security-scan:
+  stage: test
+  image: node:20
+  before_script:
+    - npm install -g @anthropic-ai/claude-code
+  script:
+    - |
+      claude --print \
+        --allowedTools "Read,Glob,Grep" \
+        "Sicherheitsscan dieser Codebase. Fokus: hartcodierte Secrets, OWASP Top 10, unsichere Konfigurationen. Deutsch. Befunde als Markdown-Liste." \
+        > security-report.md
+  artifacts:
+    reports:
+      # Als GitLab Security Report einbinden
+    paths:
+      - security-report.md
+    expire_in: 30 days
+  only:
+    - main
+    - merge_requests
+```
+
+---
+
+## Das --dangerously-skip-permissions-Flag in der Automatisierung
+
+Für CI/CD-Umgebungen, in denen Claude Code ohne Bestätigungs-Prompts operieren soll, kombiniere `--dangerously-skip-permissions` mit Tool-Einschränkungen:
+
+```bash
+claude --print \
+  --dangerously-skip-permissions \
+  --allowedTools "Read,Write,Edit,Glob,Grep" \
+  "Refaktoriere alle veralteten API-Calls auf die neuen v2-Endpunkte"
+```
+
+**Sicherheitsregeln für --dangerously-skip-permissions in CI:**
+
+1. **Immer mit --allowedTools kombinieren.** Niemals `--dangerously-skip-permissions` allein in der Automatisierung verwenden.
+
+2. **Niemals in Containern mit Produktionszugriff ausführen.** CI-Jobs mit diesem Flag sollten in ephemeren Containern ohne Zugriff auf Produktionsdatenbanken, Credentials oder Infrastruktur laufen.
+
+3. **Claude Code-Version pinnen.** In CI eine gepinnte Version verwenden: `npm install -g @anthropic-ai/claude-code@1.x.x`.
+
+4. **Read-only-Dateisystem-Mounts verwenden, wo möglich.** Quellverzeichnisse als read-only mounten, wenn die Aufgabe keine Dateien schreiben muss.
+
+---
+
+## Batch-Verarbeitung mit Shell-Skripten
+
+Für die Verarbeitung mehrerer Dateien oder Repositories Claude Code's `--print`-Modus mit Shell-Scripting kombinieren:
+
+```bash
+#!/bin/bash
+# sicherheitsaudit-repos.sh — Sicherheitsaudit für mehrere Repositories
+
+REPOS=(
+  "/data/projects/api-service"
+  "/data/projects/auth-service"
+  "/data/projects/worker-service"
+)
+
+OUTPUT_DIR="/tmp/sicherheitsaudits/$(date +%Y%m%d)"
+mkdir -p "$OUTPUT_DIR"
+
+for repo in "${REPOS[@]}"; do
+  REPO_NAME=$(basename "$repo")
+  echo "Auditiere $REPO_NAME..."
+  
+  cd "$repo"
+  
+  AUDIT=$(claude --print \
+    --allowedTools "Read,Glob,Grep" \
+    "Führe einen Sicherheitsaudit durch. Prüfe auf: hartcodierte Credentials, SQL-Injection, unsichere Abhängigkeiten, fehlende Input-Validierung, exponierte sensible Routen. Strukturierten Bericht ausgeben.")
+  
+  echo "$AUDIT" > "$OUTPUT_DIR/$REPO_NAME-sicherheitsaudit.md"
+  echo "  Gespeichert: $OUTPUT_DIR/$REPO_NAME-sicherheitsaudit.md"
+  
+  sleep 3  # Rate-Limiting zwischen Repositories
+done
+
+echo "Alle Audits abgeschlossen. Berichte in $OUTPUT_DIR"
+```
+
+---
+
+## Strukturierten Output parsen
+
+Claude Code's `--print`-Output ist Klartext. Für die Integration mit anderen Tools Claude anweisen, in einem bestimmten Format auszugeben:
+
+```bash
+ANALYSE=$(claude --print \
+  --allowedTools "Read,Glob,Grep" \
+  "Analysiere die Codebase auf TODO-Kommentare. Ausgabe NUR als gültiges JSON in diesem Format:
+{
+  \"anzahl\": <Zahl>,
+  \"items\": [
+    {\"datei\": \"<Pfad>\", \"zeile\": <Zahl>, \"text\": \"<TODO-Text>\"}
+  ]
+}
+Nichts anderes ausgeben — nur das JSON-Objekt.")
+
+# Mit jq parsen
+echo "$ANALYSE" | jq '.anzahl'
+echo "$ANALYSE" | jq '.items[] | select(.datei | contains("auth"))'
+```
+
+---
+
+## Umgebung und Konfiguration für Automatisierung
+
+**Benötigte Umgebungsvariablen:**
+
+```bash
+# Immer erforderlich
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Optional: Standard-Modell überschreiben
+export ANTHROPIC_MODEL="claude-opus-4-5"
+```
+
+**Projektweite Einstellungen für CI:**
+
+`.claude/settings.json` so konfigurieren, dass sie für automatisierte Läufe geeignet ist:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)"
+    ]
+  }
+}
+```
+
+---
+
+## Retry-Logik für Rate Limits
+
+Claude Code unterliegt Anthropic API Rate Limits. In Batch-Skripten Verzögerungen zwischen Calls hinzufügen und Retry-Logik implementieren:
+
+```bash
+run_claude_with_retry() {
+  local prompt="$1"
+  local max_attempts=3
+  local attempt=1
+  
+  while [ $attempt -le $max_attempts ]; do
+    OUTPUT=$(claude --print --allowedTools "Read,Glob,Grep" "$prompt" 2>&1)
+    EXIT_CODE=$?
+    
+    if [ $EXIT_CODE -eq 0 ]; then
+      echo "$OUTPUT"
+      return 0
+    fi
+    
+    if echo "$OUTPUT" | grep -q "rate_limit\|429"; then
+      echo "Rate-Limit erreicht. Warte 60 Sekunden... (Versuch $attempt/$max_attempts)" >&2
+      sleep 60
+    else
+      echo "Fehler bei Versuch $attempt: $OUTPUT" >&2
+      sleep 5
+    fi
+    
+    attempt=$((attempt + 1))
+  done
+  
+  echo "Nach $max_attempts Versuchen fehlgeschlagen" >&2
+  return 1
+}
+```
+
+---
+
+## Gute und schlechte Kandidaten für Automatisierung
+
+**Gut geeignet für vollständige Automatisierung:**
+
+- Code-Review und Analyse (read-only, strukturierter Output)
+- Dokumentation generieren oder aktualisieren
+- Typ-Annotationen zu bestehendem Code hinzufügen
+- Von veralteten APIs auf neue migrieren
+- Konsistenzprüfungen über eine große Codebase
+- Tests für bestehenden Code schreiben
+- Commit-Messages aus Diffs generieren
+- Sicherheitsscans und Schwachstellenberichte
+
+**Braucht menschliche Aufsicht:**
+
+- Architektonische Entscheidungen, die mehrere Systeme betreffen
+- Datenbankschema-Migrationen in der Produktion
+- Alles, was Authentifizierungs- oder Autorisierungslogik berührt
+- Refactorings, die öffentliche API-Verträge ändern
+- Alles mit externen Seiteneffekten (E-Mails senden, Events publizieren)
+
+Die Unterscheidung ist grob: **Analyse und Generierung eignen sich gut für Automatisierung; Entscheidungen mit breitem Impact brauchen einen Menschen in der Schleife.**
+
+---
+
+Die Integration von Claude Code in deine CI/CD-Pipeline kann den manuellen Review-Aufwand erheblich reduzieren und Probleme früher erkennen. Die Claude Code Beratungsleistungen von ClawHelp helfen Teams, produktionsreife KI-Automatisierungs-Workflows zu entwerfen und zu implementieren — von PR-Review-Bots bis hin zu nächtlichen Codebase-Analysen. [Sprich uns auf deine Automatisierungsanforderungen an](/de/contact).

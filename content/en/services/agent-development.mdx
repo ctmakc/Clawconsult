@@ -1,0 +1,149 @@
+---
+slug: agent-development
+title: "Custom AI Agent Development"
+description: "We design and build custom multi-agent workflows using Claude Code — orchestrators, subagents, and automated pipelines for your team."
+category: service
+tags: [agents, automation, subagents, consulting, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+seoTitle: "Custom AI Agent Development | ClawHelp"
+seoDescription: "Custom claude code agents and multi-agent workflows. Orchestrator + subagent patterns, automated pipelines, and custom AI agent development for dev teams."
+---
+
+# Custom AI Agent Development
+
+A single Claude Code session can do a lot. A well-designed multi-agent system can do work that would take your team days — automatically, in parallel, with audit trails.
+
+We build **custom Claude Code agents and multi-agent workflows** that automate complex engineering tasks: coordinated code generation, automated PR review pipelines, autonomous test writing, repository migration assistants, and more. If you can describe the workflow, we can build an agent that runs it.
+
+## What We Build
+
+### Orchestrator + Subagent Systems
+
+The most powerful Claude Code pattern: an **orchestrator agent** that breaks down a high-level goal into subtasks and dispatches **specialized subagents** to handle each one in parallel.
+
+Example: a migration orchestrator that reads your entire `src/` directory, dispatches one subagent per module to convert CommonJS to ESM, collects the results, runs a validation subagent to check for import errors, and produces a migration report — all without a human in the loop.
+
+We design the task decomposition strategy, the inter-agent communication protocol, and the result aggregation logic. We also build the safety layer: agents that can pause and request human review when they encounter ambiguity.
+
+### Automated Code Review Agents
+
+A code review agent triggered on every PR that:
+
+- Checks for security anti-patterns (hardcoded credentials, SQL injection vectors, XSS risks)
+- Verifies test coverage for changed files
+- Flags violations of your team's architectural conventions
+- Generates inline PR comments using the GitHub MCP
+- Posts a summary review with a pass/fail verdict
+
+This is not a linting script — it's a reasoning agent that understands context. It reads the PR description, looks at the diff in relation to the full file, and makes judgment calls.
+
+### Autonomous Test-Writing Agents
+
+Point the agent at a module with insufficient test coverage. It reads the source, understands the expected behavior, writes unit tests, runs them, diagnoses failures, and iterates until the test suite passes. Deliverable: a PR with new test files, ready for review.
+
+### Repository Migration Assistants
+
+Long-running agents designed for multi-day tasks:
+
+- Framework migrations (React class components → hooks, jQuery → vanilla JS)
+- Language migrations (Python 2 → 3, JavaScript → TypeScript)
+- Dependency upgrades with automated fix-up of breaking API changes
+- Monorepo restructuring
+
+We design these with checkpointing so the agent can be paused and resumed, and with a human review gate after every significant batch.
+
+### Custom Workflow Automation Agents
+
+Any repeatable engineering workflow that currently requires manual steps and context-switching is a candidate. Common examples we've built:
+
+- **Incident response agent**: reads PagerDuty alert, pulls relevant logs via MCP, searches codebase for related recent commits, drafts a root cause hypothesis, and posts to Slack
+- **Onboarding agent**: given a new team member's GitHub username, generates a personalized reading list from your CLAUDE.md files, recent PRs, and architecture docs
+- **Release notes agent**: reads merged PRs since last release, groups by category, and drafts a human-readable changelog in your team's style
+
+## Example Multi-Agent Workflow: Automated PR Review Pipeline
+
+Here's what a deployed agent system looks like in practice:
+
+```
+[GitHub Webhook] → PR opened
+        ↓
+[Orchestrator Agent]
+  ├─ Dispatch: Security Subagent → scans diff for vulnerability patterns
+  ├─ Dispatch: Coverage Subagent → checks test files for changed modules
+  ├─ Dispatch: Convention Subagent → verifies naming, structure, docs
+  └─ Dispatch: Summary Subagent → reads PR description + diff context
+        ↓
+[Aggregator] → merges findings, scores severity
+        ↓
+[GitHub MCP] → posts inline comments + summary review
+```
+
+Each subagent is isolated — it only sees the context it needs. The orchestrator manages coordination and handles failures if any subagent errors out.
+
+## Deliverables
+
+- Fully implemented agent code (TypeScript or Python, your choice)
+- Architecture diagram and written explanation of every agent's role
+- Configuration files integrated into your Claude Code environment
+- Deployment instructions (local, Docker, or cloud function)
+- Test suite for the agent system itself
+- Runbook for monitoring, debugging, and extending the agents
+- 30-day post-launch support
+
+## The Process
+
+### Step 1 — Workflow Discovery (1–2 hours)
+
+We interview you and your team to map the workflow you want to automate: inputs, outputs, decision points, failure modes, and acceptable error rates. We identify which parts benefit from AI reasoning vs. deterministic code.
+
+### Step 2 — Architecture Design (1–3 days)
+
+We design the agent topology: how many agents, what each one does, how they communicate, where human review gates go, and how the system fails safely. You review and approve the design before any code is written.
+
+### Step 3 — Build and Test (1–3 weeks depending on complexity)
+
+We build the agents iteratively, testing each component against realistic inputs before integrating. You get weekly demos with working functionality at each milestone.
+
+### Step 4 — Deployment and Handoff
+
+We deploy to your environment, run end-to-end tests, and hand off the codebase with documentation your team can maintain. We train at least one person on your team to extend and debug the system.
+
+## Pricing
+
+| Tier | Scope | Price |
+|------|-------|-------|
+| **Single Agent** | One focused agent, one task type | from $1,200 |
+| **Multi-Agent System** | 2–5 coordinated agents, full orchestration | from $3,500 |
+| **Enterprise Pipeline** | Complex workflow, custom MCP servers, deployment + monitoring | Contact us |
+
+Prices are in USD. Milestones-based payment available on multi-agent engagements.
+
+## Frequently Asked Questions
+
+**How reliable are these agents in production?**
+
+Agent reliability depends on task design. We build in explicit uncertainty handling: agents that aren't confident ask for clarification rather than proceeding. We also build test harnesses so you can measure accuracy before deploying. Most clients target 80–90% automation coverage, with human review for the remaining cases.
+
+**What language are the agents written in?**
+
+We default to TypeScript for its type safety and broad ecosystem. Python is also available. The Claude Code SDK supports both. We match your team's preferred language.
+
+**Can agents run on a schedule (nightly, weekly)?**
+
+Yes. Agents can be triggered by cron, webhooks, CI events, or file system changes. We design the triggering mechanism to fit your infrastructure.
+
+**How do agents handle sensitive code or data?**
+
+Agents run with the permissions you grant them — nothing more. Sensitive credentials are passed via environment variables. We design agents with the minimum access required for the task. All data stays in your infrastructure.
+
+**What happens if an agent makes a mistake?**
+
+We build undo-friendly agents wherever possible (draft PRs, not direct merges; staging databases, not production). Every destructive action is gated behind a human confirmation step by default.
+
+## Let's Build Your Workflow
+
+Tell us what your team does repeatedly that Claude should be doing automatically.
+
+[**Book a workflow discovery call**](/contact?service=agents) — 60 minutes, we'll scope your first agent together.

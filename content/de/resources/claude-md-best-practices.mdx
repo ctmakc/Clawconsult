@@ -1,0 +1,288 @@
+---
+slug: claude-md-best-practices
+lang: "de"
+title: "CLAUDE.md effektiv einsetzen: Best Practices für Teamprojekte"
+description: "Wie Teams CLAUDE.md strukturieren, was hineingehört und was nicht, wie die Hierarchie funktioniert und wie Änderungen versioniert werden."
+category: guide
+schema: Article
+tags: [claude-md, team, best-practices, konventionen, projektkonfiguration]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 7
+seoTitle: "CLAUDE.md Best Practices für Teamprojekte | ClawHelp"
+seoDescription: "CLAUDE.md optimal gestalten: Hierarchie, Inhalt, Länge, Team-Konventionen, persönliche Overrides und Versionierung. Praxisleitfaden für Entwicklungsteams."
+---
+
+# CLAUDE.md effektiv einsetzen: Best Practices für Teamprojekte
+
+CLAUDE.md ist die primäre Schnittstelle zwischen deinem Team und Claude Code. Claude liest diese Datei am Anfang jeder Interaktion — sie formt, wie Claude das Projekt versteht, welche Regeln es respektiert und wie es bei unklaren Entscheidungen vorgeht.
+
+Eine gut geschriebene CLAUDE.md ist ein Multiplikator für die Codequalität. Eine schlechte oder überladene CLAUDE.md kostet Tokens, verlangsamt Antworten und kann dazu führen, dass Claude wichtige Regeln übersieht.
+
+---
+
+## Die CLAUDE.md-Hierarchie
+
+Claude Code liest CLAUDE.md-Dateien aus mehreren Ebenen und kombiniert sie:
+
+```
+/                       ← Projekt-Root (obligatorisch)
+  CLAUDE.md             ← Allgemeine Projektregeln
+  src/
+    CLAUDE.md           ← Regeln nur für src/ und darunter
+  backend/
+    CLAUDE.md           ← Regeln nur für backend/ und darunter
+  .claude/
+    settings.json       ← Tool-Berechtigungen, MCP-Config (Team)
+    settings.local.json ← Persönliche Overrides (nicht committen)
+```
+
+**Wie die Hierarchie funktioniert:**
+- Die Root-CLAUDE.md gilt für das gesamte Projekt
+- Eine CLAUDE.md in einem Unterverzeichnis ergänzt die Regeln für diesen Bereich — sie ersetzt die Root-CLAUDE.md nicht, sondern addiert sich dazu
+- Claude Code liest alle CLAUDE.md-Dateien auf dem Pfad von Root bis zum aktuellen Arbeitsverzeichnis
+
+### Wann Unterverzeichnis-CLAUDE.md sinnvoll sind
+
+Nutze sie, wenn verschiedene Teile des Projekts deutlich unterschiedliche Konventionen haben:
+
+```
+backend/CLAUDE.md   → Python-Code-Style, SQLAlchemy-Regeln, Django-Konventionen
+frontend/CLAUDE.md  → React-Komponentenstruktur, CSS-Module-Regeln, Storybook
+scripts/CLAUDE.md   → "Diese Skripte nie ohne Review ausführen"
+```
+
+Für ein homogenes Projekt reicht meist eine einzige Root-CLAUDE.md.
+
+---
+
+## Was in CLAUDE.md gehört
+
+### 1. Projekt-Stack und Versionen
+
+```markdown
+## Stack
+- Node.js 20.x, TypeScript 5.4
+- PostgreSQL 16, Prisma 5.x als ORM
+- Next.js 14 (App Router), Tailwind CSS
+- Vitest für Unit-Tests, Playwright für E2E
+```
+
+Warum: Claude Code kennt deinen Stack nicht aus der Verzeichnisstruktur allein. Diese Information verhindert, dass Claude Code Lösungen für die falsche Node-Version, das falsche Test-Framework oder die falsche ORM-API schreibt.
+
+### 2. Wichtige Befehle
+
+```markdown
+## Befehle
+- Build: `pnpm build`
+- Tests (alle): `pnpm test`
+- Tests (einzelne Datei): `pnpm test src/auth/session.test.ts`
+- Lint: `pnpm lint`
+- Typen prüfen: `pnpm typecheck`
+- DB-Migration: `pnpm prisma migrate dev`
+- Dev-Server: `pnpm dev` (Port 3000)
+```
+
+Ohne diese Information muss Claude Code die Befehle aus `package.json` oder `Makefile` herleiten und macht dabei gelegentlich Fehler. Explizit ist besser als implizit.
+
+### 3. Code-Stil und Konventionen
+
+```markdown
+## Code-Stil
+- Kein `any` in TypeScript — immer konkreter Typ oder `unknown`
+- Fehlerbehandlung: Result-Typ (`{ ok: true, data } | { ok: false, error }`), kein throwing in Businesslogik
+- Async: immer `async/await`, keine Promise-Chains
+- Imports: Absolute Pfade mit `@/`-Alias, keine relativen `../../`-Imports
+- Kommentare: nur dort, wo das *Warum* nicht aus dem Code selbst hervorgeht
+```
+
+### 4. Architekturentscheidungen und verbotene Muster
+
+```markdown
+## Architektur
+- Alle DB-Zugriffe über Repository-Layer in `src/repositories/`
+- Niemals Prisma-Client direkt in Route-Handler importieren
+- Geschäftslogik nur in `src/services/`, nie in Controllern
+- API-Fehler immer über `ApiError`-Klasse, nie nackte `throw new Error()`
+
+## Verboten
+- Kein direktes `process.env` außerhalb von `src/config/env.ts`
+- Keine synchronen Datei-Operationen (`fs.readFileSync`)
+- Keine `console.log` im committed Code (Ausnahme: Skripte in `/scripts`)
+- Nie Produktionsdatenbank direkt ansprechen — immer über Staging
+```
+
+### 5. Testkonventionen
+
+```markdown
+## Tests
+- Unit-Tests: Datei neben dem Modul (`auth.ts` → `auth.test.ts`)
+- Integration-Tests: `tests/integration/`
+- E2E-Tests: `tests/e2e/`
+- Jede neue Funktion erhält mindestens einen Happy-Path- und einen Error-Path-Test
+- Mocks für externe Dienste in `src/__mocks__/`
+```
+
+### 6. Git-Workflow
+
+```markdown
+## Git
+- Commit-Messages: Imperativ, 50 Zeichen Subject, Erklärung im Body
+- Branches: `feature/`, `fix/`, `hotfix/` als Prefix
+- Niemals `--no-verify`
+- Nie force-push auf `main` oder `develop`
+```
+
+---
+
+## Was nicht in CLAUDE.md gehört
+
+### Sensible Daten
+
+CLAUDE.md kann in Git eingecheckt sein. Niemals:
+- API-Keys, Tokens, Passwörter
+- Datenbankverbindungsstrings mit Credentials
+- Interna über Kunden oder Verträge
+
+### Temporäre Aufgabennotizen
+
+```markdown
+# FALSCH — nicht in CLAUDE.md
+## Aktueller Stand
+- TODO: Redis-Cache implementieren
+- In Bearbeitung: Auth-Refactoring (Max, Branch feature/auth-v2)
+- Bug aus gestern: Session-Invalidierung funktioniert nicht
+```
+
+CLAUDE.md ist keine Aufgabenliste. Sie wird bei jeder Interaktion gelesen — Status-Updates von gestern verwirren Claude morgen. Nutze stattdessen Git, ein Ticketsystem oder ein separates Dokument.
+
+### Langer Fließtext
+
+CLAUDE.md ist kein Onboarding-Dokument für neue Entwickler. Es ist eine kompakte Referenz für Claude Code. Jeder Satz in CLAUDE.md kostet Tokens bei jeder Interaktion.
+
+**Falsch:**
+```markdown
+## Unser Ansatz zur Fehlerbehandlung
+In unserer Anwendung haben wir uns entschieden, dass Fehler immer explizit 
+behandelt werden sollten. Dies ist eine Entscheidung, die wir getroffen haben, 
+weil wir festgestellt haben, dass implizite Fehlerbehandlung durch Exceptions 
+in JavaScript/TypeScript oft dazu führt, dass Fehler unbehandelt bleiben...
+[weitere 10 Zeilen]
+```
+
+**Richtig:**
+```markdown
+## Fehlerbehandlung
+Result-Typ: `{ ok: true, data } | { ok: false, error: AppError }`. Kein throwing in Businesslogik.
+```
+
+---
+
+## Länge: Weniger ist mehr
+
+Claude Code liest CLAUDE.md bei jeder Interaktion vollständig. Das bedeutet:
+
+- Eine CLAUDE.md mit 500 Zeilen kostet bei jeder einzelnen Anfrage 500 Zeilen an Kontext
+- Über eine Sitzung mit 50 Interaktionen summiert sich das auf 25.000 Zeilen, die verarbeitet werden
+
+**Richtwert**: Unter 100 Zeilen für die Root-CLAUDE.md. Das ist genug Platz für Stack, Befehle, 5–10 Konventionen und wichtige Verbote.
+
+Wenn dein CLAUDE.md wächst: Überprüfe, ob jede Regel wirklich nötig ist. Regeln, die Claude ohnehin aus dem Kontext ableiten würde, können raus. Regeln, die nur selten relevant sind, können in Unterverzeichnis-CLAUDE.md-Dateien ausgelagert werden.
+
+---
+
+## Team-CLAUDE.md vs. persönliche Overrides
+
+Es gibt eine wichtige Unterscheidung:
+
+**CLAUDE.md (im Root, committet)**
+- Team-Konventionen, die für alle gelten
+- Stack-Informationen
+- Verbotene Muster und Code-Stil
+
+**.claude/settings.json (committet)**
+- Freigegebene Tool-Berechtigungen
+- Geteilte MCP-Server-Konfiguration (ohne Credentials)
+
+**.claude/settings.local.json (nicht committen)**
+- Persönliche Präferenzen
+- Persönliche MCP-Credentials
+- Abweichungen vom Team-Standard, die nur lokal gelten sollen
+
+Beispiel für `.gitignore`:
+
+```gitignore
+# Persönliche Claude-Einstellungen
+.claude/settings.local.json
+```
+
+Das erlaubt jedem Entwickler, seinen eigenen Claude-Code-Workflow zu konfigurieren, ohne die Team-Konfiguration zu überschreiben.
+
+---
+
+## CLAUDE.md in Git versionieren
+
+CLAUDE.md sollte wie Code behandelt werden:
+
+- Commits mit sinnvollen Messages: "Regel für Result-Type-Fehlerbehandlung ergänzt"
+- Reviews bei Änderungen — Konventionsänderungen betreffen das gesamte Team
+- Diskutiert im Team, wenn neue Regeln eingeführt werden
+
+Ein guter Moment für CLAUDE.md-Updates:
+- Nach einer Retrospektive, in der ein Muster als Problem identifiziert wurde
+- Wenn ein neues Modul oder Framework eingeführt wird
+- Wenn Claude Code wiederholt denselben Fehler macht — das ist ein Zeichen, dass eine Regel fehlt
+
+### Versionierung als lebendiges Dokument
+
+Behandle CLAUDE.md als Teil der Projektdokumentation. Wenn die Team-Konventionen sich ändern, aktualisiere CLAUDE.md — nicht als Nachgedanke, sondern als Teil des Merge-Requests, der die Konvention einführt.
+
+---
+
+## Vollständiges Beispiel: Produktions-CLAUDE.md
+
+Hier ist ein vollständiges Beispiel, das die obigen Empfehlungen umsetzt:
+
+```markdown
+# Projektname
+
+## Stack
+Node 20, TypeScript 5.4, PostgreSQL 16, Prisma 5, Next.js 14 (App Router)
+Tests: Vitest (Unit), Playwright (E2E)
+
+## Befehle
+- Build: `pnpm build`
+- Tests: `pnpm test` | einzelne Datei: `pnpm test <pfad>`
+- Lint: `pnpm lint`
+- Typen: `pnpm typecheck`
+- DB: `pnpm prisma migrate dev`
+
+## Architektur
+- DB-Zugriff nur über `src/repositories/`
+- Businesslogik nur in `src/services/`
+- Env-Variablen nur über `src/config/env.ts`
+
+## Code-Regeln
+- Kein `any` — `unknown` verwenden und narrowen
+- Fehler als Result-Typ: `{ ok: true, data } | { ok: false, error: AppError }`
+- Imports: `@/`-Alias, keine relativen `../../`-Pfade
+- Kein `console.log` im Produktionscode
+
+## Tests
+- Testdatei neben Modul: `auth.ts` → `auth.test.ts`
+- Happy Path + Error Path für jede neue Funktion
+- Mocks in `src/__mocks__/`
+
+## Git
+- Commits: Imperativ, 50-Zeichen-Subject, Warum im Body
+- Branches: `feature/`, `fix/`, `hotfix/`
+- Kein `--no-verify`, kein Force-Push auf `main`
+
+## Verboten
+- Kein direkter Prisma-Import in Route-Handler
+- Keine rohen `throw new Error()` in Services
+- Keine synchronen fs-Operationen
+- Nie Produktions-DB direkt ansprechen
+```
+
+Diese CLAUDE.md ist vollständig, konkret und kurz. Sie passt auf eine Bildschirmseite und enthält keine redundante Information.

@@ -1,0 +1,201 @@
+---
+slug: effective-claude-code
+title: "10 pratiques pour utiliser Claude Code efficacement (et 5 antipatterns)"
+description: "Les 10 pratiques à fort impact pour tirer le maximum de Claude Code, plus 5 antipatterns courants à éviter absolument."
+category: how-to
+tags: [meilleures-pratiques, workflow, claude-code, productivité, astuces]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 12
+relatedServices: [claude-code-setup, team-onboarding]
+seoTitle: "Comment utiliser Claude Code efficacement : 10 pratiques | ClawHelp"
+seoDescription: "Les 10 pratiques à fort impact pour Claude Code — CLAUDE.md, agents parallèles, worktrees, hooks et plus — plus 5 antipatterns à éviter."
+schema: Article
+---
+
+# 10 pratiques pour utiliser Claude Code efficacement (et 5 antipatterns)
+
+Claude Code est un outil puissant, mais la différence entre une utilisation basique et une utilisation experte est immense. Voici les pratiques qui font vraiment la différence — et celles qui font perdre du temps.
+
+---
+
+## 10 pratiques à fort impact
+
+### 1. Utilisez CLAUDE.md comme mémoire persistante du projet
+
+Claude Code relit `CLAUDE.md` à chaque nouvelle session. C'est votre outil le plus puissant pour maintenir la continuité entre les sessions.
+
+**Ce que doit contenir votre CLAUDE.md :**
+```markdown
+# Mon Projet
+
+## Stack technique
+- Next.js 15, TypeScript strict, Tailwind CSS
+- Supabase (Postgres + Auth + Storage)
+- pnpm comme gestionnaire de paquets
+
+## Statut (mis à jour 2026-05-15)
+- Auth : ✅ TERMINÉ
+- Dashboard : 🔄 EN COURS — bug scroll infini sur Safari
+- Paiements Stripe : ❌ NON COMMENCÉ
+
+## Décisions d'architecture
+- Zustand pour le state (pas Redux — trop verbeux pour cette taille)
+- API routes dans /app/api/ uniquement
+- Tests avec Vitest + Testing Library
+
+## Bugs actifs
+- Dashboard : useInfiniteQuery retourne undefined au premier rendu (hydration SSR)
+  - Essayé : désactivation SSR, Suspense
+  - Pas encore essayé : seed manuel du cache côté serveur
+```
+
+Mettez à jour CLAUDE.md en fin de session — c'est la chose la plus importante pour la continuité.
+
+### 2. Lancez plusieurs agents en parallèle pour les tâches indépendantes
+
+Si vous avez deux tâches qui ne partagent pas d'état, lancez-les en parallèle. Claude Code peut orchestrer plusieurs agents simultanément.
+
+**Exemple :** "Pendant qu'un agent écrit les tests pour le module auth, un autre rédige la documentation API."
+
+La clé : les tâches doivent être vraiment indépendantes. Si la tâche B a besoin du résultat de la tâche A, exécutez-les en séquence.
+
+### 3. Utilisez les worktrees pour le travail isolé
+
+Les worktrees Git permettent de maintenir plusieurs copies de travail du dépôt sur des branches séparées. Idéal pour :
+- Travailler sur deux fonctionnalités en parallèle
+- Expérimenter sans risquer votre branche principale
+- Confier une tâche risquée à Claude sans toucher à votre environnement actuel
+
+```bash
+git worktree add ../mon-projet-feature-auth feature/auth-oauth
+cd ../mon-projet-feature-auth
+claude
+```
+
+### 4. Formulez des prompts précis et délimités
+
+"Améliore le code" est une mauvaise demande. "Refactorise la fonction `processPayment` dans `lib/stripe.ts` pour extraire la logique de validation dans une fonction `validatePaymentIntent` séparée, avec les types TypeScript correspondants et un test unitaire" est une bonne demande.
+
+**Le test :** Claude doit pouvoir produire une liste de tâches concrètes depuis votre prompt. Si ce n'est pas possible, le prompt est trop vague.
+
+### 5. Utilisez le mode Plan pour les tâches complexes multi-étapes
+
+Avant que Claude ne se lance dans une implémentation conséquente, demandez-lui de planifier d'abord avec `/plan` (ou en tapant "plan:" au début de votre message). Claude expose son approche, vous pouvez corriger le tir avant qu'il ne commence à coder.
+
+Cette étape évite de découvrir à mi-chemin que l'approche choisie était mauvaise.
+
+### 6. Créez des skills pour les workflows répétitifs
+
+Si vous demandez régulièrement à Claude de faire la même chose (révision de code selon vos standards, génération d'un composant React suivant votre template, etc.) — encapsulez-le dans un skill.
+
+Un skill est un fichier Markdown dans `~/.claude/plugins/` que Claude lit et suit quand vous l'invoquez avec l'outil `Skill`.
+
+```markdown
+# Mon skill de révision de code
+Quand invoqué, vérifie :
+1. Pas de `any` en TypeScript
+2. Toutes les fonctions async ont un try/catch
+3. Les props React ont des types stricts (pas d'interface vide)
+4. Les commentaires sont en français
+```
+
+### 7. Configurez des hooks pour les vérifications automatiques de qualité
+
+Les hooks exécutent des scripts shell sur des événements Claude Code. Exemples puissants :
+
+**Auto-format sur écriture de fichier :**
+```json
+{
+  "hooks": {
+    "PostToolCall": [{
+      "matcher": "Write",
+      "command": "prettier --write \"$CLAUDE_TOOL_OUTPUT\""
+    }]
+  }
+}
+```
+
+**Scan de sécurité avant les commandes bash :**
+```json
+{
+  "hooks": {
+    "PreToolCall": [{
+      "matcher": "Bash",
+      "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'rm -rf' && echo 'BLOCKED: rm -rf détecté' && exit 1 || exit 0"
+    }]
+  }
+}
+```
+
+### 8. Utilisez /compact pour gérer le contexte sur les longues sessions
+
+Quand vous avez terminé une tâche distincte dans une session longue, tapez `/compact` pour compresser l'historique et libérer de l'espace dans la fenêtre de contexte. Claude conserve un résumé de ce qui a été fait.
+
+Utilisez-le proactivement — avant que le contexte ne déborde, pas après.
+
+```
+/compact focus on the authentication changes we just made
+```
+
+### 9. Commitez fréquemment pour que Claude voie l'historique
+
+`git log` est une source d'information précieuse pour Claude. Des commits fréquents avec des messages clairs permettent à Claude de comprendre l'évolution du projet sans relire tout le code.
+
+```
+feat: add JWT refresh token rotation
+fix: handle concurrent token refresh race condition
+refactor: extract token validation to separate module
+```
+
+Ces messages racontent l'histoire du projet de façon compacte.
+
+### 10. Faites confiance aux outils de suivi des tâches
+
+Pour les sessions longues avec plusieurs sous-tâches, demandez à Claude d'utiliser TaskCreate pour tracer les étapes. Ça évite de perdre le fil et permet de reprendre là où on s'est arrêté.
+
+---
+
+## 5 antipatterns à éviter
+
+### Antipattern 1 : Donner à Claude un dump de contexte non structuré
+
+**Ce que font les débutants :** "Voilà mon codebase complet [colle 3000 lignes de code], voilà mes requirements [colle 500 lignes de spec], maintenant construis la feature."
+
+**Pourquoi c'est mauvais :** Claude noie dans du contexte irrelevant, la fenêtre de contexte se remplit inutilement, et la qualité baisse.
+
+**Mieux :** Donnez seulement les fichiers directement pertinents. Faites confiance à Claude pour lire ce dont il a besoin avec l'outil Read.
+
+### Antipattern 2 : Approuver les permissions sans lire
+
+Approuver "Exécuter bash" sans regarder la commande, c'est comme signer un document sans le lire. Claude Code peut exécuter des commandes réelles avec des effets réels.
+
+**Règle :** Lisez chaque demande de permission avant d'approuver. Si quelque chose semble inattendu, demandez des clarifications.
+
+### Antipattern 3 : Pas de CLAUDE.md → pas de mémoire de projet
+
+Sans CLAUDE.md, chaque session repart de zéro. Claude re-découvrira votre stack, vos conventions, vos décisions d'architecture — à chaque fois.
+
+30 minutes investies dans un bon CLAUDE.md économisent des heures de répétition.
+
+### Antipattern 4 : Demander tout en une seule fois
+
+"Construis une app complète avec auth, base de données, dashboard, paiements, notifications et déploiement" — en une requête.
+
+**Pourquoi c'est mauvais :** Trop de scope, trop de risques d'erreurs, impossible à debugger si quelque chose ne va pas.
+
+**Mieux :** Découpez. Auth d'abord. Vérifiez que ça marche. Puis database. Etc. Chaque étape doit être vérifiable.
+
+### Antipattern 5 : Ignorer la sortie des outils avant de confirmer le succès
+
+"Est-ce que les tests passent ?" / "Oui, les tests passent." — sans que Claude ait réellement exécuté les tests.
+
+**Règle :** Si Claude affirme que quelque chose fonctionne, exigez qu'il vous montre la sortie de la commande qui le prouve. `npm test -- --run` doit afficher des checkmarks verts, pas une affirmation théorique.
+
+---
+
+## Conclusion
+
+La différence entre un utilisateur basique et un utilisateur expert de Claude Code n'est pas la vitesse de frappe — c'est la structure. CLAUDE.md bien tenu, prompts précis, agents parallèles, hooks automatiques, commits fréquents : chaque pratique multiplie l'efficacité.
+
+**Vous voulez mettre en place ces pratiques pour votre équipe ?** [Service d'onboarding ClawHelp →](/services/team-onboarding/)

@@ -9,10 +9,18 @@ import { formatDate } from '@/lib/utils'
 interface ResourceCardProps {
   resource: Resource
   locale: string
+  /** Override the base path for the resource link (default: /resources) */
+  basePath?: string
 }
 
-export function ResourceCard({ resource, locale }: ResourceCardProps) {
+function getResourcePath(resource: Resource): string {
+  if (resource.category === 'comparison') return `/compare/${resource.slug}`
+  return `/resources/${resource.slug}`
+}
+
+export function ResourceCard({ resource, locale, basePath }: ResourceCardProps) {
   const t = useTranslations('resources')
+  const href = basePath ? `${basePath}/${resource.slug}` : getResourcePath(resource)
 
   return (
     <Card className="flex flex-col h-full group hover:ring-1 hover:ring-blue-200 transition-all">
@@ -38,7 +46,7 @@ export function ResourceCard({ resource, locale }: ResourceCardProps) {
             </span>
           </div>
           <Link
-            href={`/resources/${resource.slug}`}
+            href={href}
             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium group/link"
           >
             {t('readMore')}

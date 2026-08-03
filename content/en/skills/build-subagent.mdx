@@ -1,0 +1,311 @@
+---
+slug: build-subagent
+title: "How to Build Subagents in Claude Code"
+description: "Learn how Claude Code spawns subagents using the Agent tool — with prompt design, context passing, isolation modes, parallel dispatch, and real examples."
+category: how-to
+tags: [subagents, agents, multi-agent, claude-code, orchestration]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 12
+relatedServices: [agent-development]
+seoTitle: "Claude Code Subagents: Build & Orchestrate Agents Guide | ClawHelp"
+seoDescription: "Master subagents in Claude Code — how the Agent tool works, how to write subagent prompts, pass context, run agents in parallel, and handle results."
+schema: HowTo
+---
+
+# How to Build Subagents in Claude Code
+
+Subagents are independent Claude instances that an orchestrator agent spawns to handle specific tasks. They have their own context windows, their own tool access, and they return their results back to the parent. Claude Code exposes this capability through the **Agent tool**, which is available to the model during an agentic session.
+
+This guide explains what subagents are, when to use them, how to write prompts for them, how to dispatch them in parallel, and how to avoid the most common mistakes.
+
+---
+
+## What Subagents Are
+
+When Claude Code runs a task, it operates within a single context window — a bounded conversation between you, the model, and its tool calls. For most tasks, this is sufficient. For complex tasks, it creates two problems:
+
+1. **Context exhaustion.** A long task fills the context window. When the window is full, the model can no longer see earlier parts of the task and performance degrades.
+2. **Coupling.** When one part of a task fails or produces noisy output, it contaminates the context for subsequent parts.
+
+A subagent solves both problems. It is a fresh Claude instance — its own context window, starting from scratch — that receives only what it needs via its prompt. When the subagent finishes, it returns a result to the orchestrator. The orchestrator sees the result, not the full trace of how the subagent got there.
+
+Subagents are not always faster. They carry overhead: each one makes API calls, processes its prompt, and may run its own tool calls. The benefit is isolation and parallelism, not raw speed.
+
+---
+
+## When to Use Subagents
+
+Use subagents when your task has clearly separable components that either:
+
+- **Can run in parallel** — two independent subtasks that don't need each other's output to start.
+- **Need context protection** — you don't want the output of one subtask polluting the orchestrator's reasoning about another.
+- **Are large enough** — a subagent task should take at least several tool calls to justify the overhead.
+
+**Good candidates:**
+- Run a security audit on the codebase while simultaneously running the test suite.
+- Research library documentation while another agent reads the existing implementation.
+- Process 10 files independently, one subagent per file.
+- Generate a draft, then spawn a separate review agent to critique it.
+
+**Poor candidates:**
+- A two-line task that's faster to do inline.
+- Tasks that need the orchestrator's current state (memory, half-completed edits) to proceed.
+- Anything that requires tight back-and-forth with the user — subagents can't address the user directly.
+
+---
+
+## The Agent Tool — Parameters
+
+The Agent tool is called by the model (not by you directly). When you write a CLAUDE.md or a system prompt that asks Claude to use subagents, you're instructing the orchestrator to emit Agent tool calls. Understanding the parameters helps you write better orchestration prompts.
+
+```
+Agent(
+  description: string        // Short label — shown in the UI, used in logs
+  prompt: string             // Full task description for the subagent
+  subagent_type?: string     // "general" (default) | model name override
+  run_in_background?: bool   // Fire-and-forget; orchestrator continues immediately
+  isolation?: string         // "none" (default) | "worktree"
+)
+```
+
+**`description`** — Keep it short and human-readable: `"Security audit of auth module"`, `"Test suite runner"`. It's the label you'll see in Claude Code's UI when multiple agents run.
+
+**`prompt`** — This is the entire world the subagent sees. Write it as if you're handing the task to a person who knows nothing about your current session. See the prompt design section below.
+
+**`subagent_type`** — Lets you route tasks to a different model. Use `claude-opus-4-5` for complex reasoning tasks, `claude-haiku-4-5` for high-volume cheap tasks. If omitted, the subagent uses the same model as the orchestrator.
+
+**`run_in_background`** — If `true`, the orchestrator doesn't wait for the subagent to finish. The orchestrator continues to its next step. Useful for fire-and-forget tasks like logging or cache warming; less useful when the orchestrator needs the result to proceed.
+
+**`isolation`** — `"worktree"` creates a separate git worktree copy of the repository before running the subagent. The subagent can make file edits without touching the orchestrator's working tree. Results are merged back when the subagent returns. Use this when subagents will edit files simultaneously.
+
+---
+
+## Writing Good Subagent Prompts
+
+The most common subagent failure is an underspecified prompt. Because the subagent starts with no memory of the parent session, it can't infer context that seems obvious to the orchestrator.
+
+### Checklist for every subagent prompt
+
+**1. State the goal explicitly.**
+Don't write "review the auth module." Write "Review the file `src/auth/jwt.ts` for security vulnerabilities. Focus on token expiry handling, signature verification, and secret management. Return a markdown list of findings with severity (high/medium/low) for each."
+
+**2. Pass the necessary context inline.**
+If the subagent needs to know about a constraint, include it:
+
+```
+You are reviewing a codebase that uses Express 4.x with JWT authentication.
+The API key is stored in the environment variable ANTHROPIC_API_KEY.
+Do NOT read or log the contents of .env files.
+```
+
+**3. Specify the output format.**
+The orchestrator will parse or summarize the subagent's return value. If you need structured output, say so:
+
+```
+Return your findings as JSON with this shape:
+{ "severity": "high" | "medium" | "low", "file": string, "line": number, "description": string }[]
+```
+
+**4. Tell the subagent what NOT to do.**
+Subagents will attempt to complete tasks thoroughly. If there are boundaries — files to skip, actions to avoid — state them explicitly:
+
+```
+Do NOT make any file edits. Read-only analysis only.
+Do NOT install any packages.
+Limit your search to the src/ directory.
+```
+
+**5. Include a stopping condition.**
+Subagents without a clear finish criterion may over-explore:
+
+```
+Stop after you have analyzed all files matching src/auth/**/*.ts.
+Do not expand the search to other directories.
+```
+
+---
+
+## Context Passing
+
+Subagents cannot access the orchestrator's memory, open files, or previous tool call results. Every piece of information the subagent needs must be in its prompt.
+
+### Patterns for passing context
+
+**Pass file paths, not file contents (for large files):**
+
+```
+Read the file at /home/user/project/src/auth/jwt.ts and audit it for vulnerabilities.
+```
+
+The subagent will use the Read tool to fetch the file itself. This keeps the prompt short.
+
+**Pass small content inline (for short snippets):**
+
+```
+Here is the relevant function. Review it for SQL injection risks:
+
+```typescript
+async function getUserById(id: string) {
+  return db.query(`SELECT * FROM users WHERE id = '${id}'`);
+}
+```
+```
+
+**Pass results from previous steps as structured data:**
+
+If the orchestrator ran a test suite and got a list of failing tests, pass that list:
+
+```
+The following tests are failing. Diagnose the root cause for each and propose a fix.
+Do not run the tests — only analyze the code.
+
+Failing tests:
+- UserController > createUser > should validate email format
+- AuthService > login > should reject expired tokens
+- ...
+```
+
+---
+
+## Parallel Dispatch
+
+To run multiple subagents simultaneously, the orchestrator emits multiple Agent tool calls in a single response. Claude Code executes them in parallel and waits for all of them to finish before continuing.
+
+Here is how to instruct the orchestrator to do this in your system prompt or CLAUDE.md:
+
+```markdown
+## Orchestration Instructions
+
+When facing tasks with independent components, spawn multiple subagents in a single
+response. For example, if asked to "audit security and run tests":
+
+1. Spawn a subagent to audit src/auth/ for security vulnerabilities.
+2. In the same response, spawn a second subagent to run `npm test` and collect failures.
+3. Wait for both to complete, then synthesize their reports.
+
+Never run these sequentially when they can run in parallel.
+```
+
+The orchestrator will emit something like this (conceptually):
+
+```
+Agent(description="Security audit", prompt="Audit src/auth/ for vulnerabilities...")
+Agent(description="Test runner", prompt="Run npm test and report all failures...")
+```
+
+Both run concurrently. The orchestrator receives both results, then reasons about them together.
+
+---
+
+## Background Agents
+
+Setting `run_in_background: true` tells the orchestrator not to wait for the subagent. The orchestrator moves on immediately. The subagent completes asynchronously and the result is delivered to the orchestrator later.
+
+Use this for:
+- Notifications (posting a Slack message, writing a log entry)
+- Cache warming or pre-computation that the orchestrator doesn't immediately need
+- Long-running tasks when you want the main flow to continue
+
+Avoid this when the orchestrator's next step depends on the subagent's output — the result won't be available in time.
+
+---
+
+## Isolation Modes
+
+**`isolation: "none"` (default)** — The subagent works in the same git working tree as the orchestrator. File edits by the subagent are immediately visible to the orchestrator and vice versa. Fine for read-only subagents or when only one subagent edits files at a time.
+
+**`isolation: "worktree"`** — Claude Code creates a new git worktree (a parallel checkout of the same repository) for the subagent. The subagent's edits happen in that worktree and don't affect the orchestrator's working directory. When the subagent finishes, its changes can be merged back or discarded.
+
+Use `worktree` isolation when:
+- Multiple subagents will edit the same files simultaneously.
+- You want to preview what a subagent would do without committing to it.
+- A subagent might make destructive edits that you want to be able to discard.
+
+---
+
+## Reading Subagent Results
+
+The subagent's final response (whatever it outputs at the end of its session) is returned to the orchestrator as the result of the Agent tool call. The orchestrator can then:
+
+- Summarize multiple results for the user
+- Use the results as input for the next step
+- Decide whether to retry or escalate based on the result
+
+Design your subagent prompts to produce a clean, parseable result. If the subagent returns a wall of reasoning text, the orchestrator has to do extra work to extract the signal.
+
+---
+
+## Real Example: Research and Code Review in Parallel
+
+Here is a worked example showing an orchestrator that spawns two subagents in parallel: one to research a library's API, another to review the existing implementation.
+
+**Orchestrator prompt (in CLAUDE.md or system prompt):**
+
+```markdown
+You are a senior engineering assistant. When asked to "upgrade a dependency," do the following:
+
+1. In a single response, spawn two subagents simultaneously:
+
+   Subagent A — Research:
+   Read the CHANGELOG and README of the new library version in node_modules.
+   Return a markdown summary of breaking changes and new APIs relevant to our codebase.
+
+   Subagent B — Review current usage:
+   Search the src/ directory for all imports and calls to the old library.
+   Return a list of every usage location with file path and line number.
+
+2. After both subagents return, synthesize their findings:
+   - Map each breaking change to the affected usage locations.
+   - Propose a specific code change for each affected file.
+
+3. Only then begin making edits.
+```
+
+With this setup, the research and the usage scan happen in parallel. The orchestrator synthesizes when both are done, then proceeds with a complete picture — rather than discovering a breaking change mid-edit.
+
+---
+
+## Common Mistakes
+
+**Subagent prompt refers to "the above" or "as discussed."**
+The subagent has no memory of the conversation above. Every reference must be explicit.
+
+**Orchestrator waits for a background agent's result.**
+If `run_in_background: true`, the result is not available in the next step. Only use background agents when the orchestrator genuinely doesn't need the output.
+
+**Parallel agents edit the same file without worktree isolation.**
+Two subagents writing to the same file will corrupt each other's work. Either serialize their execution or use `isolation: "worktree"` and merge afterward.
+
+**Subagent prompt is too open-ended.**
+"Review the codebase for issues" will cause the subagent to spend its entire context window on a broad scan. Scope the task: "Review `src/api/routes/users.ts` for input validation issues."
+
+**Spawning subagents for trivial tasks.**
+Each subagent call has latency and cost overhead. A task that takes two tool calls inline does not benefit from being delegated to a subagent.
+
+---
+
+## Next Steps
+
+- [Claude Code Hooks](/skills/claude-code-hooks) — trigger shell scripts before and after tool calls, including Agent calls
+- [Complete installation guide](/skills/install-claude-code) — get Claude Code running if you haven't yet
+- [Linux installation guide](/skills/install-claude-code-linux) — headless server setup for running agents in CI
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Build Subagents in Claude Code",
+  "description": "Build and orchestrate subagents in Claude Code using the Agent tool",
+  "step": [
+    { "@type": "HowToStep", "name": "Identify parallelizable or isolable subtasks", "text": "Determine which parts of your task are independent and benefit from a separate context window." },
+    { "@type": "HowToStep", "name": "Write a self-contained subagent prompt", "text": "Include all context the subagent needs — file paths, constraints, output format — without relying on session memory." },
+    { "@type": "HowToStep", "name": "Choose isolation mode", "text": "Use isolation: worktree when multiple subagents will edit files simultaneously." },
+    { "@type": "HowToStep", "name": "Dispatch in parallel", "text": "Instruct the orchestrator to emit multiple Agent tool calls in a single response." },
+    { "@type": "HowToStep", "name": "Synthesize results", "text": "After all subagents return, have the orchestrator combine their outputs before taking further action." }
+  ]
+}
+*/}

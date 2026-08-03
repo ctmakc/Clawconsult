@@ -1,0 +1,218 @@
+---
+slug: claude-md-starter
+title: "CLAUDE.md Starter Template for Next.js + TypeScript Projects"
+description: "A ready-to-use CLAUDE.md template for a Next.js / TypeScript web app — covers stack, commands, conventions, testing setup, deployment notes, and off-limits files."
+category: template
+tags: [claude-md, next-js, typescript, configuration, project-setup, templates]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 7
+lang: "en"
+relatedServices: [claude-code-setup, team-onboarding]
+seoTitle: "CLAUDE.md Starter Template — Next.js + TypeScript | ClawHelp"
+seoDescription: "Copy-paste CLAUDE.md template for Next.js 15 / TypeScript projects. Covers stack, dev commands, testing, conventions, deployment, and off-limits files. Get Claude productive in minutes."
+schema: HowTo
+---
+
+# CLAUDE.md Starter Template — Next.js + TypeScript
+
+`CLAUDE.md` is the single most impactful file you can add to a Claude Code project. It is loaded automatically at the start of every session and gives Claude persistent context about your stack, structure, conventions, and constraints — so you never have to re-explain them.
+
+This template covers a standard Next.js 15 + TypeScript project. Copy it to the root of your repository, fill in the blanks, and delete sections that don't apply.
+
+---
+
+## How to Use This Template
+
+1. Copy the code block below into a file named `CLAUDE.md` at your project root.
+2. Replace placeholder values (in `<angle brackets>`) with your actual settings.
+3. Delete any section that isn't relevant to your project.
+4. Commit `CLAUDE.md` to version control — it's documentation that your whole team benefits from.
+
+Keep `CLAUDE.md` under 300 lines. A file that takes 15 minutes to read defeats its own purpose.
+
+---
+
+## The Template
+
+```markdown
+# <Project Name> — Claude Code Context
+
+> Read this file at the start of every session. Do not skip it.
+
+## Stack
+
+- **Framework:** Next.js 15, App Router, React 19
+- **Language:** TypeScript 5, strict mode enabled
+- **Styling:** Tailwind CSS 3, shadcn/ui component library
+- **Database:** PostgreSQL via Prisma ORM (or Drizzle — pick one)
+- **Auth:** NextAuth.js v5 (Auth.js)
+- **Testing:** Vitest for unit/integration, Playwright for E2E
+- **Package manager:** pnpm
+- **Node version:** 20 LTS (see `.nvmrc`)
+
+## Project Structure
+
+```
+src/
+  app/           # Next.js App Router — pages, layouts, API routes
+  components/    # Shared UI components
+  lib/           # Business logic, utilities, server actions
+    db/          # Database client and query helpers
+    auth/        # Auth utilities and session helpers
+    api/         # External API client wrappers
+  hooks/         # React hooks (client-side only)
+  types/         # Shared TypeScript types and interfaces
+public/          # Static assets
+prisma/          # Schema and migrations (never edit manually)
+tests/
+  unit/          # Vitest unit tests, mirrors src/ structure
+  e2e/           # Playwright E2E tests
+```
+
+## Development Commands
+
+```bash
+pnpm dev          # Start dev server on http://localhost:3000
+pnpm build        # Production build (run before deploying)
+pnpm test         # Run all Vitest unit tests
+pnpm test:watch   # Run tests in watch mode
+pnpm test:e2e     # Run Playwright E2E tests (needs running server)
+pnpm lint         # ESLint + Prettier check
+pnpm lint:fix     # Auto-fix lint issues
+pnpm db:migrate   # Run pending Prisma migrations
+pnpm db:studio    # Open Prisma Studio on http://localhost:5555
+pnpm typecheck    # Run tsc --noEmit
+```
+
+## Coding Conventions
+
+### File naming
+- React components: PascalCase (`UserProfile.tsx`)
+- Utilities, hooks, lib: camelCase (`useSession.ts`, `formatDate.ts`)
+- API route handlers: `route.ts` inside the route folder
+- Test files: `*.test.ts` for unit, `*.spec.ts` for E2E
+
+### TypeScript
+- Always explicit return types on exported functions
+- Prefer `type` over `interface` unless extending
+- No `any` — use `unknown` and narrow
+- Import types with `import type { ... }`
+
+### Error handling
+- Business logic: use `Result<T, E>` pattern (see `src/types/result.ts`), not try/catch
+- API routes: return typed error objects `{ error: string; code: string }`
+- Client components: use error boundaries, not inline try/catch in render
+
+### Database
+- All DB queries live in `src/lib/db/` — never query directly from components or API routes
+- Every query file exports typed functions; raw Prisma client stays in `src/lib/db/client.ts`
+- Transactions for any operation touching more than one table
+
+### Components
+- Server Components by default — add `"use client"` only when needed
+- Props interfaces in the same file as the component
+- shadcn/ui components are in `src/components/ui/` — do not edit generated files directly
+
+## Environment Variables
+
+Required in `.env.local` for local development:
+
+```
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=http://localhost:3000
+# Add your own below
+```
+
+Never commit `.env.local` or `.env`. Production secrets live in <Vercel / Railway / your platform> environment settings.
+
+## Testing
+
+- Unit tests must be co-located in `tests/unit/` and mirror the `src/` path
+- Every new `src/lib/` function needs at least a happy-path and an error-path test
+- Playwright tests run against `http://localhost:3000` — start the dev server first
+- Run `pnpm typecheck && pnpm lint && pnpm test` before every commit
+
+## Deployment
+
+- **Platform:** <Vercel / Railway / Fly.io>
+- **Branch → environment mapping:**
+  - `main` → production (auto-deploy on merge)
+  - `staging` → staging environment
+- **Before merging to main:** CI must pass (lint + typecheck + tests)
+- **Database migrations:** run `pnpm db:migrate` in CI before deploy step
+
+## Off-Limits Files
+
+Never modify these directly — they are auto-generated or managed by tooling:
+
+- `prisma/migrations/` — generated by Prisma, never edit
+- `src/components/ui/` — generated by shadcn/ui CLI, regenerate with `pnpm shadcn add`
+- `.next/` — build output
+- `playwright-report/` — test reports
+
+## Domain Vocabulary
+
+> Use these terms consistently. Do not invent synonyms.
+
+- **User** — authenticated person with an account
+- **Guest** — unauthenticated visitor
+- **<Term>** — <definition>
+- **<Term>** — <definition>
+
+## Contacts / Ownership
+
+- Backend / DB: <name or team>
+- Frontend: <name or team>
+- Infrastructure / deploys: <name or team>
+```
+
+---
+
+## Section-by-Section Notes
+
+### Stack section
+List exact version numbers for anything version-sensitive. "Next.js" is not enough — "Next.js 15, App Router" tells Claude which APIs to use.
+
+### Project structure
+You don't need to list every directory. Focus on the non-obvious parts — where business logic lives, where queries live, why things are split the way they are.
+
+### Commands
+Every command Claude might need to run while working on your code. If running the command requires a flag or an env var to be set, include it here.
+
+### Conventions
+The tightest ROI section. Every convention you document here is a code review comment Claude won't make you leave.
+
+### Off-limits files
+This prevents a class of mistakes where Claude helpfully "improves" auto-generated files that will be overwritten on the next tool run.
+
+### Domain vocabulary
+If your codebase has business terms that differ from common usage (e.g., "Member" means something specific that differs from "User"), document them. Inconsistent terminology is one of the most common sources of Claude misunderstanding intent.
+
+---
+
+## Next Steps
+
+- [Effective Claude Code practices](/skills/effective-claude-code) — how to get the most out of sessions once your CLAUDE.md is set up
+- [Claude Code hooks guide](/skills/claude-code-hooks) — automate formatting, linting, and backups on lifecycle events
+- [Project kickstart prompt template](/templates/project-kickstart) — the prompt to use when starting a brand-new project with Claude Code
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Set Up CLAUDE.md for a Next.js TypeScript Project",
+  "description": "Create a CLAUDE.md file that gives Claude Code persistent context about your Next.js project — stack, commands, conventions, and constraints.",
+  "step": [
+    { "@type": "HowToStep", "name": "Copy the template", "text": "Copy the CLAUDE.md template from this page into a file named CLAUDE.md at the root of your project." },
+    { "@type": "HowToStep", "name": "Fill in project details", "text": "Replace all placeholder values in angle brackets with your actual project name, stack versions, commands, and team contacts." },
+    { "@type": "HowToStep", "name": "Remove irrelevant sections", "text": "Delete sections that don't apply to your project to keep the file under 300 lines." },
+    { "@type": "HowToStep", "name": "Commit to version control", "text": "Add CLAUDE.md to git and commit it so all team members benefit from the shared context." },
+    { "@type": "HowToStep", "name": "Verify Claude reads it", "text": "Start a new Claude Code session and ask 'What is the dev command for this project?' — Claude should answer from CLAUDE.md without you telling it." }
+  ]
+}
+*/}

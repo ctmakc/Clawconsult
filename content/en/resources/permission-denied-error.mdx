@@ -1,0 +1,168 @@
+---
+slug: permission-denied-error
+title: "Claude Code Permission Denied Error — Causes and Fixes"
+description: "How to diagnose and fix the Claude Code permission denied error. Covers npm permissions, ~/.claude/ directory issues, and blocked bash tools."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, permissions, bash, errors]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 3
+seoTitle: "Claude Code Permission Denied Error — Fix It | ClawHelp"
+seoDescription: "Fix the claude code permission denied error. Step-by-step solutions for npm permission errors, ~/.claude directory issues, and blocked bash tool access."
+---
+
+# Claude Code Permission Denied Error
+
+**Problem**: Claude Code returns a "Permission denied" error when attempting to run bash commands, install packages, edit files, or access the `~/.claude/` directory.
+
+This is one of the most common issues new Claude Code users encounter. The error usually points to one of three root causes — and each has a clean fix.
+
+---
+
+## Root Cause 1: npm Global Permissions
+
+The most frequent trigger. When Claude Code tries to install or run an npm package globally and your system npm directory is owned by root, you see:
+
+```
+Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/...'
+```
+
+or from Claude Code's output:
+
+```
+Bash tool error: permission denied running npm install -g ...
+```
+
+### Fix
+
+The correct fix is to reconfigure npm to use a user-writable directory — not `sudo npm`. Using sudo with npm breaks package security and creates more permission problems downstream.
+
+**Step 1**: Create a directory for global npm packages:
+```bash
+mkdir -p ~/.npm-global
+```
+
+**Step 2**: Configure npm to use it:
+```bash
+npm config set prefix '~/.npm-global'
+```
+
+**Step 3**: Add it to your PATH. In `~/.bashrc` or `~/.zshrc`:
+```bash
+export PATH="$HOME/.npm-global/bin:$PATH"
+```
+
+**Step 4**: Reload your shell:
+```bash
+source ~/.bashrc   # or ~/.zshrc
+```
+
+After this, npm global installs run without root and without sudo. Claude Code can run them freely.
+
+**Verify**: Run `npm install -g cowsay && cowsay "it works"` without sudo. If it succeeds, the fix is complete.
+
+---
+
+## Root Cause 2: `~/.claude/` Directory Permissions
+
+If your `~/.claude/` directory or its contents were created by a different user (this can happen after running Claude Code with sudo, or after a system restore), Claude Code can't read or write its own settings.
+
+The symptom: Claude Code starts but immediately fails to read settings, or settings changes don't persist.
+
+```bash
+ls -la ~/.claude/
+```
+
+Look for files owned by `root` or another user instead of your own username.
+
+### Fix
+
+**Option A**: If the directory is owned by root:
+```bash
+sudo chown -R $(whoami):$(whoami) ~/.claude/
+```
+
+**Option B**: If individual files have wrong permissions:
+```bash
+chmod -R u+rw ~/.claude/
+```
+
+**Option C** (nuclear, only if nothing else works): Back up your settings first, then remove and let Claude Code recreate the directory:
+```bash
+cp -r ~/.claude/ ~/claude-backup/
+rm -rf ~/.claude/
+# Restart Claude Code — it will recreate the directory with correct permissions
+```
+
+After fixing ownership, restart Claude Code and confirm it reads your settings by checking that your configured tools appear in a new session.
+
+---
+
+## Root Cause 3: Bash Tool Blocked in Settings
+
+Claude Code's bash tool may be explicitly blocked in your `~/.claude/settings.json` or in a project-level `.claude/settings.json`. This is intentional behavior when the setting is configured, but often happens accidentally.
+
+Symptoms:
+- Claude Code says it's running a command but nothing happens
+- You see a message like "Bash tool is not allowed for this session"
+- Commands work in one project but not another
+
+### Fix
+
+**Step 1**: Check your global settings:
+```bash
+cat ~/.claude/settings.json
+```
+
+Look for a `blockedTools` array or a `permissions.deny` section that includes `Bash`:
+
+```json
+{
+  "permissions": {
+    "deny": ["Bash"]
+  }
+}
+```
+
+**Step 2**: Remove the Bash restriction. The minimal fix:
+```json
+{
+  "permissions": {
+    "allow": ["Bash"],
+    "deny": []
+  }
+}
+```
+
+**Step 3**: Also check the project-level settings file if one exists:
+```bash
+cat .claude/settings.json
+```
+
+Project settings override global settings, so a project-level block will prevent bash even if the global setting allows it.
+
+**Step 4**: Restart Claude Code and test with a simple command:
+> "Run `echo hello` in bash"
+
+If the Bash tool was the issue, this will now work.
+
+---
+
+## Prevention Tips
+
+**Never run `claude` with `sudo`**: This creates files in `~/.claude/` owned by root, which breaks subsequent runs as your normal user. If you accidentally ran with sudo, see Root Cause 2 above.
+
+**Use per-project settings for restrictions**: If you want to limit bash access in a specific repo (production-adjacent work, for example), put the restriction in `.claude/settings.json` inside that repo — not in your global settings.
+
+**Audit permissions after system restore**: If you restored your home directory from a backup, check `~/.claude/` ownership before starting Claude Code.
+
+**Use the `allowedTools` list to whitelist, not a blocklist**: Rather than blocking everything and allowing specific tools, it's cleaner to define which bash commands are allowed using the `permissions.allow` pattern with explicit command patterns.
+
+---
+
+## Related Resources
+
+- [MCP Not Connecting](/resources/mcp-not-connecting) — if your MCP server is the source of permission errors
+- [Claude Code Setup Service](/services/claude-code-setup) — professional configuration that avoids these issues from the start
+- [Claude Code Rate Limit Errors](/resources/rate-limit) — a different class of error that can look similar in output

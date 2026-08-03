@@ -1,0 +1,322 @@
+---
+slug: install-claude-code-mac
+title: "Installer Claude Code sur macOS"
+description: "Guide spécifique à macOS pour installer Claude Code, couvrant Homebrew, nvm, Apple Silicon, Rosetta, le stockage de clé API dans le Trousseau et la configuration d'iTerm2."
+category: how-to
+lang: "fr"
+tags: [installation, macos, apple-silicon, claude-code, homebrew]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 7
+relatedServices: [claude-code-setup]
+seoTitle: "Installer Claude Code sur macOS : guide Apple Silicon et Intel 2026 | ClawHelp"
+seoDescription: "Installez Claude Code sur macOS étape par étape. Couvre Homebrew, nvm, Apple Silicon Rosetta, le stockage de clé API dans le Trousseau et les correctifs de permissions sur Mac."
+schema: HowTo
+---
+
+# Installer Claude Code sur macOS
+
+Ce guide couvre tout ce qui est spécifique à macOS pour faire fonctionner Claude Code — de la configuration de Node.js avec Homebrew et nvm, à la compatibilité Apple Silicon, au stockage de la clé API dans le Trousseau (Keychain), et aux recommandations d'émulateurs de terminal. Pour un survol multi-plateformes, commencez par le [guide d'installation complet](/skills/install-claude-code).
+
+---
+
+## Vérification des prérequis macOS
+
+Ouvrez Terminal (ou iTerm2) et effectuez ces vérifications avant d'installer quoi que ce soit :
+
+```bash
+# Version macOS — Sonoma ou Ventura recommandé
+sw_vers -productVersion
+
+# Outils en ligne de commande Xcode — requis pour les modules natifs npm
+xcode-select -p
+# Devrait afficher /Library/Developer/CommandLineTools
+# Sinon : xcode-select --install
+
+# Vérifier si Node.js est déjà installé
+node --version
+npm --version
+```
+
+Si `xcode-select -p` échoue, installez d'abord les outils CLI — ils fournissent `git`, `make` et les compilateurs dont certains paquets npm ont besoin :
+
+```bash
+xcode-select --install
+```
+
+Une boîte de dialogue apparaît. Acceptez et attendez (~5 minutes avec une bonne connexion).
+
+---
+
+## Installer Node.js sur macOS
+
+### Option A : nvm (recommandé)
+
+nvm vous permet de gérer plusieurs versions de Node sans toucher à votre système. C'est le meilleur choix pour les développeurs qui travaillent sur plusieurs projets.
+
+```bash
+# Installer nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# nvm s'ajoute à ~/.zshrc (défaut macOS depuis Catalina) ou ~/.bash_profile
+# Rechargez votre shell :
+source ~/.zshrc   # zsh
+# ou
+source ~/.bash_profile  # bash
+
+# Confirmer que nvm est chargé
+nvm --version
+
+# Installer le dernier Node LTS
+nvm install --lts
+nvm use --lts
+nvm alias default node   # faire du LTS le défaut pour les nouveaux shells
+
+node --version   # v22.x.x ou similaire
+```
+
+### Option B : Homebrew
+
+Si vous êtes déjà utilisateur de Homebrew et préférez moins d'outils :
+
+```bash
+# Installer Homebrew si vous ne l'avez pas
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Installer Node.js LTS
+brew install node@22
+brew link node@22 --force
+
+node --version
+```
+
+Remarque : Homebrew installe une seule version de Node. Si vous avez besoin de changer de version plus tard pour d'autres projets, migrez vers nvm.
+
+---
+
+## Apple Silicon (M1/M2/M3/M4) — Ce que vous devez savoir
+
+Claude Code fonctionne nativement sur Apple Silicon et ne nécessite pas Rosetta 2. Cependant, des problèmes surviennent quand Node.js a été installé sous Rosetta (émulation x86_64) — par exemple si vous aviez une ancienne installation de Node d'avant la mise à jour de votre Mac, ou si vous avez exécuté l'installateur dans un terminal Rosetta.
+
+### Vérifiez l'architecture de votre Node
+
+```bash
+node -e "console.log(process.arch)"
+# arm64  ← correct pour Apple Silicon
+# x64    ← fonctionne sous Rosetta (peut causer des problèmes)
+```
+
+Si vous voyez `x64` sur Apple Silicon, réinstallez Node nativement :
+
+```bash
+# Via nvm — il détecte l'architecture automatiquement
+nvm install --lts
+nvm use --lts
+node -e "console.log(process.arch)"  # devrait maintenant afficher arm64
+```
+
+### Vérification du terminal Rosetta
+
+Terminal.app et iTerm2 prennent tous deux en charge « Ouvrir avec Rosetta » dans Obtenir des informations. Assurez-vous que cette case est **décochée** pour le terminal que vous utilisez avec Claude Code. Un terminal Rosetta installera tout en x86_64.
+
+```bash
+# Vérification rapide — si cela affiche "i386", vous êtes dans un shell Rosetta
+uname -m
+# Devrait afficher : arm64
+```
+
+---
+
+## Installer Claude Code
+
+Avec Node.js 18+ confirmé et sur arm64 (ou Intel x86_64 pour les Mac plus anciens) :
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Vérifiez :
+
+```bash
+claude --version
+```
+
+### Erreur de permissions macOS : EACCES
+
+Si npm a été installé via Homebrew sans correctif de préfixe, vous pourriez obtenir :
+
+```
+npm warn checkPermissions Missing write access to /usr/local/lib/node_modules
+npm error code EACCES
+```
+
+Corrigez avec un préfixe npm appartenant à l'utilisateur :
+
+```bash
+mkdir -p "$HOME/.npm-global"
+npm config set prefix "$HOME/.npm-global"
+
+# Ajoutez à ~/.zshrc :
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# Réinstallez maintenant
+npm install -g @anthropic-ai/claude-code
+```
+
+---
+
+## Stocker votre clé API dans le Trousseau macOS
+
+Mettre votre clé API en dur dans des fichiers `.env` ou des profils shell est un risque de sécurité — ces fichiers finissent dans les sauvegardes, l'historique du shell, et parfois dans des commits git. Le Trousseau macOS (Keychain) est une alternative plus sûre.
+
+### Ajouter la clé dans le Trousseau
+
+```bash
+security add-generic-password \
+  -a "$USER" \
+  -s "anthropic-api-key" \
+  -w "sk-ant-api03-VOTRE_CLE_ICI"
+```
+
+### La charger dans votre profil shell
+
+Ajoutez ceci à `~/.zshrc` :
+
+```bash
+export ANTHROPIC_API_KEY=$(
+  security find-generic-password -a "$USER" -s "anthropic-api-key" -w 2>/dev/null
+)
+```
+
+Chaque nouveau shell récupère maintenant la clé du Trousseau sans la stocker en texte clair. Claude Code lit `ANTHROPIC_API_KEY` automatiquement — aucune invite d'authentification interactive n'est nécessaire.
+
+### Vérification
+
+```bash
+source ~/.zshrc
+echo $ANTHROPIC_API_KEY | cut -c1-10   # devrait afficher "sk-ant-api" sans exposer la clé complète
+claude --version  # test rapide
+```
+
+---
+
+## Gatekeeper macOS et avertissements de sécurité
+
+Au premier lancement, Gatekeeper macOS peut afficher : *« claude ne peut pas être ouvert car Apple ne peut pas vérifier s'il contient des logiciels malveillants. »*
+
+Cela se produit parce que le binaire `claude` est une enveloppe JavaScript installée par npm — pas un paquet d'application macOS signé. C'est un comportement attendu. Autorisez-le via les Réglages Système :
+
+1. Ouvrez **Réglages Système → Confidentialité et sécurité**.
+2. Faites défiler jusqu'à la section « Sécurité » — vous verrez un message comme *« claude a été bloqué car il ne provient pas d'un développeur identifié. »*
+3. Cliquez sur **Autoriser quand même**.
+4. Relancez `claude` dans le terminal et cliquez sur **Ouvrir** dans la boîte de dialogue de confirmation.
+
+C'est la procédure correcte approuvée par Gatekeeper. Anthropic publie Claude Code via npm, et macOS apprend à lui faire confiance après que vous l'avez explicitement autorisé une fois via les Réglages Système.
+
+---
+
+## Recommandations de terminal pour macOS
+
+### iTerm2 (recommandé)
+
+[iTerm2](https://iterm2.com) est le terminal le plus adapté aux développeurs sur macOS. Avantages pour les utilisateurs de Claude Code :
+
+- **Volets divisés** — exécutez `claude` dans un volet, surveillez les journaux ou les tests dans un autre sans quitter la fenêtre.
+- **Intégration shell** — iTerm2 peut marquer les sorties de commandes, facilitant le défilement arrière dans les sorties de Claude.
+- **Profils** — créez un profil Claude Code dédié avec une police plus grande et une largeur de colonne plus importante (120+).
+
+Paramètres iTerm2 utiles pour Claude Code :
+
+```
+Préférences → Profils → Terminal → Tampon de défilement : Illimité
+Préférences → Profils → Terminal → Colonnes : 220
+Préférences → Touches → Raccourcis : lier Cmd+D à "Diviser le volet verticalement"
+```
+
+### Terminal.app
+
+Le Terminal macOS par défaut fonctionne bien. Aucune configuration particulière n'est nécessaire. Si vous utilisez Terminal, pensez à définir la taille de la fenêtre à au moins 200 colonnes — les sorties de Claude Code peuvent être larges.
+
+### Warp
+
+[Warp](https://warp.dev) dispose de fonctionnalités IA natives qui peuvent entrer en conflit avec le mode interactif de Claude Code. Ça fonctionne, mais attendez-vous à quelques bizarreries d'interface dans le REPL interactif. Désactivez l'IA Warp si vous trouvez qu'elle intercepte les sorties de Claude Code.
+
+---
+
+## Problèmes courants spécifiques à macOS
+
+### `zsh: command not found: claude` après l'installation
+
+La mise à jour de votre `PATH` n'a pas encore été appliquée. Soit redémarrez le terminal, soit :
+
+```bash
+source ~/.zshrc
+which claude  # devrait afficher le chemin
+```
+
+### nvm introuvable après l'installation
+
+Le script d'installation de nvm modifie `~/.zshrc` mais le changement n'entre en vigueur que dans les nouveaux shells :
+
+```bash
+source ~/.zshrc
+nvm --version
+```
+
+Si toujours introuvable, vérifiez que `~/.zshrc` contient les lignes d'initialisation de nvm :
+
+```bash
+grep -n "nvm" ~/.zshrc
+```
+
+Si rien n'apparaît, relancez l'installateur nvm — il est idempotent.
+
+### `SyntaxError: Unexpected token` au démarrage
+
+Cela signifie qu'une ancienne version de Node est utilisée. Vérifiez quel `node` est dans le PATH :
+
+```bash
+which node
+node --version
+```
+
+Si ce n'est pas la version gérée par nvm, assurez-vous que `nvm use` ou `nvm alias default` a été exécuté :
+
+```bash
+nvm use --lts
+# ou
+nvm alias default node
+```
+
+Puis ouvrez une nouvelle fenêtre de terminal pour confirmer que le défaut persiste.
+
+---
+
+## Prochaines étapes
+
+- [Guide d'installation complet (toutes plateformes)](/skills/install-claude-code)
+- [Guide d'installation Windows](/skills/install-claude-code-windows)
+- [Guide d'installation Linux](/skills/install-claude-code-linux)
+- [Hooks Claude Code](/skills/claude-code-hooks) — automatisez des actions sur les écritures de fichiers, les appels d'outils et les événements de session
+- [Création de sous-agents](/skills/build-subagent) — instanciez des agents parallèles pour la recherche et la révision de code
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Installer Claude Code sur macOS",
+  "description": "Guide spécifique à macOS pour installer Claude Code avec Homebrew, nvm et la prise en charge d'Apple Silicon",
+  "totalTime": "PT15M",
+  "step": [
+    { "@type": "HowToStep", "name": "Installer les outils en ligne de commande Xcode", "text": "Exécutez : xcode-select --install" },
+    { "@type": "HowToStep", "name": "Installer Node.js via nvm ou Homebrew", "text": "Utilisez nvm install --lts pour la gestion des versions" },
+    { "@type": "HowToStep", "name": "Vérifier l'architecture Apple Silicon", "text": "Exécutez : node -e \"console.log(process.arch)\" — devrait afficher arm64" },
+    { "@type": "HowToStep", "name": "Installer Claude Code", "text": "Exécutez : npm install -g @anthropic-ai/claude-code" },
+    { "@type": "HowToStep", "name": "Stocker la clé API dans le Trousseau", "text": "Utilisez security add-generic-password pour stocker ANTHROPIC_API_KEY en toute sécurité" }
+  ]
+}
+*/}

@@ -1,0 +1,462 @@
+---
+slug: claude-code-hooks-guide
+title: "Claude Code Hooks: Complete Guide to Automating Your Workflow"
+description: "Everything you need to know about Claude Code's hooks system — pre-tool-call and post-tool-call hooks, configuration in .claude/settings.json, auto-formatting, safety checks, logging, and approval gates."
+category: guide
+schema: Article
+tags: [hooks, automation, settings, safety, workflow, formatting]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+seoTitle: "Claude Code Hooks Guide: Pre/Post Tool-Call Hooks & Configuration | ClawHelp"
+seoDescription: "Master Claude Code hooks — configure pre-tool-call and post-tool-call hooks in .claude/settings.json for auto-formatting, safety checks, logging, and approval gates."
+---
+
+# Claude Code Hooks: Complete Guide to Automating Your Workflow
+
+Claude Code's hooks system lets you intercept and respond to tool calls — the individual actions Claude takes like reading files, running shell commands, or writing code. Hooks are shell commands you define that run automatically before or after specific tool calls, giving you a powerful layer of control and automation without requiring any changes to how you prompt Claude.
+
+This guide covers everything: what hooks are, how to configure them, and the most useful patterns for real-world projects.
+
+---
+
+## What Are Claude Code Hooks?
+
+When Claude Code takes an action — reading a file, executing a shell command, writing to disk — it does so through a defined set of tools. Hooks let you attach shell commands to these tool calls at two points:
+
+- **Pre-tool-call hooks**: Run before the tool executes. Can block the tool call entirely based on exit code.
+- **Post-tool-call hooks**: Run after the tool executes, receiving the tool's output.
+
+Hooks are defined per-tool and can match specific tools or apply broadly. They run as shell commands with access to the tool call context via environment variables and stdin.
+
+**Why hooks matter:**
+
+Without hooks, Claude Code operates in its own loop — it decides what to do, does it, observes the result, and continues. Hooks give you attachment points to inject your own logic into that loop: enforce code quality standards, log activity for auditing, gate certain operations behind approval checks, or automatically apply formatting after every file write.
+
+---
+
+## Configuring Hooks in .claude/settings.json
+
+Hooks are defined in `.claude/settings.json` (project-level, shared with your team) or `.claude/settings.local.json` (personal overrides, not committed).
+
+The basic structure:
+
+```json
+{
+  "hooks": {
+    "pre-tool-call": [
+      {
+        "matcher": "tool-name-or-pattern",
+        "command": "your-shell-command"
+      }
+    ],
+    "post-tool-call": [
+      {
+        "matcher": "tool-name-or-pattern",
+        "command": "your-shell-command"
+      }
+    ]
+  }
+}
+```
+
+**The `matcher` field** accepts a tool name string. Use `"*"` to match all tools. Common tool names you'll hook into:
+
+- `"Write"` — file write operations
+- `"Edit"` — file edit operations
+- `"Bash"` — shell command execution
+- `"Read"` — file read operations
+- `"*"` — all tool calls
+
+**The `command` field** is a shell command that Claude Code runs as a subprocess. It receives context about the tool call via environment variables (details below).
+
+**Exit codes matter for pre-tool-call hooks:**
+- Exit `0`: tool call proceeds normally
+- Non-zero exit: tool call is blocked and Claude sees the error output
+
+Post-tool-call hooks always run after the tool completes regardless of exit code, and their exit codes are informational only.
+
+---
+
+## Environment Variables Available in Hooks
+
+When your hook command runs, Claude Code sets these environment variables:
+
+```
+CLAUDE_TOOL_NAME       — The name of the tool being called (e.g., "Write", "Bash")
+CLAUDE_TOOL_INPUT      — JSON-encoded input to the tool
+CLAUDE_TOOL_OUTPUT     — JSON-encoded output from the tool (post-tool-call only)
+CLAUDE_SESSION_ID      — Unique identifier for the current Claude Code session
+CLAUDE_WORKING_DIR     — The working directory Claude Code is operating in
+```
+
+Your hook command can read these variables to make decisions. For example, a pre-tool-call hook on `Bash` can inspect `CLAUDE_TOOL_INPUT` to see what command Claude is about to run, and block it if it matches a disallowed pattern.
+
+---
+
+## Use Case 1: Auto-Formatting After File Writes
+
+The most common hook use case: automatically run your formatter after Claude writes or edits any file, so you never end up with inconsistently formatted code in your working tree.
+
+```json
+{
+  "hooks": {
+    "post-tool-call": [
+      {
+        "matcher": "Write",
+        "command": "prettier --write \"$CLAUDE_WORKING_DIR\" --ignore-unknown 2>/dev/null || true"
+      },
+      {
+        "matcher": "Edit",
+        "command": "prettier --write \"$CLAUDE_WORKING_DIR\" --ignore-unknown 2>/dev/null || true"
+      }
+    ]
+  }
+}
+```
+
+This runs Prettier after every file write. The `|| true` ensures the hook exits 0 even if Prettier has nothing to format, so it never accidentally blocks Claude's workflow.
+
+**For a Python project using Black:**
+
+```json
+{
+  "hooks": {
+    "post-tool-call": [
+      {
+        "matcher": "Write",
+        "command": "black . --quiet 2>/dev/null || true"
+      },
+      {
+        "matcher": "Edit",
+        "command": "black . --quiet 2>/dev/null || true"
+      }
+    ]
+  }
+}
+```
+
+**Per-file formatting** using the tool input to target only the written file:
+
+```json
+{
+  "hooks": {
+    "post-tool-call": [
+      {
+        "matcher": "Write",
+        "command": "echo $CLAUDE_TOOL_INPUT | python3 -c \"import json,sys,os; d=json.load(sys.stdin); os.system(f'prettier --write {d[\\\"path\\\"]} 2>/dev/null || true')\""
+      }
+    ]
+  }
+}
+```
+
+For cleaner implementation, point to a script file:
+
+```json
+{
+  "hooks": {
+    "post-tool-call": [
+      {
+        "matcher": "Write",
+        "command": ".claude/hooks/format-on-write.sh"
+      }
+    ]
+  }
+}
+```
+
+```bash
+#!/bin/bash
+# .claude/hooks/format-on-write.sh
+FILE_PATH=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('path', ''))")
+
+if [[ -n "$FILE_PATH" ]]; then
+  case "$FILE_PATH" in
+    *.ts|*.tsx|*.js|*.jsx|*.json|*.css)
+      prettier --write "$FILE_PATH" 2>/dev/null
+      ;;
+    *.py)
+      black "$FILE_PATH" 2>/dev/null
+      ;;
+    *.go)
+      gofmt -w "$FILE_PATH" 2>/dev/null
+      ;;
+  esac
+fi
+
+exit 0
+```
+
+---
+
+## Use Case 2: Safety Checks — Blocking Dangerous Commands
+
+Pre-tool-call hooks on the `Bash` tool can inspect commands before they run and block anything that matches dangerous patterns. This is your safety net for automated or less-supervised Claude Code sessions.
+
+```bash
+#!/bin/bash
+# .claude/hooks/safety-check.sh
+
+COMMAND=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('command', ''))")
+
+# Block rm -rf on the entire working directory or root
+if echo "$COMMAND" | grep -qE 'rm\s+-rf\s+(/|\./)?\s*$'; then
+  echo "BLOCKED: Refusing to rm -rf the root or working directory."
+  exit 1
+fi
+
+# Block force-push to shared branches
+if echo "$COMMAND" | grep -qE 'git push.*--force.*origin.*(main|master|develop)'; then
+  echo "BLOCKED: Force-push to shared branches is not allowed."
+  exit 1
+fi
+
+# Block production database operations without explicit confirmation
+if echo "$COMMAND" | grep -qE '(DROP TABLE|TRUNCATE|DELETE FROM).*production'; then
+  echo "BLOCKED: Destructive database operations require manual confirmation."
+  exit 1
+fi
+
+exit 0
+```
+
+Configure it:
+
+```json
+{
+  "hooks": {
+    "pre-tool-call": [
+      {
+        "matcher": "Bash",
+        "command": ".claude/hooks/safety-check.sh"
+      }
+    ]
+  }
+}
+```
+
+When this hook exits non-zero, Claude Code sees the error output and typically adjusts its approach. Claude will understand "BLOCKED: Force-push to shared branches is not allowed" and either find an alternative or ask you how to proceed.
+
+**Important**: Safety hooks are a supplement to careful prompting, not a replacement. Claude Code generally respects your instructions about what not to do. Hooks add a programmatic enforcement layer for the things that must never happen regardless of prompt.
+
+---
+
+## Use Case 3: Logging and Auditing
+
+In team environments or for compliance, you may want a record of what Claude Code does. Post-tool-call hooks are ideal for logging:
+
+```bash
+#!/bin/bash
+# .claude/hooks/audit-log.sh
+
+LOG_FILE="${CLAUDE_WORKING_DIR}/.claude/audit.log"
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+echo "{\"timestamp\":\"$TIMESTAMP\",\"session\":\"$CLAUDE_SESSION_ID\",\"tool\":\"$CLAUDE_TOOL_NAME\",\"input\":$(echo $CLAUDE_TOOL_INPUT | python3 -c \"import json,sys; print(json.dumps(json.load(sys.stdin)))\")}" >> "$LOG_FILE"
+
+exit 0
+```
+
+```json
+{
+  "hooks": {
+    "post-tool-call": [
+      {
+        "matcher": "*",
+        "command": ".claude/hooks/audit-log.sh"
+      }
+    ]
+  }
+}
+```
+
+This produces a newline-delimited JSON log of every tool call across all Claude Code sessions in the project. You can analyze it with `jq`:
+
+```bash
+# See all files Claude wrote today
+jq -r 'select(.tool == "Write") | .input.path' .claude/audit.log
+
+# Count tool calls by type
+jq -r '.tool' .claude/audit.log | sort | uniq -c | sort -rn
+
+# See all bash commands Claude ran
+jq -r 'select(.tool == "Bash") | .input.command' .claude/audit.log
+```
+
+**Note**: The audit log will grow large over time. Add a rotation strategy or use `.gitignore` to exclude it from version control if it contains sensitive paths.
+
+---
+
+## Use Case 4: Approval Gates
+
+For operations that should require human confirmation before proceeding, you can implement an approval gate hook. This is particularly useful for deployment operations, external API calls, or irreversible changes.
+
+```bash
+#!/bin/bash
+# .claude/hooks/deployment-gate.sh
+
+COMMAND=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('command', ''))")
+
+# Check if this is a deployment command
+if echo "$COMMAND" | grep -qE '(deploy|kubectl apply|helm upgrade|terraform apply|fly deploy)'; then
+  echo ""
+  echo "=== APPROVAL REQUIRED ==="
+  echo "Claude is about to run:"
+  echo "$COMMAND"
+  echo ""
+  read -p "Allow this deployment? [y/N]: " response
+  
+  if [[ "$response" =~ ^[Yy]$ ]]; then
+    exit 0  # Approved — command proceeds
+  else
+    echo "BLOCKED: Deployment rejected by operator."
+    exit 1  # Blocked — Claude sees this message
+  fi
+fi
+
+exit 0
+```
+
+**Important caveat**: This interactive approval gate only works in interactive Claude Code sessions where you're actively watching the terminal. For non-interactive or headless runs, interactive prompts will hang or fail. In CI/CD pipelines, implement approval gates at the CI level instead (branch protection rules, required reviewers, deployment environments with approval policies).
+
+---
+
+## Use Case 5: Running Tests on File Changes
+
+Automatically run the relevant test suite after Claude edits source files:
+
+```bash
+#!/bin/bash
+# .claude/hooks/run-tests-on-edit.sh
+
+FILE_PATH=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('path', ''))" 2>/dev/null)
+
+# Only run tests if a source file was changed (not configs, docs, etc.)
+if echo "$FILE_PATH" | grep -qE '\.(ts|tsx|js|jsx|py)$' && ! echo "$FILE_PATH" | grep -qE '(\.test\.|\.spec\.|__tests__)'; then
+  echo "Running tests related to $FILE_PATH..."
+  
+  # For Jest: run tests related to the changed file
+  if [ -f "package.json" ] && grep -q '"jest"' package.json; then
+    npx jest --testPathPattern="$(basename "$FILE_PATH" | sed 's/\.[^.]*$//')" --passWithNoTests --silent 2>&1 | tail -5
+  fi
+  
+  # For pytest: run tests
+  if [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
+    python -m pytest --tb=short -q 2>&1 | tail -10
+  fi
+fi
+
+exit 0
+```
+
+This gives Claude Code immediate feedback on whether its changes broke tests, allowing it to course-correct within the same session.
+
+---
+
+## Advanced: Conditional Hooks Based on Context
+
+Hooks can be context-aware. Here's a hook that behaves differently depending on the git branch:
+
+```bash
+#!/bin/bash
+# .claude/hooks/branch-aware-safety.sh
+
+CURRENT_BRANCH=$(git -C "$CLAUDE_WORKING_DIR" branch --show-current 2>/dev/null)
+COMMAND=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('command', ''))")
+
+# On main/master: block all direct commits, require PR workflow
+if [[ "$CURRENT_BRANCH" =~ ^(main|master)$ ]]; then
+  if echo "$COMMAND" | grep -q 'git commit'; then
+    echo "BLOCKED: Direct commits to $CURRENT_BRANCH are not allowed. Create a branch first."
+    exit 1
+  fi
+fi
+
+exit 0
+```
+
+---
+
+## Hooks Configuration Reference
+
+Complete settings.json example with all common hooks:
+
+```json
+{
+  "hooks": {
+    "pre-tool-call": [
+      {
+        "matcher": "Bash",
+        "command": ".claude/hooks/safety-check.sh"
+      },
+      {
+        "matcher": "Bash",
+        "command": ".claude/hooks/branch-aware-safety.sh"
+      }
+    ],
+    "post-tool-call": [
+      {
+        "matcher": "Write",
+        "command": ".claude/hooks/format-on-write.sh"
+      },
+      {
+        "matcher": "Edit",
+        "command": ".claude/hooks/format-on-write.sh"
+      },
+      {
+        "matcher": "*",
+        "command": ".claude/hooks/audit-log.sh"
+      }
+    ]
+  }
+}
+```
+
+**Tips for reliable hooks:**
+
+1. **Always exit explicitly.** Don't rely on implicit exit codes from the last command. Be explicit: `exit 0` or `exit 1`.
+
+2. **Make hook scripts executable.** Run `chmod +x .claude/hooks/*.sh` after creating hooks.
+
+3. **Keep hooks fast.** Hooks run synchronously in Claude's tool execution loop. A hook that takes 5 seconds adds 5 seconds to every file write. Use `&` to fire-and-forget for non-blocking operations like logging.
+
+4. **Handle missing environment variables gracefully.** Always provide defaults or check for empty strings.
+
+5. **Test hooks manually before relying on them.** Run the hook script directly with manually set environment variables to verify it behaves as expected.
+
+---
+
+## Organizing Your Hooks Directory
+
+A clean hooks setup:
+
+```
+.claude/
+  settings.json         ← hook configuration (commit this)
+  settings.local.json   ← personal hook overrides (don't commit)
+  hooks/
+    safety-check.sh     ← pre-commit safety rules
+    format-on-write.sh  ← auto-formatting
+    audit-log.sh        ← session logging
+    run-tests.sh        ← post-edit test runner
+```
+
+Commit the `hooks/` directory and `settings.json` so the entire team gets the same hooks behavior. Put personal overrides in `settings.local.json`.
+
+---
+
+## What Hooks Cannot Do
+
+Hooks are shell commands, not Claude Code plugins. They cannot:
+
+- Modify the input to a tool call (they can only block or allow)
+- Access the Claude conversation history
+- Inject messages into the Claude context
+- Replace tool calls with alternative behavior
+
+If you need behavior that goes beyond what hooks can do — for example, intercepting a file write and redirecting it somewhere else — consider a pre-commit hook in git instead, or a custom MCP server.
+
+---
+
+Need help designing a hooks setup for your specific workflow? ClawHelp's Claude Code consulting services specialize in production-ready configurations — from safety gates to CI-integrated audit logging. [Reach out for a consultation](/en/contact).

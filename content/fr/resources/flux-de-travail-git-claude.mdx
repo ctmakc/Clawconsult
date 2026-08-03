@@ -1,0 +1,315 @@
+---
+slug: flux-de-travail-git-claude
+title: "Meilleures pratiques Git avec Claude Code"
+description: "Comment travailler efficacement avec Claude Code et git — qualité des commits, conventions de branches, révision des diffs, worktrees, hooks pre-commit, et quand utiliser stash."
+category: guide
+schema: Article
+tags: [git, workflow, meilleures-pratiques, commits, worktrees]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 9
+lang: "fr"
+seoTitle: "Meilleures pratiques Git avec Claude Code | ClawHelp"
+seoDescription: "Maîtrisez les workflows Git avec Claude Code. Apprenez la qualité des commits, le nommage des branches, la révision des diffs avec git diff --staged, les worktrees, les hooks pre-commit et les descriptions de pull requests."
+---
+
+# Meilleures pratiques Git avec Claude Code
+
+Claude Code peut gérer l'ensemble de votre workflow Git — du staging et des commits jusqu'au branching, rebase et ouverture de pull requests. Bien utilisé, c'est un multiplicateur de force. Utilisé négligemment, vous pouvez vous retrouver avec un historique brouillon, du travail perdu, ou des commits que vous n'aviez pas l'intention de pousser.
+
+Ce guide couvre les pratiques qui maintiennent votre workflow Git propre quand vous travaillez avec un collaborateur IA.
+
+---
+
+## Comment Claude Code gère Git
+
+Claude Code a un accès direct à votre shell et traite Git comme un outil standard. Par défaut, il va :
+
+- Stager les fichiers avec `git add`
+- Committer avec un message descriptif qu'il génère
+- Créer des branches quand nécessaire pour des changements isolés
+- Lire l'historique Git pour comprendre les conventions de votre projet
+- Ouvrir des PRs via le CLI `gh` s'il est installé
+
+Il n'a pas d'opinions sur votre workflow — il suivra les conventions et contraintes que vous lui donnez. Cela signifie que la qualité de vos sorties Git est directement déterminée par la clarté avec laquelle vous définissez vos attentes.
+
+---
+
+## Qualité des messages de commit
+
+Claude Code génère des messages de commit en examinant le diff et en inférant l'intention. La qualité est généralement bonne, mais vous pouvez l'améliorer en donnant à Claude un contexte que le diff seul ne contient pas.
+
+**Ce qui fait un bon message de commit que Claude peut rédiger :**
+
+Expliquez le *pourquoi*, pas seulement le *quoi*. Comparez :
+
+- « Commit ces changements » — Claude rédige une description mécanique du diff
+- « Committe ce correctif. Le bug était que les tokens de session n'étaient pas rafraîchis à l'expiration, causant des déconnexions silencieuses. » — Claude rédige un message qui capture la cause racine
+
+**Définissez les conventions dans CLAUDE.md :**
+
+```markdown
+## Style de commit Git
+- Mode impératif : « Ajouter fonctionnalité » pas « Ajouté fonctionnalité »
+- Sujet de 50 caractères max
+- Inclure le numéro de ticket si sur une tâche : « Corriger rafraîchissement token (PROJ-142) »
+- Le corps explique le *pourquoi*, pas le *quoi*
+```
+
+Claude lira ceci et appliquera ces règles lors de la génération des messages de commit.
+
+**Révisez toujours avant que Claude ne committe.** Le workflow devrait être :
+
+1. Claude stage les changements
+2. Vous révisez : `git diff --staged`
+3. Vous confirmez le commit ou demandez à Claude d'ajuster le message
+4. Claude committe
+
+Si vous sautez l'étape de révision, vous risquez de vous retrouver avec des commits qui ne correspondent pas au style d'historique de votre projet, ou qui incluent des fichiers que vous n'aviez pas l'intention de stager.
+
+---
+
+## Révision des diffs avant de committer
+
+La pratique Git la plus importante quand on travaille avec Claude Code : **toujours exécuter `git diff --staged` avant de confirmer un commit.**
+
+```bash
+git diff --staged
+```
+
+Cela montre exactement ce qui sera commité. Claude Code opère avec une grande confiance et peut stager plus que vous ne le souhaitiez — par exemple, il pourrait stager un fichier de configuration qu'il a modifié comme effet secondaire de la tâche principale, ou inclure un log de débogage que vous aviez ajouté temporairement.
+
+**Faites de la révision des diffs un réflexe.** Si vous utilisez Claude Code dans un terminal, exécutez `git diff --staged` vous-même avant de dire « oui, committe. » Si Claude Code propose un commit, vous pouvez lui dire : « Montre-moi `git diff --staged` d'abord, puis on committera. »
+
+Vous pouvez aussi ajouter un hook qui ouvre le diff automatiquement (voir Hooks Pre-commit ci-dessous).
+
+---
+
+## Conventions de nommage des branches
+
+Quand Claude Code crée des branches, il génère des noms basés sur la tâche en cours. Les noms par défaut sont généralement raisonnables (`fix-auth-token-refresh`, `add-user-export-endpoint`) mais peuvent ne pas correspondre à la convention de votre projet.
+
+**Définissez les règles de nommage dans CLAUDE.md :**
+
+```markdown
+## Nommage des branches Git
+- Branches de fonctionnalité : feature/<description-courte>
+- Corrections de bugs : fix/<description-courte>
+- Hotfixes : hotfix/<description-courte>
+- Inclure le numéro de ticket : feature/PROJ-142-export-utilisateur
+```
+
+Claude suivra ces patterns lors de la création de branches. Cela est particulièrement important quand on travaille en équipe où les noms de branches pilotent le comportement CI ou l'intégration avec les outils de gestion de projet.
+
+---
+
+## Quand utiliser les worktrees
+
+Les worktrees Git vous permettent de checkout plusieurs branches simultanément dans des répertoires séparés. Claude Code le supporte nativement et c'est particulièrement utile pour :
+
+- Travailler sur un correctif pendant que Claude continue le développement d'une fonctionnalité sur une autre branche
+- Réviser la branche de PR de quelqu'un d'autre sans perturber votre répertoire de travail
+- Exécuter des sessions Claude Code parallèles sur différentes parties de la base de code
+
+**Configuration basique de worktree :**
+
+```bash
+# Créer un worktree pour un hotfix pendant que le développement principal continue
+git worktree add ../monapp-hotfix hotfix/bug-auth-critique
+
+# Claude Code peut ensuite être pointé vers n'importe quel répertoire
+cd ../monapp-hotfix
+claude
+```
+
+**Quand les worktrees sont le bon outil :**
+- Vous avez deux tâches vraiment indépendantes qui ne devraient pas partager l'état de travail
+- Vous devez exécuter des tests sur une branche sans changer votre environnement principal
+- Vous faites des sessions Claude Code parallèles sur le même dépôt
+
+**Quand les worktrees sont excessifs :**
+- Tâches séquentielles simples — finissez-en une, passez à la suivante
+- Tâches qui partagent des fichiers ou une configuration
+
+---
+
+## Hooks pre-commit et Claude Code
+
+Les hooks pre-commit s'exécutent automatiquement avant chaque commit. Claude Code les respecte — il ne contournera pas les hooks avec `--no-verify` sauf si vous lui demandez explicitement de le faire (et il vous avertira si vous essayez).
+
+**C'est une fonctionnalité, pas une limitation.** Les hooks sont vos barrières de qualité. Des hooks courants qui fonctionnent bien avec Claude Code :
+
+```bash
+# exemple .husky/pre-commit
+#!/bin/sh
+pnpm lint
+pnpm test --passWithNoTests
+```
+
+Si un hook pre-commit échoue, Claude Code verra la sortie d'échec et typiquement :
+1. Expliquera ce qui a échoué
+2. Corrigera le problème
+3. Re-stagera et tentera à nouveau le commit
+
+Ce cycle fonctionne bien pour les échecs de linting. Pour les échecs de tests, Claude Code enquêtera habituellement et corrigera la cause racine avant de réessayer.
+
+**Critique : Ne demandez jamais à Claude de sauter les hooks.** Les hooks existent pour attraper les problèmes avant qu'ils n'atteignent le dépôt. Si un hook échoue et que vous êtes tenté de le contourner, la bonne réponse est de corriger le problème sous-jacent. Claude Code peut aider avec ça.
+
+---
+
+## Patterns .gitignore pour Claude Code
+
+Claude Code crée plusieurs fichiers locaux qui ne devraient généralement pas être commités :
+
+```gitignore
+# Config locale Claude Code (peut contenir des paramètres personnels)
+.claude/settings.local.json
+
+# Si vous utilisez des paramètres au niveau du projet partagés par l'équipe, commitez :
+# .claude/settings.json  ← celui-ci est généralement sûr à committer
+# .claude/CLAUDE.md      ← ce sont vos instructions de projet, commitez-le
+
+# Ne jamais committer
+.claude/settings.local.json
+```
+
+**Quoi committer vs. ne pas committer :**
+
+| Fichier | Committer? | Raison |
+|---------|------------|--------|
+| `CLAUDE.md` (racine) | Oui | Instructions de projet partagées |
+| `.claude/settings.json` | Généralement oui | Permissions d'outils partagées |
+| `.claude/settings.local.json` | Non | Overrides personnels |
+| `.claude/projects/` | Non | Mémoire de session personnelle |
+
+Si votre répertoire `.claude/` contient des clés API ou une configuration personnelle, ajoutez-le entièrement à `.gitignore`. Utilisez des variables d'environnement pour les identifiants, pas des fichiers de configuration.
+
+---
+
+## Stasher le travail avant les grands refactorings
+
+Avant de demander à Claude de faire un refactoring à grande échelle, stashez votre travail en cours :
+
+```bash
+git stash push -m "WIP: avant refactoring Claude du module auth"
+```
+
+Cela vous donne un point de retour arrière propre. Si le refactoring déraille — Claude mal comprend la portée, fait des changements inattendus, ou casse quelque chose de non évident — vous pouvez restaurer votre état précédent :
+
+```bash
+git stash pop
+```
+
+**Quand stasher avant une tâche Claude Code :**
+- « Refactore l'ensemble du module d'authentification »
+- « Renomme ce concept dans toute la base de code »
+- « Convertis ce composant basé sur des classes en hooks partout »
+- Toute tâche où « tous les fichiers » ou « partout » apparaît dans la description
+
+Pour les modifications chirurgicales (corriger cette fonction, ajouter cet endpoint), stasher n'est généralement pas nécessaire. Pour les changements structurels larges, c'est une assurance bon marché.
+
+---
+
+## Rebaser vs. Merger les branches de fonctionnalité
+
+Quand Claude Code crée une branche de fonctionnalité et que vous voulez l'intégrer dans main, vous avez deux choix : rebase ou merge. Claude Code suivra la stratégie que vous spécifiez.
+
+**Merge** (`git merge feature/ma-branche`) :
+- Préserve l'historique exact de quand les changements ont été faits
+- Crée un commit de merge
+- Plus facile de comprendre « ce qui s'est passé et quand »
+- Mieux pour les équipes qui valorisent la précision historique
+
+**Rebase** (`git rebase main`) :
+- Rejoue les commits de la branche de fonctionnalité sur le tip actuel de main
+- Crée un historique linéaire
+- Rend `git log` plus facile à lire
+- Mieux quand vous voulez un historique de projet propre et linéaire
+
+**Recommandation pour les workflows Claude Code** : Utilisez rebase + squash pour les petites branches de fonctionnalité que Claude crée. Cela garde l'historique de votre branche main propre sans le bruit des commits intermédiaires que Claude a faits en explorant des solutions.
+
+```bash
+# Squasher tous les commits de la branche de fonctionnalité en un commit propre
+git rebase -i main
+# Puis choisissez 'squash' pour tous les commits sauf le premier
+```
+
+Ou dites à Claude : « Squashe tous les commits de cette branche en un seul avec un message de résumé propre, puis merge dans main. »
+
+---
+
+## Qualité des descriptions de pull requests
+
+Quand vous demandez à Claude Code d'ouvrir une pull request, il génère une description basée sur les changements. La qualité de cette description dépend du contexte disponible.
+
+**Conseils pour de meilleures descriptions de PR :**
+
+1. **Dites à Claude ce que la PR devrait accomplir avant qu'il rédige la description.** « Ouvre une PR — ça corrige le bug d'expiration de session rapporté dans l'issue #142. La cause racine était que les tokens de rafraîchissement n'étaient pas vérifiés avant de faire des requêtes authentifiées. »
+
+2. **Référencez les issues.** Claude va lier aux issues GitHub si vous les mentionnez : « Ça ferme #142. »
+
+3. **Définissez un template de PR.** Ajoutez un `.github/PULL_REQUEST_TEMPLATE.md` et Claude l'utilisera comme guide de structure.
+
+4. **Révisez la description avant de soumettre.** Les descriptions de PR de Claude Code sont de bons points de départ mais peuvent manquer le contexte métier, les implications de sécurité, ou les notes de migration dont un reviewer humain a besoin.
+
+**Exemple de prompt pour une PR de qualité :**
+
+```
+Ouvre une PR de cette branche vers main.
+Titre : "Corriger la gestion de l'expiration des tokens de session"
+- Ferme l'issue #142
+- Inclure : ce qui a changé, pourquoi c'était cassé, comment le tester
+- Noter que ça nécessite une migration de base de données avant le déploiement
+```
+
+---
+
+## Erreurs courantes à éviter
+
+**1. Laisser Claude committer sans réviser `git diff --staged`**
+Révisez toujours ce qui est stagé. Claude est précis mais pas infaillible — il peut stager des fichiers qu'il ne devrait pas.
+
+**2. Ne pas définir les conventions Git dans CLAUDE.md**
+Sans directives, Claude committe dans un style générique qui peut ne pas correspondre à votre projet. Investissez 5 minutes à écrire des conventions de commits et de branches.
+
+**3. Demander à Claude de force-pusher sur des branches partagées**
+N'instruisez jamais Claude à faire `git push --force` sur main ou n'importe quelle branche partagée avec votre équipe. Les scénarios légitimes de force-push (réécriture de l'historique d'une branche de fonctionnalité avant merge) sont bien sûr acceptables sur des branches privées.
+
+**4. Sauter les hooks pre-commit**
+Ne demandez pas à Claude d'utiliser `--no-verify`. Corrigez plutôt le problème sous-jacent.
+
+**5. Faire de grands refactorings sans stasher**
+Stashez d'abord. Les deux minutes que ça prend en valent la peine.
+
+---
+
+## Section Git CLAUDE.md recommandée
+
+Voici une section Git prête pour la production pour votre CLAUDE.md :
+
+```markdown
+## Workflow Git
+
+### Messages de commit
+- Mode impératif, sujet de 50 caractères
+- Corps : expliquer le *pourquoi*, pas le *quoi*
+- Référencer les tickets : « Corriger timeout de connexion (PROJ-89) »
+
+### Branches
+- feature/<description> pour les nouvelles fonctionnalités
+- fix/<description> pour les corrections de bugs
+- Toujours brancher depuis main sauf indication contraire
+
+### Règles
+- Toujours exécuter `git diff --staged` avant de committer — montrer la sortie
+- Ne jamais utiliser --no-verify
+- Ne jamais force-pusher sur main ou develop
+- Stasher avant les grands refactorings
+
+### Descriptions de PR
+- Inclure : ce qui a changé, pourquoi, comment tester
+- Référencer les issues liées
+- Noter les étapes de migration ou de déploiement
+```
+
+Avec cette section dans CLAUDE.md, Claude Code suivra systématiquement vos conventions de workflow tout au long de chaque session.

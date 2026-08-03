@@ -1,0 +1,288 @@
+---
+slug: claude-code-gestion-sessions
+title: "Gérer les sessions Claude Code : fenêtre de contexte et mémoire de projet"
+description: "Comment Claude Code gère le contexte de conversation, limites de la fenêtre de contexte, commande /compact et compaction automatique, TodoList pour les longues tâches, et meilleures pratiques pour maintenir le cap sur plusieurs sessions."
+category: guide
+schema: Article
+tags: [sessions, fenêtre-de-contexte, compact, TodoList, CLAUDE.md, contexte]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 9
+lang: "fr"
+seoTitle: "Gérer les sessions Claude Code : fenêtre de contexte et mémoire | ClawHelp"
+seoDescription: "Maîtrisez la gestion des sessions Claude Code. Fenêtre de contexte, /compact, compaction automatique, TodoList pour le suivi, CLAUDE.md pour la mémoire persistante, et pratiques pour les longues tâches."
+---
+
+# Gérer les sessions Claude Code : fenêtre de contexte et mémoire de projet
+
+Une des frustrations les plus courantes avec Claude Code : vous travaillez sur une tâche complexe depuis une heure, puis vous réalisez que Claude a « oublié » quelque chose établi au début de la session. Ou pire — vous revenez le lendemain et devez tout ré-expliquer.
+
+Ces comportements sont prévisibles une fois qu'on comprend comment Claude Code gère le contexte. Ce guide explique les mécanismes sous-jacents et comment travailler avec eux plutôt que contre eux.
+
+---
+
+## Comment Claude Code gère le contexte de conversation
+
+Chaque session Claude Code est une **conversation** — un fil d'échanges entre vous et le modèle. Ce fil est stocké dans ce qu'on appelle la **fenêtre de contexte** : la quantité maximale d'information que Claude peut considérer simultanément.
+
+La fenêtre de contexte de Claude Code contient :
+- Tous vos messages et les réponses de Claude depuis le début de la session
+- Le contenu de CLAUDE.md et des fichiers chargés au démarrage
+- Les fichiers que Claude a lus pendant la session
+- Les résultats des commandes shell exécutées
+- Les résultats des appels d'outils (MCP, recherches, etc.)
+
+Tout cela s'accumule au fil de la session. Les premières instructions, les décisions prises, les fichiers examinés — tout ça occupe de l'espace dans la fenêtre de contexte.
+
+### Ce que Claude « voit » à tout moment
+
+À chaque échange, Claude traite **l'intégralité** de la fenêtre de contexte actuelle. Il n'y a pas de mémoire sélective — soit quelque chose est dans la fenêtre de contexte, soit Claude ne peut pas y accéder. C'est fondamentalement différent de la mémoire humaine.
+
+Cette architecture a une conséquence importante : Claude Code ne « se souvient » pas des sessions précédentes. Quand vous ouvrez une nouvelle session, la fenêtre de contexte est vide (modulo ce que CLAUDE.md charge automatiquement).
+
+---
+
+## Limites de la fenêtre de contexte
+
+La fenêtre de contexte de Claude Code a une taille maximale mesurée en **tokens** — unités de texte qui correspondent approximativement à des syllabes ou des mots courts. Le modèle Claude Sonnet utilisé par Claude Code a une fenêtre de contexte de 200 000 tokens.
+
+En pratique, voici combien ça représente :
+- Un fichier TypeScript de 500 lignes ≈ 3 000–5 000 tokens
+- Une réponse détaillée de Claude ≈ 500–2 000 tokens
+- Un fichier de configuration JSON ≈ 200–1 000 tokens
+
+Une session de développement active peut facilement consommer 50 000–100 000 tokens. Pour des tâches longues ou des codebases volumineuses, on peut approcher les limites.
+
+### Signes que la fenêtre de contexte est pleine
+
+Quand la fenêtre de contexte approche sa limite :
+- Claude code commencera à compacter automatiquement (voir ci-dessous)
+- Les réponses peuvent devenir moins précises sur des détails établis tôt dans la session
+- Claude peut sembler « oublier » des décisions ou des contraintes mentionnées plusieurs échanges auparavant
+
+---
+
+## La commande /compact
+
+`/compact` est la commande slash la plus utile pour les longues sessions. Elle demande à Claude de **résumer** la conversation jusqu'à présent en gardant l'essentiel, libérant de l'espace dans la fenêtre de contexte.
+
+```
+/compact
+```
+
+Claude va :
+1. Lire l'ensemble de la conversation actuelle
+2. Créer un résumé dense des décisions prises, du travail accompli, et du contexte important
+3. Remplacer l'historique de conversation par ce résumé
+4. Continuer la session avec la fenêtre de contexte allégée
+
+### Quand utiliser /compact manuellement
+
+- Avant de commencer une nouvelle sous-tâche distincte dans la même session
+- Quand vous voyez Claude commencer à faire des erreurs sur des détails établis tôt
+- Après avoir résolu un problème complexe et avant de passer au suivant
+- Environ toutes les 30–45 minutes pour les sessions très actives
+
+### Ce qui est préservé par /compact
+
+Le résumé généré par `/compact` capture généralement bien :
+- Les décisions architecturales importantes
+- L'état actuel du travail (ce qui est fait, ce qui reste)
+- Les contraintes et exigences établies
+- Les fichiers modifiés
+
+Ce qui peut être perdu ou dilué :
+- Les détails précis de conversations spécifiques
+- Le contexte nuancé de pourquoi certaines décisions ont été prises
+- Les erreurs tentées et rejetées (ce qui peut mener Claude à les retenter)
+
+**Conseil :** Si vous avez établi une contrainte importante tôt dans la session, répétez-la explicitement après un `/compact` plutôt que d'assumer qu'elle est dans le résumé.
+
+---
+
+## Compaction automatique
+
+Si vous n'exécutez pas `/compact` manuellement, Claude Code peut le faire automatiquement quand la fenêtre de contexte approche sa limite. Ce comportement est activé par défaut.
+
+La compaction automatique se produit de façon transparente — vous verrez peut-être une indication que la conversation a été compactée, mais la session continue sans interruption.
+
+### Configurer la compaction automatique
+
+Vous pouvez contrôler ce comportement dans votre CLAUDE.md :
+
+```markdown
+## Gestion du contexte
+
+- Effectuer /compact proactivement avant de commencer une nouvelle tâche majeure
+- Toujours annoncer quand un /compact va être effectué
+- Après chaque /compact, confirmer les 3 décisions les plus importantes qui ont été préservées
+```
+
+---
+
+## TodoList pour le suivi sur plusieurs sessions
+
+Pour les tâches qui s'étendent sur plusieurs sessions, les instructions dans CLAUDE.md et les résumés de `/compact` ne suffisent pas. Vous avez besoin d'un mécanisme de suivi explicite.
+
+Claude Code supporte une **TodoList** intégrée — une liste de tâches qu'il maintient et consulte pendant la session. Elle est accessible via les slash commands `/todo`.
+
+### Utiliser la TodoList efficacement
+
+En début de tâche complexe, demandez à Claude de structurer le travail :
+
+```
+Créons une TodoList pour cette refactorisation. Les étapes sont :
+1. Auditer les composants existants et identifier les doublons
+2. Créer les nouveaux composants partagés
+3. Migrer les usages existants un à un
+4. Mettre à jour les tests
+5. Mettre à jour la documentation
+```
+
+Claude Code va créer et maintenir cette liste, cochant les éléments au fur et à mesure et vous informant de la progression.
+
+### Combiner TodoList et CLAUDE.md pour la persistance inter-sessions
+
+La TodoList disparaît à la fin de la session. Pour les projets longs, établissez une convention dans CLAUDE.md :
+
+```markdown
+## Suivi de progression
+
+Les tâches en cours sont documentées dans `docs/en-cours.md`.
+Format :
+- [x] Tâche complétée
+- [ ] Tâche à faire
+- [~] En progression
+
+Mettre à jour ce fichier en fin de session ou après chaque jalon.
+```
+
+Puis demandez à Claude de mettre à jour ce fichier Markdown en fin de session :
+
+```
+Avant de terminer, mets à jour docs/en-cours.md avec ce qu'on a accompli 
+aujourd'hui et ce qui reste à faire.
+```
+
+Ce fichier sera là au début de la prochaine session, que vous ou Claude pouvez lire pour reprendre là où vous vous êtes arrêtés.
+
+---
+
+## CLAUDE.md pour le contexte persistant
+
+CLAUDE.md est votre outil principal pour maintenir la continuité entre les sessions. Contrairement à la fenêtre de contexte de conversation (qui se vide entre les sessions), CLAUDE.md est un fichier sur le disque chargé automatiquement à chaque démarrage.
+
+### Ce qui appartient à CLAUDE.md vs. à la conversation
+
+**Dans CLAUDE.md :**
+- Stack technologique et conventions du projet
+- Règles de comportement permanentes
+- Architecture et structure des répertoires
+- Commandes importantes
+- Décisions architecturales stables
+
+**Dans la conversation (ou un fichier de suivi) :**
+- État actuel d'une tâche en cours
+- Décisions temporaires pour cette session
+- Contexte spécifique à une tâche ponctuelle
+
+### Mettre à jour CLAUDE.md en cours de session
+
+Quand vous prenez une décision architecturale importante pendant une session, c'est le bon moment pour la documenter dans CLAUDE.md :
+
+```
+Nous venons de décider d'utiliser Zustand pour la gestion d'état client 
+plutôt que useState/props drilling. Ajoute cette décision dans CLAUDE.md 
+avec la justification.
+```
+
+Claude Code va mettre à jour le fichier. La prochaine session commencera avec cette décision déjà en contexte.
+
+---
+
+## Meilleures pratiques pour les tâches longues
+
+### Découper avant de commencer
+
+Pour une tâche qui va prendre plusieurs heures, commencez par créer un plan :
+
+```
+Avant de commencer, décompose cette migration de base de données en étapes 
+séquentielles. Pour chaque étape, indique les risques et les points de contrôle. 
+Sauvegarde ce plan dans docs/migration-plan.md.
+```
+
+Ce document devient votre fil d'Ariane entre les sessions.
+
+### Établir des checkpoints
+
+Définissez des points de contrôle explicites dans vos tâches longues :
+
+```
+Après chaque module migré, indique :
+1. Ce qui a été fait
+2. Les tests qui passent
+3. Ce qui reste
+4. Les problèmes rencontrés
+```
+
+Ces checkpoints servent à la fois pour votre suivi et comme résumés utiles pour `/compact`.
+
+### La règle du résumé de fin de session
+
+En fin de session de travail, avant de fermer, demandez toujours :
+
+```
+Avant de terminer, donne-moi un résumé de ce qu'on a accompli aujourd'hui, 
+l'état actuel du code, et les prochaines étapes. Format court, points de liste.
+```
+
+Copiez ce résumé ou demandez à Claude de le sauvegarder dans un fichier. C'est votre point de départ pour la prochaine session.
+
+### Reprendre une session avec le bon contexte
+
+En début de session après une interruption, donnez à Claude le contexte minimum nécessaire :
+
+```
+Nous travaillons sur la migration de la base de données. Lis docs/migration-plan.md 
+et docs/en-cours.md pour l'état actuel, puis dis-moi ce que tu comprends de la 
+situation avant de continuer.
+```
+
+Cette confirmation que Claude a bien compris l'état du projet avant d'agir évite des erreurs coûteuses.
+
+---
+
+## Gestion de la fenêtre de contexte dans les grands dépôts
+
+Dans les dépôts volumineux, Claude Code peut lire beaucoup de fichiers rapidement, remplissant la fenêtre de contexte avant d'avoir accompli beaucoup de travail.
+
+### Stratégies pour les grands dépôts
+
+**Soyez sélectif sur ce que vous demandez à Claude de lire.** Au lieu de « lis toute la codebase et dis-moi comment améliorer l'architecture », dites « lis les fichiers src/auth/ et identifie les problèmes de sécurité ». Le premier va saturer la fenêtre de contexte; le second est actionnable.
+
+**Utilisez les imports CLAUDE.md pour pré-charger le contexte essentiel.** Référencez dans CLAUDE.md les fichiers d'architecture de haut niveau qui donnent une vue d'ensemble sans nécessiter de lire tout le code.
+
+**Travaillez sur des modules isolés.** Si votre monorepo a 20 services, ouvrez Claude Code dans le répertoire du service sur lequel vous travaillez plutôt qu'à la racine du monorepo. Ça limite naturellement la surface de contexte.
+
+**Utilisez /compact entre les sous-tâches.** Quand vous finissez de travailler sur un module et passez au suivant, `/compact` avant de changer de contexte garde la session efficace.
+
+---
+
+## Erreurs courantes et comment les éviter
+
+**Assumer que Claude se souvient d'une décision de la semaine dernière.** Il ne s'en souvient pas. Si une décision est importante, elle doit être dans CLAUDE.md.
+
+**Ne jamais utiliser /compact.** Les sessions longues sans compaction deviennent progressivement moins précises. Utilisez `/compact` proactivement, pas seulement quand les problèmes apparaissent.
+
+**Mettre trop de contexte en début de session.** Coller 5 000 lignes de documentation dans la première instruction remplit la fenêtre de contexte avant de commencer. Structurez le contexte dans CLAUDE.md et laissez Claude le charger automatiquement.
+
+**Ne pas valider le contexte après un /compact.** Après une compaction, confirmez les points critiques : « Rappelle-moi les trois contraintes principales de ce projet. » Si Claude en a manqué une, corrigez immédiatement.
+
+---
+
+## Pour aller plus loin avec ClawHelp
+
+Bien gérer les sessions Claude Code sur des projets complexes qui s'étendent sur des semaines est un savoir-faire qui s'acquiert. Les bonnes structures de CLAUDE.md, les bons patterns de suivi, et les bonnes habitudes de compaction font une différence mesurable sur la productivité.
+
+ClawHelp offre des services de consultation pour vous aider à établir ces patterns dans votre équipe — que vous travailliez seul ou avec plusieurs développeurs utilisant Claude Code en parallèle. Contactez-nous pour en discuter.

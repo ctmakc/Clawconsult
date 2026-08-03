@@ -1,0 +1,304 @@
+---
+slug: claude-code-debugging-workflow
+title: "Debugging Complex Issues with Claude Code: The Systematic Approach"
+description: "How to use Claude Code to debug multi-file errors, trace null pointer chains, diagnose test failures, and find performance issues — including what context to give Claude, the systematic hypothesis method, and what Claude cannot do."
+category: guide
+schema: Article
+tags: [debugging, troubleshooting, workflow, testing, performance, systematic, null-pointer]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 13
+seoTitle: "Debugging Complex Issues with Claude Code: The Systematic Approach | ClawHelp"
+seoDescription: "Use Claude Code to systematically debug multi-file errors, test failures, and performance issues. Learn the hypothesis method, what context to provide, and the limits of AI-assisted debugging."
+---
+
+# Debugging Complex Issues with Claude Code: The Systematic Approach
+
+Bugs have two phases: finding and fixing. Most developer time goes into finding. Claude Code significantly compresses the finding phase for a specific class of bugs — the ones that require reading across multiple files, understanding error chains, or tracing where state gets corrupted.
+
+This guide covers how to approach debugging with Claude Code systematically, what context to provide, which patterns Claude handles well, and where you still need a traditional debugger.
+
+---
+
+## Claude Code vs a Debugger: When to Use Which
+
+These are complementary tools with different strengths. Using the wrong one wastes time.
+
+**Use a traditional debugger (gdb, Chrome DevTools, VS Code debugger, pdb) when:**
+
+- You need step-by-step execution to watch variable values change in real time
+- You have a tight loop and need to observe exactly which iteration breaks
+- You need to inspect runtime heap state or memory addresses
+- The bug is a timing issue (race condition, async ordering) that only manifests during actual execution
+- You know roughly where the bug is and just need to see the exact values
+
+**Use Claude Code when:**
+
+- The error message is cryptic and you need someone to explain what it actually means
+- The bug involves logic spread across three or more files and you're losing track of the chain
+- You have a stack trace but don't understand which call is actually wrong
+- A test is failing and you can't tell whether the test is wrong or the code is wrong
+- You need to identify all the places in the codebase that could be responsible for a symptom
+- You've been staring at the bug for 20 minutes and your eyes have stopped seeing it
+
+The heuristic: **debuggers are better for observing runtime state; Claude Code is better for reasoning about code paths before running the code.**
+
+---
+
+## The Systematic Approach: Four Steps
+
+The biggest mistake in debugging — with or without AI assistance — is jumping straight to making changes. Scatter-shot fixes ("I'll try this, and if it doesn't work, I'll try that") waste time and can introduce new bugs while failing to fix the original one.
+
+The systematic approach has four steps. Do not skip ahead.
+
+### Step 1: Gather All Evidence
+
+Before asking Claude anything, collect everything that is known about the bug:
+
+- The full error message and stack trace (not just the last line)
+- The exact command or action that triggers the bug
+- The code that was recently changed: `git log --oneline -10`, `git diff HEAD~3`
+- The expected behavior vs what actually happened
+- Whether this worked before, and if so, what changed
+
+The more complete your evidence set, the better Claude's diagnosis. Showing Claude only the error message is like showing a doctor only the patient's temperature — it's data, but not enough to diagnose.
+
+### Step 2: Form Hypotheses
+
+Once you have the evidence, ask Claude to generate hypotheses before proposing fixes. The framing matters:
+
+> "Given this error and stack trace, what are the 3-5 most likely causes? Rank them by probability. Don't suggest fixes yet — just explain what could cause this symptom."
+
+This produces a ranked list of suspects. Claude is good at this because it has seen many instances of similar bugs and can recognize the pattern of what a given error usually indicates.
+
+### Step 3: Test the Most Likely Hypothesis First
+
+Starting with the most probable cause, ask Claude to help you verify it:
+
+> "Hypothesis 1 is that the user object is null when it reaches `formatUser()`. Show me all the code paths that could pass a null user to that function."
+
+Claude will trace the call graph and identify the entry points. You verify whether any of those paths can actually be reached given your data.
+
+### Step 4: Fix One Thing at a Time
+
+Only when you have confirmed which hypothesis is correct do you make changes. Change exactly one thing. Verify the symptom is gone. Only then move to the next issue.
+
+**Why this matters:** if you change three things at once and the bug disappears, you don't know which change fixed it. If the bug persists, you don't know if one of your changes made things worse. One change at a time gives you clear causal attribution.
+
+---
+
+## Feeding Claude the Right Context
+
+Claude's diagnosis is only as good as the context you provide. Here is the difference in practice.
+
+**Too little context (common mistake):**
+
+> "I'm getting a TypeError. Here's the error: `TypeError: Cannot read property 'id' of undefined`. How do I fix it?"
+
+Claude can give you a generic answer ("check if the object is null before accessing it") but cannot actually find the bug because it doesn't know what object, what code, or what flow you're working with.
+
+**Sufficient context:**
+
+> "I'm getting this error in production. Here is the full stack trace:
+>
+> ```
+> TypeError: Cannot read property 'id' of undefined
+>   at formatUser (src/utils/formatUser.ts:23:18)
+>   at UserController.getProfile (src/controllers/UserController.ts:45:22)
+>   at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+> ```
+>
+> Here is `formatUser.ts`:
+>
+> [paste the file]
+>
+> Here is the `getProfile` method in `UserController.ts`:
+>
+> [paste the relevant method]
+>
+> This error started happening after we deployed commit a3f9c21 this morning. That commit added caching to the user lookup — here's the diff:
+>
+> [paste the diff]
+>
+> The expected behavior is that `getProfile` returns the user's public profile. What's wrong?"
+
+Now Claude has: the exact error, the call stack, the relevant source files, and the recent change that likely introduced the bug. It can give you a specific answer.
+
+**What to always include:**
+
+1. The full stack trace, not just the error message
+2. The relevant source files (or at minimum the functions named in the stack trace)
+3. What recently changed (`git diff` or a description)
+4. What you expected vs what happened
+5. Whether this is intermittent or reproducible every time
+
+---
+
+## Common Debugging Patterns
+
+### Null Pointer / Undefined Behavior
+
+The single most common class of bug. The symptom is `Cannot read property X of undefined`, `NullReferenceException`, `AttributeError: 'NoneType' object has no attribute`, or equivalent.
+
+**The right ask:**
+
+> "The error is `Cannot read property 'userId' of undefined` at line 47 of `src/auth/middleware.ts`. Trace all code paths that could result in `req.user` being undefined when this line is reached. Show each path."
+
+Claude will trace backwards from the failure point through the call chain, identifying every place where `req.user` could fail to be set. Typical findings: missing `await` on an async function, a conditional that can be bypassed, a middleware that's registered in the wrong order.
+
+### Test Failures
+
+Test failures have two possible causes: the code is wrong, or the test is wrong. Claude can help you determine which.
+
+**The right ask:**
+
+> "This test is failing:
+>
+> [paste the test]
+>
+> The error is:
+>
+> [paste the test output]
+>
+> Here is the function under test:
+>
+> [paste the function]
+>
+> What does the test expect to happen? What does the code actually do? Are they inconsistent, and if so, which one is correct?"
+
+This framing forces Claude to analyze both sides without assuming the code is wrong. Claude will describe the test's assertion, trace what the function actually produces, and explain the discrepancy — which often makes it obvious whether the test expectation or the implementation needs to change.
+
+**For integration test failures** where multiple components interact, also include:
+- The test setup (beforeEach/fixtures)
+- Mock configurations or stubs that are active
+- Any database or API state the test depends on
+
+### Performance Issues
+
+Performance bugs are often invisible until scale. Claude can identify structural issues by reading code.
+
+**The right ask:**
+
+> "This endpoint is taking 3-5 seconds to respond for accounts with more than 1000 records. Here is the handler:
+>
+> [paste the handler]
+>
+> Here are the database query functions it calls:
+>
+> [paste the query functions]
+>
+> Identify any O(n²) patterns, queries inside loops, unnecessary data loading, or missing indexes. Explain the complexity of each operation."
+
+Claude will read the code and identify patterns like: fetching all records then filtering in JavaScript (instead of filtering in the database query), calling a database function inside a map/forEach loop, loading entire objects when only one field is needed, or missing pagination on a list endpoint.
+
+### Import and Module Resolution Errors
+
+Module errors (`Cannot find module`, `Module not found`, `ImportError`) are often caused by path misconfiguration, circular dependencies, or missing exports.
+
+**The right ask:**
+
+> "I'm getting `Cannot find module '@/components/Button'`. Here is my tsconfig.json paths configuration:
+>
+> [paste paths section]
+>
+> Here is where I'm importing it from:
+>
+> [paste the import statement and surrounding code]
+>
+> Trace what the module resolver would do with this import. Where does it look, and what would cause it to fail?"
+
+Claude will walk through the module resolution algorithm — alias expansion, path mapping, file extension resolution — and identify where the chain breaks.
+
+---
+
+## Using Bash in Debugging Sessions
+
+Claude Code can run shell commands as part of debugging. This is often more effective than reading files manually.
+
+**Find all callers of a function:**
+
+```bash
+# Ask Claude to run this
+grep -r "formatUser" src/ --include="*.ts" -n
+```
+
+**Find where a variable is mutated:**
+
+```bash
+grep -r "req.user\s*=" src/ --include="*.ts" -n
+grep -r "req.user\s*:" src/ --include="*.ts" -n
+```
+
+**Check all error handlers for a specific pattern:**
+
+```bash
+grep -r "catch" src/ --include="*.ts" -l
+```
+
+**Find all imports of a module to understand usage:**
+
+```bash
+grep -r "from.*authMiddleware\|require.*authMiddleware" src/ --include="*.ts" -n
+```
+
+When you're debugging, asking Claude to run grep across the codebase is often faster than manually opening files. It also ensures Claude is looking at the actual current state of the code, not a version it read earlier in the conversation.
+
+---
+
+## The Rubber Duck Pattern
+
+One of the most effective debugging techniques is explaining the problem to someone else. The act of forming the explanation forces you to be precise about what you know, what you assume, and where the gap is. Often the explanation surfaces the bug before the listener even responds.
+
+With Claude Code, you get the benefit of a patient, always-available listener who will also respond substantively.
+
+**How to use it:**
+
+> "Let me explain this bug so you can help me think through it. I have a webhook handler that processes Stripe payment events. When a payment succeeds, it should update the order status to 'paid' and send a confirmation email. The webhook fires (I can see it in Stripe's dashboard), but the order status is not updating. The email is being sent. Here's the flow:
+>
+> [describe the flow]
+>
+> What questions would you ask to narrow this down?"
+
+By the time you finish writing the explanation, you often spot the issue yourself — in this example, the email being sent but the status not updating suggests the database write might be failing silently and the execution is continuing past the error.
+
+If you don't spot it, Claude's questions will guide you to the right area.
+
+---
+
+## Post-Debugging Best Practices
+
+After you find and fix a bug, Claude Code can help you prevent recurrence.
+
+**Check for similar bugs elsewhere:**
+
+> "I fixed a null reference bug where `req.user` could be undefined in `getProfile`. Are there other endpoints in `src/controllers/` that access `req.user` without checking for null first? List them."
+
+**Write a regression test:**
+
+> "This bug was: a user with no profile photo caused a null pointer in `formatUser`. Write a unit test that would have caught this bug. The test should assert that `formatUser` handles a user with a null `photoUrl` field without throwing."
+
+**Document the fix:**
+
+> "Write a one-paragraph comment explaining why the null check on line 47 exists. Reference what bug it prevents and when it was introduced."
+
+These three steps — check for siblings, add a test, document the fix — turn a one-time bug fix into a permanent improvement to code quality.
+
+---
+
+## What Claude Cannot Do
+
+Being clear about Claude's limitations prevents frustration and helps you choose the right tool.
+
+**Claude cannot step through execution.** It cannot set a breakpoint and watch variable values change. It reasons about code paths statically, not by running the program. For bugs that only manifest in specific runtime conditions (a particular database state, a race condition under load, OS-specific behavior), you need an actual debugger or production logging.
+
+**Claude cannot access runtime state.** It cannot tell you what the value of `req.user` is at the moment the error fires. It can tell you all the ways `req.user` could be undefined based on the code, but it cannot observe what actually happened at runtime. Add logging to capture the actual state, then give that log output back to Claude.
+
+**Claude may miss occurrences without grep verification.** When Claude says "this is the only place where X happens," verify with grep. Claude reads the files in its context window but cannot guarantee it has seen every file in a large codebase. Always verify scope claims with actual search commands.
+
+**Claude can produce plausible-sounding but wrong explanations.** Especially for complex async bugs or highly framework-specific behavior, Claude may give a confident explanation that is subtly wrong. Verify proposed fixes by actually running the code, not by asking Claude to confirm its own analysis.
+
+The working posture: use Claude to generate hypotheses and narrow the search space quickly, then verify with the actual tools (debugger, logs, tests) before committing to a fix.
+
+---
+
+Systematic debugging with Claude Code is a skill, and the skill is mostly about what context you provide and maintaining discipline about the four-step process. Teams that use it well cut debugging time significantly — not because Claude magically finds bugs, but because it instantly brings multi-file reasoning to bear on problems that would otherwise require a lot of slow, manual code reading. ClawHelp works with teams to establish debugging workflows and tooling that make the most of Claude Code's capabilities. [Talk to us about your workflow](/en/contact).

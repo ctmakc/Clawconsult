@@ -1,0 +1,329 @@
+---
+slug: install-claude-code
+lang: "ru"
+title: "Как установить Claude Code — полное руководство"
+description: "Пошаговое руководство по установке Claude Code на любой системе: предварительные требования, проверка установки и начальная настройка."
+category: how-to
+tags: [установка, настройка, claude-code, cli]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [claude-code-setup]
+seoTitle: "Как установить Claude Code: полное руководство 2026 | ClawHelp"
+seoDescription: "Установите Claude Code за 5 минут. Пошаговое руководство для macOS, Windows и Linux с предварительными требованиями, проверкой и исправлением типичных ошибок."
+schema: HowTo
+---
+
+# Как установить Claude Code — полное руководство
+
+Claude Code — официальный CLI-инструмент Anthropic для работы с Claude: агентный помощник по написанию кода, который запускается в вашем терминале, читает кодовую базу, редактирует файлы, выполняет команды и самостоятельно вызывает инструменты. В этом руководстве описан каждый шаг — от нуля до работающей установки: аутентификация, начальная настройка и наиболее распространённые способы устранения ошибок.
+
+Подробные руководства по платформам: [macOS](/skills/install-claude-code-mac) · [Windows](/skills/install-claude-code-windows) · [Linux](/skills/install-claude-code-linux)
+
+---
+
+## Предварительные требования
+
+Прежде чем запускать `npm install`, убедитесь, что ваша среда соответствует этим требованиям.
+
+### Node.js версии 18 или выше
+
+Claude Code требует Node.js 18+. Проверьте текущую версию:
+
+```bash
+node --version
+# v22.2.0  ← всё, что 18+ — подходит
+```
+
+Если Node.js не установлен или у вас старая версия, установите его через [nvm](https://github.com/nvm-sh/nvm) (рекомендуется для всех платформ):
+
+```bash
+# Установить nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Перезагрузить оболочку, затем установить последнюю LTS-версию
+nvm install --lts
+nvm use --lts
+
+node --version  # убедиться, что 18+
+```
+
+### npm
+
+npm поставляется вместе с Node.js, так что он у вас, скорее всего, уже есть. Проверьте:
+
+```bash
+npm --version
+# 10.x.x или новее
+```
+
+### Учётная запись Anthropic с доступом к API
+
+Claude Code поддерживает два способа аутентификации:
+
+**Вариант A — подписка Claude.ai Pro (рекомендуется для частного использования):** Вы входите через OAuth в браузере. API-ключ не нужен.
+
+**Вариант B — API-ключ Anthropic:** Необходим для командного использования, CI-окружений или если у вас нет подписки Pro. Получить ключ можно на [console.anthropic.com](https://console.anthropic.com) → API Keys → Create Key.
+
+Держите API-ключ наготове — он понадобится на шаге аутентификации ниже.
+
+---
+
+## Шаг 1: Установка Claude Code
+
+Установите CLI глобально через npm:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Команда загружает пакет из реестра npm и устанавливает бинарный файл `claude` в глобальный каталог `bin`. Установка обычно занимает 15–30 секунд.
+
+Если вы видите ошибки прав доступа (`EACCES`), обратитесь к разделу [исправление прав](#распространённые-ошибки-установки) ниже.
+
+---
+
+## Шаг 2: Проверка установки
+
+Убедитесь, что бинарный файл доступен через PATH и версия корректная:
+
+```bash
+claude --version
+# Claude Code 1.x.x
+```
+
+Если появляется `claude: command not found`, глобальный каталог `bin` для npm не добавлен в `PATH`. Найдите его и добавьте:
+
+```bash
+npm root -g
+# /home/yourname/.nvm/versions/node/v22.2.0/lib/node_modules
+# Каталог bin — на уровень выше: /home/yourname/.nvm/versions/node/v22.2.0/bin
+
+# Добавьте в профиль оболочки (~/.bashrc или ~/.zshrc):
+export PATH="$HOME/.nvm/versions/node/v22.2.0/bin:$PATH"
+source ~/.bashrc
+```
+
+---
+
+## Шаг 3: Первый запуск и аутентификация
+
+Перейдите в любую директорию проекта и запустите Claude Code:
+
+```bash
+cd ~/my-project
+claude
+```
+
+При первом запуске Claude Code откроет окно браузера для входа через OAuth (путь Claude.ai Pro) или попросит ввести API-ключ:
+
+**Путь с API-ключом:**
+```
+? How would you like to authenticate?
+  ❯ Login with Claude.ai (recommended)
+    Enter API key
+```
+
+Выберите "Enter API key" и вставьте ваш ключ:
+
+```
+? Enter your Anthropic API key: sk-ant-api03-...
+✓ Authenticated successfully
+```
+
+**Путь через OAuth (Claude.ai Pro):**
+CLI выводит URL. Браузер открывается автоматически. Войдите на claude.ai, подтвердите авторизацию и вернитесь в терминал. Вы увидите:
+
+```
+✓ Authenticated successfully via Claude.ai
+```
+
+Учётные данные сохраняются в `~/.claude/` — повторная аутентификация не потребуется, пока вы явно не выйдете из системы.
+
+---
+
+## Шаг 4: Начальная настройка
+
+Claude Code хранит всю конфигурацию в `~/.claude/`. Вот что там создаётся:
+
+```
+~/.claude/
+├── settings.json       # Глобальные настройки (модель, разрешения, хуки)
+├── settings.local.json # Локальные переопределения (по соглашению в .gitignore)
+└── projects/           # Файлы памяти для каждого проекта
+```
+
+### Обзор settings.json
+
+Откройте `~/.claude/settings.json` в редакторе. Настройки по умолчанию разумны, но два параметра стоит изучить сразу:
+
+```json
+{
+  "model": "claude-sonnet-4-5",
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}
+```
+
+**model** — модель Claude, которую использует Claude Code. `claude-sonnet-4-5` — значение по умолчанию; `claude-opus-4-5` обеспечивает более глубокое рассуждение для сложных задач, но стоит дороже.
+
+**permissions.allow** — список шаблонов инструментов, которые Claude Code может запускать без запроса подтверждения. Пример: `["Bash(npm run test:*)", "Read(**)", "Edit(**)"]`. Чем больше вы заполните этот список, тем реже Claude будет прерывать вас запросами на разрешение.
+
+### Файл CLAUDE.md для каждого проекта
+
+Создайте `CLAUDE.md` в корне каждого проекта. Claude Code читает его автоматически при запуске в этой директории. Опишите в нём стек, соглашения о коде и всё, что нужно знать модели:
+
+```markdown
+# Project: my-api
+
+## Stack
+- Node.js 22, TypeScript, Fastify
+- Postgres 16 via pg (no ORM)
+- Tests: Vitest, run with `npm test`
+
+## Conventions
+- All async functions must have explicit return types
+- Error handling: never swallow errors; always log then rethrow
+- Migration files go in db/migrations/
+
+## Do not edit
+- src/generated/ — auto-generated by codegen
+```
+
+---
+
+## Распространённые ошибки установки и их исправление
+
+### EACCES: permission denied (глобальная установка npm)
+
+На некоторых системах глобальная директория npm принадлежит root. Исправьте это, настроив пользовательский глобальный префикс — не используйте `sudo`:
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH=$HOME/.npm-global/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+
+# Теперь устанавливаем без sudo
+npm install -g @anthropic-ai/claude-code
+```
+
+Если вы вынуждены использовать системный npm и не хотите менять префикс, `sudo npm install -g @anthropic-ai/claude-code` сработает, но не рекомендуется.
+
+### `claude` не найден после установки
+
+Глобальный каталог `bin` для npm не добавлен в `PATH`. Найдите его:
+
+```bash
+npm config get prefix
+# /home/user/.npm-global  → добавьте /home/user/.npm-global/bin в PATH
+```
+
+Добавьте экспорт в профиль оболочки и перезагрузите его.
+
+### Ошибки SSL/TLS-сертификатов за корпоративным прокси
+
+Перед установкой задайте переменные окружения для прокси:
+
+```bash
+export HTTP_PROXY=http://proxy.corp.example.com:8080
+export HTTPS_PROXY=http://proxy.corp.example.com:8080
+npm install -g @anthropic-ai/claude-code
+```
+
+Если прокси использует самоподписанный сертификат, может понадобиться:
+
+```bash
+npm config set cafile /path/to/corporate-ca.crt
+```
+
+### Ошибка аутентификации: "Invalid API key"
+
+- Проверьте, нет ли пробелов в начале или конце ключа при вставке.
+- Убедитесь, что ключ не был отозван на [console.anthropic.com](https://console.anthropic.com).
+- Убедитесь, что на вашем аккаунте достаточно средств (новые ключи начинают с нулевым балансом; сначала добавьте способ оплаты).
+
+### Устаревшая версия Node
+
+Если вы установили Claude Code до обновления Node и видите ошибки выполнения:
+
+```bash
+nvm install --lts
+nvm use --lts
+npm install -g @anthropic-ai/claude-code  # переустановить под новую версию Node
+```
+
+---
+
+## Быстрый старт: первый разговор
+
+После аутентификации откройте проект и задайте Claude конкретный вопрос:
+
+```bash
+cd ~/my-project
+claude "Explain the main entry point and tell me which files handle authentication"
+```
+
+Или запустите интерактивный REPL без начального промпта:
+
+```bash
+claude
+```
+
+Внутри REPL Claude Code может читать файлы, выполнять команды оболочки, редактировать код и использовать инструменты — всё в рамках одной сессии. Введите `exit` или нажмите `Ctrl+C` дважды, чтобы выйти.
+
+---
+
+## Следующие шаги
+
+- **Настройка на macOS** → [Установка Claude Code на macOS](/skills/install-claude-code-mac)
+- **Windows (WSL2 и нативный)** → [Установка Claude Code на Windows](/skills/install-claude-code-windows)
+- **Linux (Ubuntu, Fedora, Arch)** → [Установка Claude Code на Linux](/skills/install-claude-code-linux)
+- **Автоматизация действий с хуками** → [Руководство по хукам Claude Code](/skills/claude-code-hooks)
+- **Создание сабагентов** → [Как создавать сабагентов в Claude Code](/skills/build-subagent)
+
+---
+
+{/* HowTo schema — consumed by the site's SEO layer
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Install Claude Code",
+  "description": "Step-by-step guide to installing Claude Code on any system",
+  "totalTime": "PT10M",
+  "supply": [
+    { "@type": "HowToSupply", "name": "Node.js 18+" },
+    { "@type": "HowToSupply", "name": "Anthropic API key or Claude.ai Pro subscription" }
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Install Node.js 18+",
+      "text": "Install Node.js 18 or higher using nvm or your platform package manager."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Install Claude Code via npm",
+      "text": "Run: npm install -g @anthropic-ai/claude-code"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Verify the installation",
+      "text": "Run: claude --version to confirm the binary is accessible."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Authenticate",
+      "text": "Run claude in a project directory and complete the OAuth or API key flow."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Configure settings.json and CLAUDE.md",
+      "text": "Review ~/.claude/settings.json and create a per-project CLAUDE.md file."
+    }
+  ]
+}
+*/}

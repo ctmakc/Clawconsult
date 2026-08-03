@@ -1,0 +1,501 @@
+---
+slug: claude-code-hooks-posibnyk
+title: "Хуки в Claude Code: автоматизація та перехоплення подій"
+description: "Повний посібник з хуків (Hooks) у Claude Code — типи подій PreToolCall, PostToolCall, SessionStart, SessionEnd, конфігурація в settings.json, змінні середовища через stdin JSON та 5 практичних прикладів."
+category: guide
+schema: Article
+tags: [hooks, автоматизація, settings, workflow, конфігурація]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+lang: "uk"
+seoTitle: "Хуки в Claude Code: автоматизація та перехоплення подій | ClawHelp"
+seoDescription: "Налаштуйте хуки в Claude Code для авто-форматування, блокування небезпечних команд, аудит-логування, approval gates та автоматичного запуску тестів. Повний довідник з прикладами конфігурації."
+---
+
+# Хуки в Claude Code: автоматизація та перехоплення подій
+
+Хуки — один з найпотужніших, але найменш відомих механізмів Claude Code. Вони дозволяють запускати довільні shell-скрипти у ключові моменти роботи агента: перед викликом інструменту, після нього, при запуску сесії та при її завершенні. Завдяки хукам Claude Code перетворюється зі звичайного ШІ-асистента на повноцінно інтегрований компонент вашого CI/CD та DevOps-пайплайну.
+
+У цьому посібнику — повний розбір системи хуків: архітектура, конфігурація, змінні середовища і п'ять production-ready прикладів, які можна використовувати вже сьогодні.
+
+---
+
+## Що таке хуки і навіщо вони потрібні
+
+Хуки — це shell-команди, які Claude Code виконує автоматично на певних подіях свого життєвого циклу. Вони не залежать від промптів і не потребують участі користувача — це чиста автоматизація на рівні інфраструктури.
+
+**Ключові сценарії застосування:**
+
+- **Форматування коду** — автоматично запускати Prettier, Black або gofmt після кожного редагування файлу
+- **Safety-перевірки** — блокувати небезпечні команди (видалення продакшн-даних, force-push тощо) ще до їх виконання
+- **Аудит** — записувати в лог кожну дію агента у структурованому JSON
+- **Approval gates** — вимагати явного підтвердження людини перед критичними операціями
+- **Автотестування** — запускати тести після зміни пов'язаних файлів
+
+Без хуків ви покладаєтесь на те, що Claude Code «правильно здогадається» про потрібні кроки. З хуками ці кроки гарантовані незалежно від промпту.
+
+---
+
+## Типи подій хуків
+
+Claude Code підтримує чотири типи подій:
+
+| Подія | Коли спрацьовує |
+|-------|-----------------|
+| `PreToolCall` | Безпосередньо перед викликом будь-якого інструменту |
+| `PostToolCall` | Одразу після завершення виклику інструменту |
+| `SessionStart` | При відкритті нової сесії Claude Code |
+| `SessionEnd` | При завершенні сесії |
+
+Найчастіше використовуються `PreToolCall` і `PostToolCall`. Вони дають максимальний контроль над поведінкою агента.
+
+**Коли застосовувати кожен тип:**
+
+- `PreToolCall` — для перевірок і блокувань: зупинити небезпечну операцію до того, як вона відбудеться
+- `PostToolCall` — для дій після факту: форматування, логування, запуск тестів
+- `SessionStart` — для ініціалізації: перевірка середовища, завантаження конфігурацій, відправка повідомлень
+- `SessionEnd` — для очищення: збереження звітів, відправка підсумків, вивільнення ресурсів
+
+---
+
+## Конфігурація в `.claude/settings.json`
+
+Хуки налаштовуються у файлі `.claude/settings.json` вашого проекту (або в `~/.claude/settings.json` для глобальних налаштувань). Базова структура:
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/your/pre-bash-hook.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolCall": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/your/post-edit-hook.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Поля конфігурації:**
+
+- `matcher` — регулярний вираз для фільтрації за іменем інструменту. `".*"` матчить усе. `"Bash"` — тільки Bash-виклики. `"Write|Edit"` — запис і редагування файлів.
+- `type` — тип хука. Зараз підтримується тільки `"command"`.
+- `command` — shell-команда або шлях до скрипту.
+
+Хуки виконуються в тому ж середовищі, що й Claude Code, з успадкованими змінними середовища.
+
+---
+
+## Змінні середовища та stdin JSON у хуках
+
+При спрацюванні хука Claude Code передає контекст через змінні середовища та stdin у форматі JSON. Це дозволяє скриптам приймати рішення на основі конкретного виклику інструменту.
+
+**Змінні, доступні в хуках:**
+
+```bash
+CLAUDE_TOOL_NAME        # Ім'я інструменту, що викликається (наприклад, "Bash", "Write")
+CLAUDE_TOOL_INPUT       # JSON з вхідними параметрами інструменту
+CLAUDE_TOOL_OUTPUT      # JSON з вихідними даними (тільки в PostToolCall)
+CLAUDE_SESSION_ID       # Унікальний ідентифікатор поточної сесії
+CLAUDE_PROJECT_DIR      # Коренева директорія проекту
+```
+
+**Повний JSON-контекст через stdin:**
+
+```bash
+#!/bin/bash
+# Прочитати повний контекст виклику
+context=$(cat)
+tool_name=$(echo "$context" | jq -r '.tool_name')
+tool_input=$(echo "$context" | jq -r '.tool_input')
+```
+
+Для `PreToolCall` хуків — якщо скрипт завершується з кодом `2`, Claude Code блокує виконання інструменту і показує stderr користувачу як пояснення відмови.
+
+**Приклад повного JSON-контексту для Bash-виклику:**
+
+```json
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push --force origin main",
+    "description": "Push changes to main"
+  },
+  "session_id": "sess_abc123",
+  "project_dir": "/home/user/myproject"
+}
+```
+
+---
+
+## Приклад 1: Авто-форматування коду
+
+Найпопулярніший use case — форматувати файли одразу після їх створення або редагування.
+
+**`.claude/settings.json`:**
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/auto-format.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**`~/.claude/hooks/auto-format.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+file_path=$(echo "$context" | jq -r '.tool_input.file_path // empty')
+
+if [[ -z "$file_path" ]]; then
+  exit 0
+fi
+
+case "$file_path" in
+  *.ts|*.tsx|*.js|*.jsx|*.json|*.css|*.md)
+    if command -v prettier &>/dev/null; then
+      prettier --write "$file_path" 2>/dev/null || true
+    fi
+    ;;
+  *.py)
+    if command -v black &>/dev/null; then
+      black --quiet "$file_path" 2>/dev/null || true
+    fi
+    ;;
+  *.go)
+    if command -v gofmt &>/dev/null; then
+      gofmt -w "$file_path" 2>/dev/null || true
+    fi
+    ;;
+esac
+```
+
+Зробіть скрипт виконуваним: `chmod +x ~/.claude/hooks/auto-format.sh`. Тепер кожен файл, який Claude Code створює або редагує, буде автоматично відформатований відповідно до налаштувань вашого проекту.
+
+---
+
+## Приклад 2: Блокування небезпечних команд
+
+`PreToolCall` хуки можуть повністю блокувати виконання інструментів. Код завершення `2` сигналізує Claude Code про відмову і повертає stderr як пояснення.
+
+**`~/.claude/hooks/safety-check.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+tool_name=$(echo "$context" | jq -r '.tool_name')
+
+if [[ "$tool_name" != "Bash" ]]; then
+  exit 0
+fi
+
+command_str=$(echo "$context" | jq -r '.tool_input.command // ""')
+
+# Патерни, що потребують блокування
+DANGEROUS_PATTERNS=(
+  "DROP TABLE"
+  "DROP DATABASE"
+  "DELETE FROM.*WHERE.*1=1"
+  "git push --force.*main"
+  "git push --force.*master"
+  "rm -rf /"
+  "chmod -R 777"
+  "curl.*\| bash"
+  "wget.*\| sh"
+)
+
+for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+  if echo "$command_str" | grep -qiE "$pattern"; then
+    echo "ЗАБЛОКОВАНО: Команда відповідає патерну небезпечної операції: $pattern" >&2
+    echo "Команда: $command_str" >&2
+    echo "Для виконання цієї операції потрібне ручне підтвердження." >&2
+    exit 2
+  fi
+done
+```
+
+**Конфігурація:**
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/safety-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Claude Code побачить повідомлення зі stderr та пояснить користувачу, чому команду було відхилено, не розкриваючи деталей реалізації хука.
+
+---
+
+## Приклад 3: Аудит-логування
+
+В enterprise-середовищах часто потрібен повний запис усіх дій ШІ-агента. Хук нижче записує структурований JSONL-лог кожного виклику інструменту.
+
+**`~/.claude/hooks/audit-log.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+
+log_entry=$(echo "$context" | jq -c --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg session "${CLAUDE_SESSION_ID:-unknown}" \
+  --arg project "${CLAUDE_PROJECT_DIR:-unknown}" \
+  '{
+    timestamp: $ts,
+    session_id: $session,
+    project: $project,
+    tool_name: .tool_name,
+    tool_input: .tool_input,
+    tool_output: (.tool_output // null),
+    exit_code: (.exit_code // null)
+  }')
+
+LOG_DIR="${HOME}/.claude/audit-logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d).jsonl"
+
+echo "$log_entry" >> "$LOG_FILE"
+```
+
+**Конфігурація для логування всіх подій:**
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/audit-log.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Лог-файли створюються за датою: `~/.claude/audit-logs/2026-05-16.jsonl`. Кожен рядок — валідний JSON, зручний для парсингу через `jq`, завантаження в Elasticsearch або відправки в SIEM-систему.
+
+---
+
+## Приклад 4: Запуск тестів після редагування
+
+Після зміни вихідних файлів автоматично запускати пов'язані тести — без промптів, без нагадувань.
+
+**`~/.claude/hooks/run-tests.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+file_path=$(echo "$context" | jq -r '.tool_input.file_path // empty')
+
+if [[ -z "$file_path" ]]; then
+  exit 0
+fi
+
+project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Визначити, чи файл є вихідним кодом (не тестом, не конфігом)
+if echo "$file_path" | grep -qE '\.(test|spec)\.(ts|js|py)$'; then
+  exit 0
+fi
+
+if echo "$file_path" | grep -qE '\.(ts|js|py)$'; then
+  echo "Файл змінено: $file_path — запускаю пов'язані тести..."
+  
+  if [[ -f "$project_dir/package.json" ]]; then
+    test_file="${file_path%.*}.test.${file_path##*.}"
+    spec_file="${file_path%.*}.spec.${file_path##*.}"
+    
+    if [[ -f "$test_file" ]]; then
+      cd "$project_dir" && npx jest "$test_file" --passWithNoTests 2>&1 | tail -20
+    elif [[ -f "$spec_file" ]]; then
+      cd "$project_dir" && npx jest "$spec_file" --passWithNoTests 2>&1 | tail -20
+    fi
+  elif [[ -f "$project_dir/pytest.ini" ]] || [[ -f "$project_dir/pyproject.toml" ]]; then
+    cd "$project_dir" && python -m pytest --tb=short -q 2>&1 | tail -20
+  fi
+fi
+```
+
+Виведення тестів відображається прямо в терміналі Claude Code. Якщо тести впадуть, Claude побачить це і може негайно запропонувати виправлення.
+
+---
+
+## Приклад 5: Ініціалізація сесії
+
+Хук `SessionStart` ідеально підходить для підготовки середовища на початку кожної сесії.
+
+**`~/.claude/hooks/session-init.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Перевірити наявність .env файлу
+if [[ -f "$PROJECT_DIR/.env.example" ]] && [[ ! -f "$PROJECT_DIR/.env" ]]; then
+  echo "УВАГА: Файл .env відсутній. Скопіюйте .env.example і заповніть змінні." >&2
+fi
+
+# Перевірити, чи запущені потрібні сервіси
+if [[ -f "$PROJECT_DIR/docker-compose.yml" ]]; then
+  if ! docker compose ps --status running 2>/dev/null | grep -q "Up"; then
+    echo "УВАГА: Docker Compose сервіси не запущені. Виконайте: docker compose up -d" >&2
+  fi
+fi
+
+# Активувати Python venv якщо є
+if [[ -f "$PROJECT_DIR/.venv/bin/activate" ]]; then
+  source "$PROJECT_DIR/.venv/bin/activate"
+fi
+
+# Відправити повідомлення в Slack (опціонально)
+if [[ -n "${SLACK_WEBHOOK_URL:-}" ]]; then
+  curl -s -X POST "$SLACK_WEBHOOK_URL" \
+    -H 'Content-type: application/json' \
+    -d "{\"text\": \"Claude Code сесія розпочата в проекті: $PROJECT_DIR\"}" \
+    > /dev/null 2>&1 || true
+fi
+```
+
+**Конфігурація:**
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/session-init.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Таблиця exit-кодів
+
+| Код | Значення |
+|-----|----------|
+| `0` | Успіх, продовжити виконання |
+| `1` | Помилка хука (логується, виконання продовжується) |
+| `2` | Блокування інструменту (тільки для PreToolCall); stderr показується користувачу |
+
+**Важливо:** exit-код `2` працює **тільки** для `PreToolCall` хуків. Для `PostToolCall` код `2` інтерпретується як звичайна помилка (код `1`).
+
+---
+
+## Повний довідник по налаштуваннях
+
+| Параметр | Тип | Обов'язковий | Опис |
+|----------|-----|--------------|------|
+| `matcher` | string (regex) | так | Патерн для імені інструменту. `".*"` — всі інструменти |
+| `type` | `"command"` | так | Тип хука (зараз тільки command) |
+| `command` | string | так | Shell-команда або шлях до скрипту |
+
+**Розташування файлів:**
+
+- Проектні хуки: `.claude/settings.json` (комітиться в репозиторій, спільне для команди)
+- Користувацькі хуки: `~/.claude/settings.json` (застосовуються до всіх проектів)
+- Скрипти: рекомендується зберігати в `~/.claude/hooks/` або `.claude/hooks/`
+
+---
+
+## Часті помилки при налаштуванні хуків
+
+**1. Не зробили скрипт виконуваним**
+```bash
+chmod +x ~/.claude/hooks/your-hook.sh
+```
+
+**2. Використовуєте відносні шляхи**
+Завжди вказуйте абсолютні шляхи — хуки можуть виконуватись із різних робочих директорій.
+
+**3. Хук працює надто довго**
+Повільні хуки блокують роботу Claude Code. Для важких операцій запускайте їх у фоні: `long-operation.sh &`.
+
+**4. Забуваєте обробляти порожні значення**
+Завжди перевіряйте, що `file_path` та інші поля не порожні перед використанням.
+
+**5. Плутаєте проектні та користувацькі налаштування**
+`.claude/settings.json` у проекті успадковує користувацькі налаштування з `~/.claude/settings.json`. Якщо хук зареєстрований глобально — він буде працювати в усіх проектах.
+
+---
+
+## Хуки або CLAUDE.md — що обрати?
+
+| Завдання | Інструмент |
+|----------|-----------|
+| Форматування файлів | Хук (PostToolCall) |
+| Блокування команд | Хук (PreToolCall) |
+| Аудит-логування | Хук (PostToolCall) |
+| Стиль комітів | CLAUDE.md |
+| Іменування гілок | CLAUDE.md |
+| Контекст проекту | CLAUDE.md |
+| Автозапуск тестів | Хук (PostToolCall) |
+| Бізнес-правила для агента | CLAUDE.md |
+
+Хуки — для детермінованої автоматизації. CLAUDE.md — для передачі намірів і контексту. Оптимальне налаштування використовує обидва інструменти.
+
+---
+
+Якщо ви хочете налаштувати хуки для вашого конкретного стеку або інтегрувати Claude Code у корпоративний CI/CD-пайплайн — команда ClawHelp проведе технічний аудит і розробить production-ready конфігурацію під ваші вимоги. Напишіть нам, щоб обговорити завдання.

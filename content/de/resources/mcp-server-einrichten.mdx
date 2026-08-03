@@ -1,0 +1,382 @@
+---
+slug: mcp-server-einrichten
+lang: "de"
+title: "MCP-Server in Claude Code konfigurieren"
+description: "Schritt-für-Schritt-Anleitung zur Einrichtung von MCP-Servern in Claude Code — populäre Server, Konfigurationsdateien, eigene Server bauen, Fehlersuche und Sicherheit."
+category: guide
+schema: Article
+tags: [mcp, konfiguration, tools, integration, sicherheit]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 8
+seoTitle: "MCP-Server in Claude Code einrichten und konfigurieren | ClawHelp"
+seoDescription: "MCP-Server für Claude Code konfigurieren: Konfigurationsdateien, populäre MCP-Server installieren, eigene Server bauen, Verbindungsprobleme debuggen, Sicherheitshinweise."
+---
+
+# MCP-Server in Claude Code konfigurieren
+
+MCP steht für **Model Context Protocol** — ein offener Standard, der Claude Code ermöglicht, mit externen Tools und Systemen zu interagieren. Ohne MCP kann Claude Code Dateien lesen, Shell-Befehle ausführen und Code schreiben. Mit MCP kann Claude Code direkt Datenbankabfragen stellen, GitHub-Issues lesen, Webseiten navigieren, auf deine eigenen internen APIs zugreifen und vieles mehr.
+
+Diese Anleitung erklärt, wie MCP-Server konfiguriert werden, welche populären Server existieren, wie du eigene Server baust und wie du Verbindungsprobleme diagnostizierst.
+
+---
+
+## Was MCP-Server leisten
+
+Ein MCP-Server ist ein separater Prozess, der sich über ein standardisiertes Protokoll mit Claude Code verbindet. Der Server stellt sogenannte **Tools** zur Verfügung — Funktionen, die Claude Code aufrufen kann.
+
+Beispiel: Ein PostgreSQL-MCP-Server stellt Tools wie `query_database`, `list_tables` und `describe_schema` bereit. Claude Code kann diese Tools nutzen, um direkt mit deiner Datenbank zu interagieren — Abfragen ausführen, Schemas analysieren, Daten prüfen — alles innerhalb einer Konversation.
+
+Andere MCP-Server bieten:
+- **Dateisystem**: Erweiterte Dateioperationen über das Standard-Toolset hinaus
+- **GitHub**: Issues lesen, PRs erstellen, Repositories durchsuchen
+- **Browser-Automatisierung**: Webseiten laden, Screenshots erstellen, Formulare ausfüllen
+- **Datenbanken**: PostgreSQL, MySQL, SQLite, MongoDB direkt abfragen
+- **Slack, Linear, Jira**: Projektmanagement-Integrationen
+
+---
+
+## Konfigurationsdateien
+
+MCP-Server werden in JSON-Konfigurationsdateien registriert. Es gibt zwei Orte:
+
+### 1. Globale Konfiguration (`claude_desktop_config.json`)
+
+Für MCP-Server, die in allen Projekten verfügbar sein sollen:
+
+```
+~/.config/claude/claude_desktop_config.json
+```
+
+(macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`)
+
+### 2. Projektspezifische Konfiguration (`.claude/settings.json`)
+
+Für MCP-Server, die nur in einem bestimmten Projekt verfügbar sein sollen. Diese Datei liegt im Projektstamm unter `.claude/settings.json` und kann in Git eingecheckt werden, wenn das Team dieselben MCP-Server nutzen soll.
+
+### Konfigurationsformat
+
+Beide Dateien verwenden dasselbe Format:
+
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "node",
+      "args": ["/path/to/mcp-server/index.js"],
+      "env": {
+        "OPTIONAL_ENV_VAR": "value"
+      }
+    }
+  }
+}
+```
+
+Für npm-basierte Server:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_..."
+      }
+    }
+  }
+}
+```
+
+---
+
+## Populäre MCP-Server
+
+### Filesystem-Server
+
+Erweitert die Dateizugriffe von Claude Code um Operationen wie Suche nach Inhalt, Batch-Operationen und erweiterte Metadaten:
+
+```json
+"filesystem": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projekte"]
+}
+```
+
+Der Pfad am Ende begrenzt, auf welche Verzeichnisse der Server zugreifen kann — ein wichtige Sicherheitsmaßnahme.
+
+### GitHub-Server
+
+Ermöglicht Claude Code, direkt mit der GitHub-API zu interagieren:
+
+```json
+"github": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_dein_token_hier"
+  }
+}
+```
+
+Nach der Einrichtung kann Claude Code z.B.:
+- "Welche offenen Issues mit dem Label `bug` haben wir?"
+- "Erstelle einen PR von diesem Branch mit einer Beschreibung basierend auf den Commits"
+- "Suche in unseren Repos nach Verwendungen von `deprecated_function`"
+
+### Datenbankserver
+
+Für PostgreSQL:
+
+```json
+"postgres": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-postgres"],
+  "env": {
+    "POSTGRES_CONNECTION_STRING": "postgresql://user:pass@localhost:5432/mydb"
+  }
+}
+```
+
+Damit kann Claude Code direkt Abfragen stellen, Schemas analysieren und bei Datenproblemen helfen — ohne dass du Abfragen manuell ausführen musst.
+
+### Browser-Automatisierung
+
+Für Playwright-basierte Browser-Automatisierung:
+
+```json
+"playwright": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-playwright"]
+}
+```
+
+Claude Code kann dann Webseiten navigieren, Screenshots machen und UI-Tests schreiben, die tatsächlich im Browser verifiziert wurden.
+
+---
+
+## Eigene MCP-Server bauen
+
+Das MCP-Protokoll ist offen und gut dokumentiert. Einen einfachen eigenen Server zu bauen ist überraschend unkompliziert.
+
+### Minimalbeispiel in TypeScript
+
+```typescript
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = new Server(
+  { name: "mein-server", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
+
+// Tool definieren
+server.setRequestHandler("tools/list", async () => ({
+  tools: [{
+    name: "get_deployment_status",
+    description: "Gibt den aktuellen Deploy-Status der Anwendung zurück",
+    inputSchema: {
+      type: "object",
+      properties: {
+        environment: {
+          type: "string",
+          description: "staging oder production"
+        }
+      },
+      required: ["environment"]
+    }
+  }]
+}));
+
+// Tool-Ausführung
+server.setRequestHandler("tools/call", async (request) => {
+  if (request.params.name === "get_deployment_status") {
+    const env = request.params.arguments.environment;
+    // Hier echte Logik: z.B. Kubernetes-API aufrufen
+    const status = await checkDeploymentStatus(env);
+    return {
+      content: [{ type: "text", text: JSON.stringify(status) }]
+    };
+  }
+});
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+```bash
+npm install @modelcontextprotocol/sdk
+npx tsc
+```
+
+In der Konfiguration:
+
+```json
+"mein-server": {
+  "command": "node",
+  "args": ["/pfad/zu/mein-server/dist/index.js"]
+}
+```
+
+**Typische Anwendungsfälle für eigene Server:**
+- Interne APIs (Deploy-Status, Monitoring, Feature-Flags)
+- Firmendatenbanken oder Data Warehouses
+- Spezialisierte Build-Systeme
+- Unternehmens-Ticketsysteme
+
+---
+
+## MCP-Server installieren
+
+Die meisten verfügbaren MCP-Server sind npm-Pakete. Installationsweg:
+
+**Option 1: Direkt via `npx` (kein vorheriges Installieren nötig)**
+
+```json
+"command": "npx",
+"args": ["-y", "@modelcontextprotocol/server-github"]
+```
+
+Der `-y`-Flag bestätigt die npx-Prompt automatisch. Das ist bequem, aber lädt den Server bei jedem Start herunter falls er nicht gecacht ist.
+
+**Option 2: Global installieren**
+
+```bash
+npm install -g @modelcontextprotocol/server-github
+```
+
+```json
+"command": "mcp-server-github",
+"args": []
+```
+
+Für Server, die täglich genutzt werden, ist die globale Installation vorzuziehen — schnellerer Start, definierte Version.
+
+---
+
+## Verbindungsprobleme debuggen
+
+Wenn ein MCP-Server nicht erreichbar ist oder Tools nicht angezeigt werden:
+
+### Schritt 1: JSON-Syntax prüfen
+
+Das häufigste Problem ist ungültiges JSON in der Konfigurationsdatei. Prüfe die Syntax:
+
+```bash
+cat ~/.config/claude/claude_desktop_config.json | python3 -m json.tool
+```
+
+Ein Syntaxfehler gibt eine genaue Fehlermeldung mit Zeilennummer aus.
+
+### Schritt 2: Server manuell starten
+
+Starte den Server-Prozess direkt in der Kommandozeile — genauso wie in der Konfiguration angegeben:
+
+```bash
+GITHUB_PERSONAL_ACCESS_TOKEN="ghp_..." npx -y @modelcontextprotocol/server-github
+```
+
+Wenn der Server normal startet und auf stdin wartet, ist die Konfiguration korrekt. Wenn er mit einem Fehler abbricht, siehst du direkt die Ursache.
+
+### Schritt 3: Logs prüfen
+
+Claude Code schreibt MCP-Verbindungsprobleme in die Logs. Speicherort:
+
+```bash
+# macOS
+tail -f ~/Library/Logs/Claude/mcp*.log
+
+# Linux
+tail -f ~/.local/share/claude/logs/mcp*.log
+```
+
+### Häufige Fehler
+
+| Fehler | Ursache | Lösung |
+|--------|---------|--------|
+| `Server not found` | Falscher Pfad in `args` | Pfad absolut angeben, prüfen ob Datei existiert |
+| `Connection refused` | Server läuft nicht | Server manuell starten und Fehler prüfen |
+| `Permission denied` | Fehlende Ausführungsrechte | `chmod +x` für das Server-Script |
+| `Invalid JSON` | Syntaxfehler in Konfiguration | JSON-Validator nutzen |
+| Tools erscheinen nicht | Server läuft, aber registriert keine Tools | Server-Logs prüfen, `tools/list` Response debuggen |
+
+### MCP Inspector
+
+Das offizielle Debugging-Tool für MCP-Server:
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+Der Inspector öffnet eine Web-UI, mit der du MCP-Server direkt aufrufen, Tool-Aufrufe testen und Protokollnachrichten inspizieren kannst.
+
+---
+
+## Sicherheitshinweise
+
+MCP-Server können Code ausführen und auf Ressourcen zugreifen. Vor der Installation eines MCP-Servers von einer Drittpartei:
+
+### Vertrauenswürdige Quellen bevorzugen
+
+- Offizielle MCP-Server unter `@modelcontextprotocol/` auf npm
+- Server von bekannten Unternehmen (GitHub, Anthropic, verbreitete Open-Source-Projekte)
+- Selbst geschriebene Server
+
+Sei skeptisch gegenüber unbekannten npm-Paketen, die MCP-Server für sensible Systeme anbieten.
+
+### Minimaler Zugriff
+
+Konfiguriere MCP-Server mit minimalen Berechtigungen:
+
+```json
+"filesystem": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/home/user/mein-projekt"  // nur dieses Verzeichnis, nicht "/"
+  ]
+}
+```
+
+Beschränke Datenbankverbindungen auf Read-Only-Credentials, wenn Claude Code keine Schreiboperationen benötigt:
+
+```
+postgresql://readonly_user:pass@localhost:5432/mydb
+```
+
+### Keine Secrets in der Konfigurationsdatei für geteilte Repos
+
+Wenn `.claude/settings.json` in Git eingecheckt wird:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Verwende Umgebungsvariablen-Referenzen statt hardcodierter Werte. Jeder Entwickler setzt seine eigene `GITHUB_TOKEN`-Variable lokal.
+
+### Code-Review vor Produktionseinsatz
+
+Bevor du einen selbst geschriebenen MCP-Server in einer Produktionsumgebung oder auf einem geteilten System einsetzt, führe ein Code-Review durch. MCP-Server haben vollen Zugriff auf alles, was du ihnen erlaubst.
+
+---
+
+## Nächste Schritte
+
+Mit funktionierenden MCP-Servern kann Claude Code erheblich mächtiger werden. Typische nächste Schritte:
+
+- Richte den GitHub-Server ein und lass Claude Code Issues und PRs direkt verwalten
+- Verbinde Claude Code mit deiner Entwicklungsdatenbank für direkte Schema-Analyse
+- Schreibe einen eigenen Server für deine internen Deployment-Tools
+
+Weitere Hilfe bei der Einrichtung oder bei Verbindungsproblemen: [ClawHelp Support](/de/services/claude-code-setup).

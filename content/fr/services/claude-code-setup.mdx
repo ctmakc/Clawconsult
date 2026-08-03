@@ -1,0 +1,138 @@
+---
+slug: claude-code-setup
+title: "Service de Configuration Claude Code"
+description: "Installation et configuration professionnelle de Claude Code pour les individus et les équipes."
+category: service
+tags: [setup, consulting, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+lang: "fr"
+seoTitle: "Service de Configuration Claude Code | ClawHelp"
+seoDescription: "Service de configuration professionnelle de Claude Code — installation, config ~/.claude/, serveurs MCP, skills personnalisés et hooks. Réservez une session à partir de 299 $."
+---
+
+# Service de Configuration Claude Code
+
+Installer Claude Code est la partie facile. Le configurer pour qu'il transforme réellement votre flux de travail — ça demande de l'expérience. Notre **service de configuration Claude Code** gère tout, de la première installation à un environnement entièrement optimisé et prêt pour l'équipe, afin que vous puissiez éviter les essais-erreurs et commencer à livrer plus rapidement dès le premier jour.
+
+Que vous soyez un développeur solo qui expérimente le codage assisté par IA ou un responsable d'ingénierie qui déploie Claude Code dans une équipe de 20 personnes, nous construisons la couche de configuration qui fait tenir l'ensemble.
+
+## Ce Qui est Inclus
+
+### Installation et Configuration de Base
+
+Nous vérifions que Claude Code est installé correctement sur votre système d'exploitation (macOS, Linux ou WSL2 sur Windows), résolvons les conflits de version Node.js, et connectons la clé API Anthropic ou votre authentification d'entreprise. Nous confirmons que la CLI est réactive et couvrons les exigences de proxy ou de pare-feu que votre réseau peut avoir.
+
+### Configuration du Répertoire `~/.claude/`
+
+Le répertoire `~/.claude/` est le cerveau de votre environnement Claude Code. Nous construisons :
+
+- **`settings.json`** — permissions, outils autorisés, listes blanches de commandes bash, et variables d'environnement correctement délimitées aux niveaux global vs. par projet
+- **`CLAUDE.md`** — votre fichier d'instructions global qui prépare Claude avec votre stack préféré, guide de style, conventions de commit et règles d'escalade
+- **Fichiers `CLAUDE.md` au niveau projet** — un par dépôt actif, couvrant le contexte spécifique au dépôt, les notes d'architecture et les accords d'équipe
+
+### Intégration de Serveurs MCP
+
+Les serveurs Model Context Protocol étendent ce que Claude Code peut voir et faire. Nous installons et configurons les serveurs MCP qui correspondent à votre flux de travail :
+
+- **MCP Système de fichiers** — accès lecture/écriture fin délimité à vos racines de projet
+- **MCP GitHub** — révision de PR, tri d'issues, et navigation de dépôt dans la conversation
+- **MCP Automatisation de navigateur** — pour les équipes qui font du scraping web, du QA ou des tests UI
+- **MCP Base de données** (Postgres, SQLite) — exécuter des requêtes et inspecter des schémas sans quitter le terminal
+- **MCP API REST personnalisée** — si vous avez des APIs internes, nous configurons un wrapper MCP léger
+
+### Bibliothèque de Skills Initiaux
+
+Nous installons un ensemble de départ de skills réutilisables adaptés à votre flux de travail :
+
+- `commit-commands` — flux standardisé de commit + PR
+- `systematic-debugging` — protocole structuré d'investigation de bugs
+- `test-driven-development` — boucle d'application TDD
+- `verification-before-completion` — prévient les revendications prématurées de succès
+- Skills spécifiques au domaine personnalisés pour votre stack technique
+
+### Configuration des Hooks
+
+Les hooks se déclenchent automatiquement avant ou après les actions de Claude Code. Nous configurons :
+
+- Des hooks pré-commit qui lancent le linting ou les tests avant que Claude commite
+- Des hooks post-édition qui formatent automatiquement les fichiers après que Claude les modifie
+- Des hooks de notification pour les tâches longues
+- Des hooks de sécurité qui font une pause avant les opérations destructives (force-push, patterns `rm -rf`)
+
+### Appel d'Intégration d'Équipe
+
+Pour les configurations d'équipe, nous incluons une session live de 60 minutes avec votre équipe d'ingénierie couvrant : ce que Claude Code peut et ne peut pas faire, comment rédiger des prompts efficaces, quand invoquer des skills vs. le prompting libre, et comment maintenir vos fichiers `CLAUDE.md` à mesure que votre base de code évolue.
+
+## Livrables
+
+- Installation Claude Code entièrement fonctionnelle sur votre/vos machine(s)
+- `~/.claude/settings.json` configuré (global) et fichiers `CLAUDE.md` par dépôt
+- Serveurs MCP installés, testés et documentés
+- Bibliothèque de skills initiaux avec exemples d'utilisation
+- Hooks configurés et testés de bout en bout
+- Résumé écrit de configuration avec justification de chaque décision de configuration
+- Support async de 14 jours pour les questions de suivi par email
+
+## Pour Qui C'est
+
+**Développeurs solo** qui veulent arrêter de se battre avec la configuration et commencer à utiliser Claude Code comme les utilisateurs avancés — avec une mémoire persistante, des outils personnalisés et des flux de travail automatisés.
+
+**Responsables d'ingénierie** qui ont besoin d'un environnement Claude Code cohérent dans toute l'équipe, avec des conventions partagées intégrées dans des fichiers `CLAUDE.md` versionnés.
+
+**Agences et consultants** qui veulent ajouter le développement assisté par IA à leur flux de livraison sans passer des semaines à comprendre l'outillage.
+
+**Startups** qui avancent vite et ne peuvent pas se permettre la pénalité de productivité d'une adoption ad hoc des outils IA.
+
+## Le Processus
+
+### Étape 1 — Appel de Découverte (30 minutes)
+
+Nous commençons par un appel gratuit pour comprendre votre stack, la taille de l'équipe, les points de douleur et les objectifs. À la fin de l'appel, vous aurez un document de périmètre clair pour votre session de configuration.
+
+### Étape 2 — Session de Configuration (2–3 heures)
+
+Une session de partage d'écran en direct (ou async si vous préférez) où nous construisons et testons votre configuration complète. Vous regardez, posez des questions, et à la fin vous comprenez chaque fichier que nous avons créé et pourquoi.
+
+### Étape 3 — Remise
+
+Nous livrons un résumé écrit de tout ce que nous avons configuré, incluant les chemins de fichiers, la justification et les instructions pour maintenir ou étendre la configuration vous-même. Les configurations d'équipe incluent l'appel d'intégration à cette étape.
+
+## Tarification
+
+| Forfait | Ce Qui est Inclus | Prix |
+|---------|-------------------|------|
+| **Solo** | 1 machine, config globale, jusqu'à 3 serveurs MCP, skills initiaux | à partir de 299 $ |
+| **Équipe** | Jusqu'à 10 développeurs, modèles CLAUDE.md partagés, bibliothèque de skills complète, appel d'équipe | à partir de 799 $ |
+| **Entreprise** | 10+ développeurs, développement MCP personnalisé, stratégie multi-dépôts, retainer continu | Contactez-nous |
+
+Tous les prix sont en USD. Les forfaits Solo et Équipe sont des engagements ponctuels. L'entreprise inclut des points mensuels.
+
+## Questions Fréquentes
+
+**Dois-je être technique pour utiliser ce service ?**
+
+Vous devez être à l'aise avec un terminal et avoir une familiarité de base avec votre propre base de code. Vous n'avez pas besoin de comprendre comment fonctionnent les serveurs MCP ou comment écrire des scripts de hooks — c'est ce que nous gérons.
+
+**Combien de temps prend la configuration ?**
+
+La session de configuration elle-même dure 2–3 heures. La plupart des clients sont entièrement configurés et utilisent Claude Code de manière productive dans la même journée.
+
+**Est-ce que ça fonctionnera avec mes outils existants (VS Code, GitHub Actions, Jira) ?**
+
+Oui. Claude Code s'exécute aux côtés de votre éditeur existant — il ne remplace pas VS Code, il ajoute une puissante couche IA basée sur le terminal. Nous intégrons avec GitHub, Jira et la plupart des systèmes CI/CD via des serveurs MCP ou des hooks.
+
+**Que se passe-t-il si mon équipe s'agrandit après la configuration ?**
+
+Vos modèles `CLAUDE.md` et fichiers de paramètres sont versionnés aux côtés de votre base de code. Intégrer un nouveau développeur signifie cloner le dépôt — la configuration vient avec. Nous offrons également un intégration à l'échelle pour les expansions d'équipe plus importantes.
+
+**Y a-t-il un support continu après la session ?**
+
+Chaque forfait inclut 14 jours de support async par email. Pour une aide continue, renseignez-vous sur nos forfaits de retainer.
+
+## Réserver un Appel de Configuration
+
+Prêt à arrêter de deviner et à travailler avec un environnement Claude Code conçu pour la façon dont vous développez réellement ?
+
+[**Réservez un appel de découverte gratuit**](/contact?service=setup) — 30 minutes, sans engagement, et vous repartirez avec un plan d'action clair même si vous ne réservez pas de session.

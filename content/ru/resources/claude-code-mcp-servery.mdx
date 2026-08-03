@@ -1,0 +1,569 @@
+---
+slug: claude-code-mcp-servery
+title: "MCP-серверы с Claude Code: расширение возможностей ИИ"
+description: "Что такое Model Context Protocol, как MCP-серверы расширяют Claude Code, конфигурация в settings.json, популярные серверы, создание кастомного MCP-сервера на Node.js и вопросы безопасности."
+category: guide
+schema: Article
+tags: [MCP, серверы, интеграции, конфигурация, расширения]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+lang: "ru"
+seoTitle: "MCP-серверы с Claude Code: расширение возможностей ИИ | ClawHelp"
+seoDescription: "Настройте MCP-серверы для Claude Code: GitHub, Slack, базы данных, filesystem. Полный пример кастомного сервера на Node.js, безопасность и отладка MCP-соединений."
+---
+
+# MCP-серверы с Claude Code: расширение возможностей ИИ
+
+Claude Code умеет выполнять код, читать файлы, работать с git. Но что, если нужно дать ему доступ к GitHub API, внутренней базе данных, Slack, или корпоративной Wiki? Именно для этого существует Model Context Protocol (MCP) — стандартизированный способ расширить возможности Claude Code инструментами из внешнего мира.
+
+---
+
+## Что такое MCP
+
+Model Context Protocol — это открытый протокол, разработанный Anthropic, который стандартизирует взаимодействие между языковыми моделями и внешними инструментами. Аналогия: если Claude Code — это браузер, то MCP-серверы — это расширения (plugins).
+
+MCP работает по модели клиент-сервер:
+
+- **Клиент** — Claude Code, который инициирует соединение и отправляет запросы
+- **Сервер** — отдельный процесс, который экспортирует набор инструментов (tools) и/или ресурсов (resources)
+
+Протокол транспортно-независим: серверы могут общаться через stdin/stdout (локально) или через HTTP+SSE (удалённо). Для большинства use cases — локальный транспорт через stdio.
+
+**Что MCP-сервер может предоставить Claude Code:**
+
+- **Tools** — функции, которые Claude может вызывать (поиск в базе данных, отправка Slack-сообщения, создание GitHub Issue)
+- **Resources** — структурированные данные, которые Claude может читать (схема БД, документация API, список файлов)
+- **Prompts** — шаблонные промпты для типовых сценариев
+
+---
+
+## Конфигурация в `.claude/settings.json`
+
+MCP-серверы подключаются через секцию `mcpServers` в `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
+    },
+    "my-internal-api": {
+      "command": "node",
+      "args": ["/path/to/my-mcp-server/index.js"],
+      "env": {
+        "API_BASE_URL": "https://api.internal.example.com",
+        "API_KEY": "${INTERNAL_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**Поля конфигурации сервера:**
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `command` | string | Исполняемый файл для запуска сервера |
+| `args` | string[] | Аргументы командной строки |
+| `env` | object | Переменные окружения (поддерживают `${VAR}` для подстановки из shell) |
+| `url` | string | URL для HTTP-серверов (альтернатива command+args) |
+
+Синтаксис `${VAR}` в `env` подставляет значение из переменных окружения вашего shell. Никогда не вставляйте токены и пароли напрямую в settings.json — только через переменные окружения.
+
+---
+
+## Популярные MCP-серверы
+
+### GitHub
+
+Даёт Claude Code доступ к GitHub API: чтение и создание Issues, Pull Requests, просмотр репозиториев, комментирование кода.
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+После подключения вы можете писать:
+
+```
+Создай GitHub Issue с заголовком "Память утекает в worker pool" 
+и описанием проблемы на основе этого лога: [вставить лог]
+```
+
+Claude Code обратится к GitHub MCP-серверу, который создаст Issue через API.
+
+### Slack
+
+Позволяет Claude Code отправлять сообщения в каналы, читать историю, управлять уведомлениями.
+
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      }
+    }
+  }
+}
+```
+
+### Базы данных
+
+**PostgreSQL:**
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}"
+      }
+    }
+  }
+}
+```
+
+Даёт Claude возможность выполнять SQL-запросы, просматривать схему, анализировать данные. Особенно полезно при отладке сложных запросов или написании миграций.
+
+**SQLite:**
+
+```json
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "/path/to/database.db"]
+    }
+  }
+}
+```
+
+### Filesystem
+
+Расширенный доступ к файловой системе с поиском и метаданными:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/user/projects",
+        "/home/user/documents"
+      ]
+    }
+  }
+}
+```
+
+Аргументы — список директорий, к которым сервер предоставит доступ. Сервер не даёт доступ за пределы указанных директорий.
+
+### Brave Search и другие поисковики
+
+Даёт Claude Code возможность делать веб-поиск прямо из сессии:
+
+```json
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Создание кастомного MCP-сервера на Node.js
+
+Официальный SDK делает создание MCP-сервера достаточно простым. Вот полный пример сервера, который предоставляет Claude Code доступ к внутреннему REST API.
+
+### Установка зависимостей
+
+```bash
+mkdir my-mcp-server && cd my-mcp-server
+npm init -y
+npm install @modelcontextprotocol/sdk node-fetch
+```
+
+### Полный пример: сервер для внутреннего API
+
+**`index.js`:**
+
+```javascript
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import fetch from "node-fetch";
+
+const API_BASE = process.env.API_BASE_URL || "https://api.example.com";
+const API_KEY = process.env.API_KEY;
+
+// Инициализация сервера
+const server = new Server(
+  {
+    name: "internal-api-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Объявление доступных инструментов
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "get_user",
+        description: "Получить информацию о пользователе по ID",
+        inputSchema: {
+          type: "object",
+          properties: {
+            user_id: {
+              type: "string",
+              description: "ID пользователя",
+            },
+          },
+          required: ["user_id"],
+        },
+      },
+      {
+        name: "search_orders",
+        description: "Поиск заказов по фильтрам",
+        inputSchema: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              enum: ["pending", "processing", "completed", "cancelled"],
+              description: "Статус заказа для фильтрации",
+            },
+            limit: {
+              type: "number",
+              description: "Максимальное количество результатов (по умолчанию 20)",
+            },
+          },
+        },
+      },
+      {
+        name: "create_ticket",
+        description: "Создать тикет в системе поддержки",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Заголовок тикета" },
+            description: { type: "string", description: "Описание проблемы" },
+            priority: {
+              type: "string",
+              enum: ["low", "medium", "high", "critical"],
+            },
+          },
+          required: ["title", "description"],
+        },
+      },
+    ],
+  };
+});
+
+// Обработка вызовов инструментов
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  const headers = {
+    Authorization: `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  };
+
+  try {
+    switch (name) {
+      case "get_user": {
+        const response = await fetch(`${API_BASE}/users/${args.user_id}`, {
+          headers,
+        });
+        if (!response.ok) {
+          throw new Error(`API вернул ${response.status}: ${await response.text()}`);
+        }
+        const user = await response.json();
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(user, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "search_orders": {
+        const params = new URLSearchParams();
+        if (args.status) params.set("status", args.status);
+        if (args.limit) params.set("limit", String(args.limit));
+
+        const response = await fetch(`${API_BASE}/orders?${params}`, {
+          headers,
+        });
+        const orders = await response.json();
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(orders, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "create_ticket": {
+        const response = await fetch(`${API_BASE}/tickets`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            title: args.title,
+            description: args.description,
+            priority: args.priority || "medium",
+          }),
+        });
+        const ticket = await response.json();
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Тикет создан: ${ticket.id}\nURL: ${API_BASE}/tickets/${ticket.id}`,
+            },
+          ],
+        };
+      }
+
+      default:
+        throw new Error(`Неизвестный инструмент: ${name}`);
+    }
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Ошибка: ${error.message}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+});
+
+// Запуск сервера через stdio
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+### Подключение к Claude Code
+
+```json
+{
+  "mcpServers": {
+    "internal-api": {
+      "command": "node",
+      "args": ["/absolute/path/to/my-mcp-server/index.js"],
+      "env": {
+        "API_BASE_URL": "https://api.internal.example.com",
+        "API_KEY": "${INTERNAL_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+После этого можно писать прямо в чате:
+
+```
+Найди все заказы со статусом "pending" и создай тикет поддержки 
+для каждого, у которого нет активности более 48 часов.
+```
+
+Claude Code сам разберётся, какие инструменты вызывать и в каком порядке.
+
+---
+
+## Вопросы безопасности
+
+MCP-серверы расширяют возможности Claude Code — а значит, расширяют и поверхность атаки. Несколько критических правил:
+
+### Принцип минимальных привилегий
+
+Давайте MCP-серверу только те разрешения, которые реально нужны. Для сервера, который только читает данные — только read-only доступ к API. Для Postgres — отдельный пользователь с правами только SELECT на нужные таблицы, без INSERT/UPDATE/DELETE.
+
+```sql
+-- Создать read-only пользователя для MCP-сервера
+CREATE USER mcp_claude WITH PASSWORD 'strong-password';
+GRANT CONNECT ON DATABASE your_db TO mcp_claude;
+GRANT USAGE ON SCHEMA public TO mcp_claude;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO mcp_claude;
+```
+
+### Никогда не хардкодить credentials
+
+```json
+// ПЛОХО — никогда так не делайте
+{
+  "mcpServers": {
+    "github": {
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_xxxxxxxxxxxx"
+      }
+    }
+  }
+}
+
+// ХОРОШО — через переменные окружения
+{
+  "mcpServers": {
+    "github": {
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+### Проверяйте входные данные в кастомных серверах
+
+Claude Code передаёт параметры инструментов как есть — кастомный сервер должен валидировать их перед использованием:
+
+```javascript
+case "search_orders": {
+  // Валидация перед использованием
+  const allowedStatuses = ["pending", "processing", "completed", "cancelled"];
+  if (args.status && !allowedStatuses.includes(args.status)) {
+    throw new Error(`Недопустимый статус: ${args.status}`);
+  }
+  const limit = Math.min(Math.max(1, args.limit || 20), 100); // Ограничить диапазон
+  // ...
+}
+```
+
+### settings.local.json для персональных credentials
+
+Если credentials нужны только вам (не команде), используйте `.claude/settings.local.json`, который должен быть в `.gitignore`:
+
+```json
+// .claude/settings.local.json (НЕ коммитить в репозиторий)
+{
+  "mcpServers": {
+    "my-personal-tool": {
+      "command": "node",
+      "args": ["/home/user/my-private-mcp/index.js"],
+      "env": {
+        "SECRET_KEY": "my-personal-secret"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Отладка MCP-соединений
+
+Когда MCP-сервер не работает, диагностика проходит в несколько этапов.
+
+### Шаг 1: Запустите сервер вручную
+
+```bash
+GITHUB_TOKEN=your-token npx -y @modelcontextprotocol/server-github
+```
+
+Если сервер падает при ручном запуске — проблема в конфигурации или зависимостях, не в Claude Code.
+
+### Шаг 2: Проверьте логи Claude Code
+
+```bash
+# macOS/Linux
+tail -f ~/Library/Logs/Claude/mcp*.log  # macOS
+tail -f ~/.config/claude/logs/mcp*.log  # Linux
+```
+
+Логи MCP-соединений показывают что именно пошло не так: timeout, ошибка парсинга JSON, отказ в подключении.
+
+### Шаг 3: Проверьте переменные окружения
+
+Переменные из `.claude/settings.json` с синтаксисом `${VAR}` берутся из окружения, в котором запущен Claude Code. Если вы запускаете Claude Code из IDE или лаунчера — переменные из `.bashrc`/`.zshrc` могут не быть доступны.
+
+```bash
+# Проверить, доступна ли переменная в окружении Claude Code
+echo $GITHUB_TOKEN  # В том же терминале, откуда запускаете claude
+```
+
+Если переменная недоступна — добавьте export в `.profile` или запускайте Claude из терминала, где переменные установлены.
+
+### Шаг 4: Тестирование через MCP Inspector
+
+Официальный инструмент для отладки MCP-серверов:
+
+```bash
+npx @modelcontextprotocol/inspector node /path/to/your-server/index.js
+```
+
+Открывается веб-интерфейс, где можно видеть список доступных инструментов и тестировать их вызовы напрямую, без Claude Code.
+
+### Типичные ошибки и их причины
+
+| Ошибка | Причина | Решение |
+|--------|---------|---------|
+| `spawn ENOENT` | Исполняемый файл не найден | Проверьте `command` — используйте абсолютный путь |
+| `Connection timeout` | Сервер не отвечает в течение 10 секунд | Запустите вручную, проверьте зависимости |
+| `Tool not found` | Имя инструмента в промпте не совпадает с объявленным | Запустите `/help` чтобы увидеть реальные имена инструментов |
+| `Authentication failed` | Неверный или просроченный токен | Проверьте значение переменной окружения |
+| `Permission denied` | MCP-сервер не имеет прав на ресурс | Проверьте права учётной записи |
+
+---
+
+## MCP в командной работе
+
+MCP-серверы, объявленные в `.claude/settings.json` (не `.local.json`), разделяются со всей командой через репозиторий. Это хорошо для стандартизации набора инструментов, но требует аккуратного управления credentials.
+
+**Рекомендуемая модель:**
+
+- `.claude/settings.json` в репозитории — список серверов с `${ENV_VAR}` плейсхолдерами
+- Документация в CLAUDE.md — какие переменные окружения нужно установить
+- Персональные значения — в `.env.local` или менеджере secrets (Vault, 1Password, AWS Secrets Manager)
+- `.claude/settings.local.json` в `.gitignore` — для персональных серверов
+
+---
+
+Если вы хотите интегрировать Claude Code с внутренними системами вашей компании — базами данных, CRM, тикет-системами или корпоративным API — команда ClawHelp разработает кастомный MCP-сервер и настроит безопасную интеграцию под ваши требования. Свяжитесь с нами, чтобы обсудить архитектуру решения.

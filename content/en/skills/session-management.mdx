@@ -1,0 +1,245 @@
+---
+slug: session-management
+title: "Claude Code Session Management: Context, Compaction, and Continuity"
+description: "How Claude Code sessions work, when context gets compressed, how to use /compact effectively, and strategies for long-running projects."
+category: how-to
+tags: [sessions, context, memory, compaction, claude-code, workflow]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 10
+relatedServices: [claude-code-setup]
+seoTitle: "Claude Code Session Management: Context & Compaction Guide | ClawHelp"
+seoDescription: "Master Claude Code session management — understand context windows, use /compact effectively, resume work across sessions, and avoid context-related failures."
+schema: HowTo
+---
+
+# Claude Code Session Management: Context, Compaction, and Continuity
+
+Every Claude Code session operates within a context window — a finite amount of text that Claude can actively reason about at once. Understanding how sessions work, how context is managed, and how to structure long-running work is the difference between smooth multi-day projects and frustrating, repetitive conversations.
+
+## How Claude Code Sessions Work
+
+### The Context Window
+
+Claude Code uses a large context window (the exact size depends on the model — Sonnet 4.6 and Opus 4.x have 200K token windows), but it is finite. Every file you read, every tool result, every exchange in the conversation consumes context tokens.
+
+**What consumes context quickly:**
+- Reading large files (a 500-line TypeScript file = ~2,000 tokens)
+- Large command outputs (running `npm run build` with many warnings)
+- Long back-and-forth conversations about complex topics
+- Repeated reading of the same files
+- Verbose tool results from bash commands
+
+**What stays light:**
+- Short, targeted questions
+- Reading only the specific lines you need (using `offset` and `limit` on Read)
+- Concise bash commands that produce focused output
+
+### Context Compression
+
+When the conversation approaches the context limit, Claude Code automatically compresses prior messages into a summary. This compression preserves the essential facts and decisions but loses the exact wording. The system tells you when compression occurs with a note in the conversation.
+
+**What compression preserves:**
+- What work was done
+- What decisions were made
+- What files were created or changed
+- What errors were encountered and how they were resolved
+
+**What compression may lose:**
+- Exact wording of earlier messages
+- Detailed reasoning from early in the session
+- Specific file contents that were read but not acted on
+
+## The /compact Command
+
+`/compact` triggers manual context compression before the system does it automatically. Use it proactively — before you lose control of the session rather than after.
+
+### When to use /compact
+
+**Use /compact when:**
+- You've finished a logical chunk of work (a feature, a set of file edits, a debugging session)
+- You're about to start a new, distinct task in the same session
+- You notice the session getting "heavy" — responses starting to drift or lose context
+- You've been in a session for 2+ hours and there's still significant work ahead
+
+**Don't use /compact when:**
+- You're in the middle of a complex, multi-step operation where losing the exact intermediate state would cause problems
+- Claude has just read a large file you'll need to reference in the next step
+- You're in a debugging loop that requires the full error history to be fresh
+
+### What /compact does
+
+`/compact` tells Claude to summarize the current conversation into a compact representation, then continue from that summary. You can optionally pass a focus:
+
+```
+/compact focus on the authentication module changes we made
+```
+
+Without a focus, Claude decides what's most important to preserve. With a focus, it prioritizes those elements in the summary.
+
+After `/compact`, the session continues with Claude aware of what happened (through the summary) but without the full conversation history in active context.
+
+## Structuring Long-Running Projects
+
+### Session Boundaries and Continuity
+
+Sessions do not persist between Claude Code processes. When you quit and restart, Claude starts with a blank context. This is by design — it prevents stale assumptions from contaminating new work.
+
+**How to maintain continuity across sessions:**
+
+**1. CLAUDE.md — Your project's persistent memory**
+
+`CLAUDE.md` in your project root is always loaded into Claude's context when it starts a session in that directory. Use it to document:
+- What the project is and what you're building
+- Current status (what's done, what's in progress, what's next)
+- Key architectural decisions and why they were made
+- Things Claude must know but can't infer from the code
+- Active blockers or open questions
+
+Update CLAUDE.md at the end of each session. In the next session, Claude reads it and has current context.
+
+```markdown
+# MyApp CLAUDE.md
+
+## Status (2026-05-15)
+- Auth module: COMPLETE ✅
+- Dashboard: IN PROGRESS — data fetching works, rendering broken on mobile
+- Payment integration: NOT STARTED
+
+## Active issues
+- Dashboard: `useInfiniteQuery` returns undefined on first render (SSR hydration mismatch)
+  - Tried: disabling SSR, using Suspense, setting initialData
+  - Not tried: manual cache seed on server, separate client component
+
+## Key decisions
+- Using Zustand not Redux (simpler for this scope)
+- Supabase for auth, not NextAuth (already have existing Supabase project)
+- Mobile-first layout breakpoints (375px base)
+```
+
+**2. Task tracking**
+
+Use the TaskCreate/TaskUpdate tools during sessions to maintain a task list. Tasks persist and can be reviewed at the start of a new session to re-establish context.
+
+**3. Git as session memory**
+
+Commit frequently and write meaningful commit messages. When you start a new session, `git log --oneline -20` gives Claude a clear picture of recent progress without re-reading all the code.
+
+```
+git log --oneline -20
+# 3ae2e33 fix: dashboard infinite scroll bug on Safari
+# 2a1b4c5 feat: user profile page with avatar upload
+# 9f8d2e1 fix: auth token refresh race condition
+```
+
+**4. Status documents**
+
+For large projects, maintain a `PROGRESS.md` or `STATUS.md` that you update at the end of each session:
+
+```markdown
+# Auth module — complete
+# Dashboard — data layer done; UI bug active (see CLAUDE.md)
+# Payments — not started; Stripe account needed first
+```
+
+## Common Session Management Mistakes
+
+### Reading the Same Files Repeatedly
+
+If Claude reads `app/page.tsx` five times in one session because it needs to check different things, that's 5× the token cost. Instead:
+
+**Better pattern:** Read the file once at the start of a task, do all the work that requires it, then move to the next task.
+
+**Even better:** When you know the session will involve a large file, read it early and give Claude a clear summary of what you need from it. "This file handles our routing — we'll be adding a new route at line 87 and updating the middleware at line 134."
+
+### Asking Claude to Summarize Without Direction
+
+`/compact` without focus produces a generic summary. If your session was 80% debugging an obscure bug and 20% writing documentation, the compact will treat them as equal. Give Claude direction:
+
+```
+/compact focus on the routing middleware debugging — specifically the CORS header issue and the solution we arrived at
+```
+
+### Starting New Tasks Without Resetting Context
+
+If you finish a feature and immediately pivot to a different module without compaction, Claude carries the full weight of the previous task. Five minutes of `/compact` and a crisp new prompt produces better work than asking Claude to context-switch with a full session already loaded.
+
+### Not Updating CLAUDE.md
+
+The most common session continuity failure: significant work gets done, decisions get made, then the session ends without CLAUDE.md being updated. The next session starts without this context and Claude re-discovers the same information or makes inconsistent decisions.
+
+Make CLAUDE.md updates part of your session wind-down: "Before we finish, update CLAUDE.md with what we accomplished and what's next."
+
+## Context Budget Management
+
+Think of context tokens as a budget you want to spend wisely, not a limit you're trying not to hit.
+
+**High-value token spend:**
+- Reading files you'll actually edit
+- Running commands whose output informs the next decision
+- Discussing architecture before implementing it
+
+**Low-value token spend:**
+- Reading files out of curiosity (use grep or targeted searches instead)
+- Running commands whose output you could predict
+- Long back-and-forth on settled decisions
+
+**Context budgeting in practice:**
+
+For a complex feature implementation:
+1. Start: read CLAUDE.md (project context), run `git log --oneline -10` (recent history)
+2. Research: targeted reads of relevant files, targeted grep for patterns
+3. Plan: discuss the implementation approach briefly
+4. Implement: edit files, run targeted tests
+5. Validate: run the full test suite once, fix issues
+6. Wind-down: update CLAUDE.md, commit, `/compact` or end session
+
+This pattern keeps the context window focused on active work rather than accumulated exploration.
+
+## Multi-Session Projects
+
+For projects spanning days or weeks:
+
+**Session start ritual:**
+1. Claude reads CLAUDE.md automatically (keep it updated!)
+2. Ask for current task: "Read CLAUDE.md, then tell me what we should work on next based on current status."
+3. Brief `git log` review
+
+**Session end ritual:**
+1. Commit all changes with a meaningful message
+2. Update CLAUDE.md with current status
+3. Write a one-paragraph note about what you'd want to know next session: current blockers, active decisions, next steps
+
+**Between-session context:** Keep a `DECISIONS.md` for architectural decisions that don't belong in CLAUDE.md but that Claude might need to re-derive without documentation:
+
+```markdown
+# 2026-05-12: Chose RSA-OAEP over ECDH for key exchange
+Reason: existing PKI infrastructure uses RSA; switching to ECDH would require migrating all existing key pairs.
+Considered: ECDH (better performance), RSA-OAEP (compatible with existing infra) → chose compat.
+```
+
+## Parallel Sessions and Worktrees
+
+Claude Code supports running multiple independent sessions simultaneously using git worktrees. Each worktree is an isolated copy of the repo on a separate branch.
+
+```bash
+# Create a worktree for a parallel feature
+git worktree add ../myapp-auth-feature auth/feature-oauth
+
+# Open a new terminal, start Claude Code in the worktree
+cd ../myapp-auth-feature
+claude
+```
+
+Each Claude Code session in each worktree is independent — they don't share context. This is useful for:
+- Parallel feature development without branch conflicts
+- Running a long-running agent in one worktree while working interactively in another
+- Experimenting with risky changes without affecting the main workspace
+
+Use `ExitWorktree` to clean up when done (or `git worktree remove` manually).
+
+---
+
+**Related guides:** [Claude Code Hooks](/skills/claude-code-hooks/) · [How to Build Subagents](/skills/build-subagent/) · [Effective Claude Code Practices](/skills/effective-claude-code/)
+
+**Need help setting up Claude Code for your team?** [ClawHelp Setup Service →](/services/claude-code-setup/)

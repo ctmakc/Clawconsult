@@ -1,0 +1,312 @@
+---
+slug: build-subagent
+title: "Comment créer des sous-agents dans Claude Code"
+description: "Apprenez comment Claude Code instancie des sous-agents via l'outil Agent — conception des prompts, passage de contexte, modes d'isolation, déploiement parallèle et exemples concrets."
+category: how-to
+lang: "fr"
+tags: [sous-agents, agents, multi-agent, claude-code, orchestration]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 12
+relatedServices: [agent-development]
+seoTitle: "Sous-agents Claude Code : créer et orchestrer des agents | ClawHelp"
+seoDescription: "Maîtrisez les sous-agents dans Claude Code — comment fonctionne l'outil Agent, comment rédiger les prompts, passer le contexte, exécuter des agents en parallèle et gérer les résultats."
+schema: HowTo
+---
+
+# Comment créer des sous-agents dans Claude Code
+
+Les sous-agents sont des instances Claude indépendantes qu'un agent orchestrateur instancie pour traiter des tâches précises. Ils disposent de leur propre fenêtre de contexte, de leur propre accès aux outils, et retournent leurs résultats à l'agent parent. Claude Code expose cette capacité via l'**outil Agent**, disponible au modèle lors d'une session agentique.
+
+Ce guide explique ce que sont les sous-agents, quand les utiliser, comment rédiger leurs prompts, comment les déployer en parallèle, et comment éviter les erreurs les plus courantes.
+
+---
+
+## Ce que sont les sous-agents
+
+Lorsque Claude Code exécute une tâche, il opère dans une seule fenêtre de contexte — une conversation bornée entre vous, le modèle et ses appels d'outils. Pour la plupart des tâches, c'est suffisant. Pour les tâches complexes, cela crée deux problèmes :
+
+1. **Épuisement du contexte.** Une tâche longue remplit la fenêtre de contexte. Quand elle est pleine, le modèle ne peut plus voir les parties antérieures de la tâche et ses performances se dégradent.
+2. **Couplage.** Quand une partie d'une tâche échoue ou produit un résultat bruité, cela contamine le contexte des parties suivantes.
+
+Un sous-agent résout ces deux problèmes. C'est une nouvelle instance Claude — avec sa propre fenêtre de contexte, repartant de zéro — qui reçoit uniquement ce dont elle a besoin via son prompt. Quand le sous-agent termine, il retourne un résultat à l'orchestrateur. L'orchestrateur voit le résultat, pas la trace complète du cheminement du sous-agent.
+
+Les sous-agents ne sont pas toujours plus rapides. Ils ont un coût fixe : chacun effectue des appels API, traite son prompt et peut exécuter ses propres appels d'outils. L'avantage est l'isolation et le parallélisme, pas la vitesse brute.
+
+---
+
+## Quand utiliser des sous-agents
+
+Utilisez des sous-agents quand votre tâche comporte des composantes clairement séparables qui :
+
+- **Peuvent s'exécuter en parallèle** — deux sous-tâches indépendantes qui n'ont pas besoin du résultat de l'autre pour démarrer.
+- **Nécessitent une protection du contexte** — vous ne voulez pas que la sortie d'une sous-tâche pollue le raisonnement de l'orchestrateur sur une autre.
+- **Sont suffisamment substantielles** — une tâche de sous-agent devrait nécessiter au moins plusieurs appels d'outils pour justifier le coût fixe.
+
+**Bons candidats :**
+- Effectuer un audit de sécurité du code source en même temps qu'on exécute la suite de tests.
+- Rechercher la documentation d'une bibliothèque pendant qu'un autre agent lit l'implémentation existante.
+- Traiter 10 fichiers indépendamment, un sous-agent par fichier.
+- Générer un brouillon, puis instancier un agent de révision distinct pour le critiquer.
+
+**Mauvais candidats :**
+- Une tâche de deux lignes qu'il est plus rapide de faire directement.
+- Des tâches qui ont besoin de l'état courant de l'orchestrateur (mémoire, modifications en cours) pour avancer.
+- Tout ce qui nécessite des échanges étroits avec l'utilisateur — les sous-agents ne peuvent pas s'adresser directement à l'utilisateur.
+
+---
+
+## L'outil Agent — Paramètres
+
+L'outil Agent est appelé par le modèle (pas directement par vous). Quand vous écrivez un CLAUDE.md ou un prompt système qui demande à Claude d'utiliser des sous-agents, vous demandez à l'orchestrateur d'émettre des appels à l'outil Agent. Comprendre les paramètres vous aide à rédiger de meilleurs prompts d'orchestration.
+
+```
+Agent(
+  description: string        // Étiquette courte — affichée dans l'interface, utilisée dans les journaux
+  prompt: string             // Description complète de la tâche pour le sous-agent
+  subagent_type?: string     // "general" (défaut) | nom du modèle à substituer
+  run_in_background?: bool   // Déclenchement asynchrone ; l'orchestrateur continue immédiatement
+  isolation?: string         // "none" (défaut) | "worktree"
+)
+```
+
+**`description`** — Gardez-la courte et lisible : `"Audit de sécurité du module auth"`, `"Exécuteur de la suite de tests"`. C'est l'étiquette visible dans l'interface de Claude Code quand plusieurs agents tournent.
+
+**`prompt`** — C'est l'intégralité du monde que voit le sous-agent. Rédigez-le comme si vous confiez la tâche à une personne qui ne sait rien de votre session en cours. Consultez la section sur la conception des prompts ci-dessous.
+
+**`subagent_type`** — Permet d'acheminer les tâches vers un modèle différent. Utilisez `claude-opus-4-5` pour les tâches de raisonnement complexe, `claude-haiku-4-5` pour les tâches à fort volume et faible coût. Si omis, le sous-agent utilise le même modèle que l'orchestrateur.
+
+**`run_in_background`** — Si `true`, l'orchestrateur n'attend pas que le sous-agent termine. L'orchestrateur passe à l'étape suivante immédiatement. Utile pour les tâches déclenchées sans attente de résultat comme la journalisation ou le préchauffage de cache ; moins utile quand l'orchestrateur a besoin du résultat pour continuer.
+
+**`isolation`** — `"worktree"` crée une copie git worktree séparée du dépôt avant d'exécuter le sous-agent. Le sous-agent peut modifier des fichiers sans toucher à l'arborescence de travail de l'orchestrateur. Les résultats sont fusionnés quand le sous-agent retourne. Utilisez ce mode quand des sous-agents modifient des fichiers simultanément.
+
+---
+
+## Rédiger de bons prompts de sous-agents
+
+L'échec le plus courant de sous-agent est un prompt insuffisamment spécifié. Comme le sous-agent démarre sans aucun souvenir de la session parente, il ne peut pas inférer le contexte qui semble évident à l'orchestrateur.
+
+### Liste de contrôle pour chaque prompt de sous-agent
+
+**1. Énoncez l'objectif explicitement.**
+N'écrivez pas « révise le module auth ». Écrivez : « Examine le fichier `src/auth/jwt.ts` à la recherche de failles de sécurité. Concentrez-vous sur la gestion de l'expiration des jetons, la vérification des signatures et la gestion des secrets. Retournez une liste markdown des constats avec leur sévérité (haute/moyenne/faible) pour chacun. »
+
+**2. Passez le contexte nécessaire directement dans le prompt.**
+Si le sous-agent a besoin de connaître une contrainte, incluez-la :
+
+```
+Vous examinez un code source qui utilise Express 4.x avec l'authentification JWT.
+La clé API est stockée dans la variable d'environnement ANTHROPIC_API_KEY.
+Ne lisez PAS et ne journalisez PAS le contenu des fichiers .env.
+```
+
+**3. Précisez le format de sortie.**
+L'orchestrateur analysera ou résumera la valeur de retour du sous-agent. Si vous avez besoin d'une sortie structurée, dites-le :
+
+```
+Retournez vos constats sous forme JSON avec cette structure :
+{ "severity": "high" | "medium" | "low", "file": string, "line": number, "description": string }[]
+```
+
+**4. Dites au sous-agent ce qu'il NE doit PAS faire.**
+Les sous-agents tendent à accomplir les tâches de façon exhaustive. S'il y a des limites — fichiers à ignorer, actions à éviter — précisez-les explicitement :
+
+```
+Ne faites AUCUNE modification de fichier. Analyse en lecture seule uniquement.
+N'installez AUCUN paquet.
+Limitez votre recherche au répertoire src/.
+```
+
+**5. Incluez une condition d'arrêt.**
+Les sous-agents sans critère de fin clair peuvent surexplorer :
+
+```
+Arrêtez après avoir analysé tous les fichiers correspondant à src/auth/**/*.ts.
+N'élargissez pas la recherche à d'autres répertoires.
+```
+
+---
+
+## Passage de contexte
+
+Les sous-agents ne peuvent pas accéder à la mémoire de l'orchestrateur, aux fichiers ouverts, ni aux résultats des appels d'outils précédents. Chaque information dont le sous-agent a besoin doit figurer dans son prompt.
+
+### Modèles pour passer le contexte
+
+**Passez les chemins de fichiers, pas le contenu (pour les grands fichiers) :**
+
+```
+Lisez le fichier /home/user/projet/src/auth/jwt.ts et vérifiez-le à la recherche de failles.
+```
+
+Le sous-agent utilisera l'outil Read pour récupérer le fichier lui-même. Cela garde le prompt court.
+
+**Passez le contenu court directement (pour les extraits brefs) :**
+
+```
+Voici la fonction concernée. Examinez-la pour des risques d'injection SQL :
+
+```typescript
+async function getUserById(id: string) {
+  return db.query(`SELECT * FROM users WHERE id = '${id}'`);
+}
+```
+```
+
+**Passez les résultats des étapes précédentes sous forme de données structurées :**
+
+Si l'orchestrateur a exécuté une suite de tests et obtenu une liste de tests en échec, passez cette liste :
+
+```
+Les tests suivants sont en échec. Diagnostiquez la cause racine de chacun et proposez un correctif.
+N'exécutez pas les tests — analysez seulement le code.
+
+Tests en échec :
+- UserController > createUser > should validate email format
+- AuthService > login > should reject expired tokens
+- ...
+```
+
+---
+
+## Déploiement parallèle
+
+Pour exécuter plusieurs sous-agents simultanément, l'orchestrateur émet plusieurs appels à l'outil Agent dans une seule réponse. Claude Code les exécute en parallèle et attend que tous se terminent avant de continuer.
+
+Voici comment demander à l'orchestrateur de procéder ainsi dans votre prompt système ou CLAUDE.md :
+
+```markdown
+## Instructions d'orchestration
+
+Face à des tâches comportant des composantes indépendantes, instanciez plusieurs sous-agents
+dans une seule réponse. Par exemple, si on vous demande d'« auditer la sécurité et d'exécuter les tests » :
+
+1. Instanciez un sous-agent pour auditer src/auth/ à la recherche de failles de sécurité.
+2. Dans la même réponse, instanciez un second sous-agent pour exécuter `npm test` et collecter les échecs.
+3. Attendez que les deux terminent, puis synthétisez leurs rapports.
+
+N'exécutez jamais ces tâches séquentiellement quand elles peuvent s'exécuter en parallèle.
+```
+
+L'orchestrateur émettra quelque chose comme ceci (conceptuellement) :
+
+```
+Agent(description="Audit de sécurité", prompt="Audite src/auth/ pour des failles...")
+Agent(description="Exécuteur de tests", prompt="Exécute npm test et rapporte tous les échecs...")
+```
+
+Les deux s'exécutent de façon concurrente. L'orchestrateur reçoit les deux résultats, puis raisonne à partir de ceux-ci ensemble.
+
+---
+
+## Agents en arrière-plan
+
+Définir `run_in_background: true` indique à l'orchestrateur de ne pas attendre le sous-agent. L'orchestrateur continue immédiatement. Le sous-agent se termine de façon asynchrone et le résultat est transmis à l'orchestrateur plus tard.
+
+Utilisez ce mode pour :
+- Les notifications (publier un message Slack, écrire une entrée de journal)
+- Le préchauffage de cache ou le précalcul dont l'orchestrateur n'a pas besoin immédiatement
+- Les tâches longues quand vous voulez que le flux principal continue
+
+Évitez ce mode quand l'étape suivante de l'orchestrateur dépend du résultat du sous-agent — le résultat ne sera pas disponible à temps.
+
+---
+
+## Modes d'isolation
+
+**`isolation: "none"` (défaut)** — Le sous-agent travaille dans la même arborescence git que l'orchestrateur. Les modifications de fichiers du sous-agent sont immédiatement visibles par l'orchestrateur et vice-versa. Convient pour les sous-agents en lecture seule ou quand un seul sous-agent modifie des fichiers à la fois.
+
+**`isolation: "worktree"`** — Claude Code crée un nouveau git worktree (un checkout parallèle du même dépôt) pour le sous-agent. Les modifications du sous-agent ont lieu dans ce worktree et n'affectent pas le répertoire de travail de l'orchestrateur. Quand le sous-agent termine, ses changements peuvent être fusionnés ou rejetés.
+
+Utilisez l'isolation `worktree` quand :
+- Plusieurs sous-agents modifient les mêmes fichiers simultanément.
+- Vous voulez prévisualiser ce que ferait un sous-agent sans vous y engager.
+- Un sous-agent pourrait effectuer des modifications destructrices que vous souhaitez pouvoir annuler.
+
+---
+
+## Lecture des résultats des sous-agents
+
+La réponse finale du sous-agent (ce qu'il produit à la fin de sa session) est retournée à l'orchestrateur comme résultat de l'appel à l'outil Agent. L'orchestrateur peut alors :
+
+- Résumer plusieurs résultats pour l'utilisateur
+- Utiliser les résultats comme entrée pour l'étape suivante
+- Décider de réessayer ou d'escalader en fonction du résultat
+
+Concevez vos prompts de sous-agents pour produire un résultat propre et analysable. Si le sous-agent retourne un mur de texte de raisonnement, l'orchestrateur doit faire un travail supplémentaire pour en extraire le signal.
+
+---
+
+## Exemple concret : Recherche et révision de code en parallèle
+
+Voici un exemple concret montrant un orchestrateur qui instancie deux sous-agents en parallèle : l'un pour rechercher l'API d'une bibliothèque, l'autre pour réviser l'implémentation existante.
+
+**Prompt de l'orchestrateur (dans CLAUDE.md ou le prompt système) :**
+
+```markdown
+Vous êtes un assistant d'ingénierie senior. Quand on vous demande de « mettre à jour une dépendance », procédez comme suit :
+
+1. Dans une seule réponse, instanciez deux sous-agents simultanément :
+
+   Sous-agent A — Recherche :
+   Lisez le CHANGELOG et le README de la nouvelle version de la bibliothèque dans node_modules.
+   Retournez un résumé markdown des changements incompatibles et des nouvelles API pertinentes pour notre code source.
+
+   Sous-agent B — Révision de l'utilisation courante :
+   Recherchez dans le répertoire src/ toutes les importations et les appels à l'ancienne bibliothèque.
+   Retournez une liste de chaque emplacement d'utilisation avec le chemin du fichier et le numéro de ligne.
+
+2. Après le retour des deux sous-agents, synthétisez leurs constats :
+   - Associez chaque changement incompatible aux emplacements d'utilisation affectés.
+   - Proposez un changement de code spécifique pour chaque fichier affecté.
+
+3. Ne commencez à faire des modifications qu'après cette étape.
+```
+
+Avec cette configuration, la recherche et l'analyse de l'utilisation s'effectuent en parallèle. L'orchestrateur synthétise quand les deux sont terminés, puis procède avec une vue d'ensemble complète — plutôt que de découvrir un changement incompatible en pleine modification.
+
+---
+
+## Erreurs courantes
+
+**Le prompt du sous-agent fait référence à « ce qui précède » ou « comme discuté ».**
+Le sous-agent n'a aucun souvenir de la conversation précédente. Chaque référence doit être explicite.
+
+**L'orchestrateur attend le résultat d'un agent en arrière-plan.**
+Si `run_in_background: true`, le résultat n'est pas disponible à l'étape suivante. N'utilisez les agents en arrière-plan que quand l'orchestrateur n'a réellement pas besoin du résultat.
+
+**Des agents parallèles modifient le même fichier sans isolation worktree.**
+Deux sous-agents qui écrivent dans le même fichier corrompront mutuellement leur travail. Sérialisez leur exécution ou utilisez `isolation: "worktree"` et fusionnez ensuite.
+
+**Le prompt du sous-agent est trop ouvert.**
+« Revoyez le code source pour détecter des problèmes » va amener le sous-agent à dépenser toute sa fenêtre de contexte sur une analyse large. Ciblez la tâche : « Revoyez `src/api/routes/users.ts` pour des problèmes de validation des entrées. »
+
+**Instancier des sous-agents pour des tâches triviales.**
+Chaque appel à un sous-agent a une latence et un coût fixe. Une tâche qui nécessite deux appels d'outils directement ne tire aucun bénéfice d'être déléguée à un sous-agent.
+
+---
+
+## Prochaines étapes
+
+- [Hooks Claude Code](/skills/claude-code-hooks) — déclenchez des scripts shell avant et après les appels d'outils, y compris les appels Agent
+- [Guide d'installation complet](/skills/install-claude-code) — démarrez avec Claude Code si ce n'est pas encore fait
+- [Guide d'installation Linux](/skills/install-claude-code-linux) — configuration sur serveur sans interface graphique pour exécuter des agents en IC
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Comment créer des sous-agents dans Claude Code",
+  "description": "Créer et orchestrer des sous-agents dans Claude Code via l'outil Agent",
+  "step": [
+    { "@type": "HowToStep", "name": "Identifier les sous-tâches parallélisables ou isolables", "text": "Déterminez quelles parties de votre tâche sont indépendantes et bénéficient d'une fenêtre de contexte séparée." },
+    { "@type": "HowToStep", "name": "Rédiger un prompt de sous-agent autonome", "text": "Incluez tout le contexte dont le sous-agent a besoin — chemins de fichiers, contraintes, format de sortie — sans vous appuyer sur la mémoire de session." },
+    { "@type": "HowToStep", "name": "Choisir le mode d'isolation", "text": "Utilisez isolation: worktree quand plusieurs sous-agents modifient des fichiers simultanément." },
+    { "@type": "HowToStep", "name": "Déployer en parallèle", "text": "Demandez à l'orchestrateur d'émettre plusieurs appels à l'outil Agent dans une seule réponse." },
+    { "@type": "HowToStep", "name": "Synthétiser les résultats", "text": "Après le retour de tous les sous-agents, demandez à l'orchestrateur de combiner leurs sorties avant d'agir." }
+  ]
+}
+*/}

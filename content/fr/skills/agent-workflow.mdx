@@ -1,0 +1,236 @@
+---
+slug: agent-workflow
+title: "Flux de travail agent Claude Code : modèles d'orchestration"
+description: "Guide pratique des modèles de flux de travail agent Claude Code — du task agent unique aux architectures orchestrateur-sous-agent, avec déploiement parallèle et pipelines séquentiels."
+category: how-to
+lang: "fr"
+tags: [agents, flux-de-travail, orchestration, multi-agent, automatisation, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [workflow-automation, consulting]
+seoTitle: "Modèles de flux de travail agent Claude Code — Guide d'orchestration"
+seoDescription: "Découvrez les principaux modèles d'orchestration d'agents Claude Code : agent unique, orchestrateur+sous-agent, déploiement parallèle, pipelines séquentiels et agents en arrière-plan. Avec des exemples pratiques."
+schema: HowTo
+---
+
+# Flux de travail agent Claude Code : modèles d'orchestration
+
+La plupart des usages de Claude Code sont en mode agent unique : vous donnez une tâche à Claude, il l'exécute, vous révisez le résultat. Cela couvre beaucoup de terrain. Mais certains problèmes — grandes bases de code, flux de travail parallèles, automatisation longue durée — bénéficient d'une coordination multi-agent structurée.
+
+Ce guide recense les principaux modèles, quand chacun s'applique et comment les mettre en place.
+
+---
+
+## Agent unique vs multi-agent : le compromis fondamental
+
+Un agent unique est plus simple, moins coûteux et plus facile à déboguer. Tout se passe dans une seule fenêtre de contexte, un seul fil, un seul ensemble d'appels d'outils. Vous pouvez lire la transcription et comprendre exactement ce qui s'est passé.
+
+Les architectures multi-agents paient un coût de coordination en échange de :
+
+- **Parallélisme** — plusieurs agents travaillant simultanément sur des tâches indépendantes
+- **Isolation du contexte** — chaque agent dispose d'une fenêtre de contexte propre pour sa sous-tâche
+- **Spécialisation** — agents adaptés à des rôles spécifiques (planificateur, exécuteur, réviseur)
+- **Passage à l'échelle** — tâches trop grandes pour une seule fenêtre de contexte
+
+Choisissez l'agent unique par défaut. Passez au multi-agent quand vous avez un travail genuinement indépendant et parallélisable, ou quand une tâche est trop grande pour un seul contexte.
+
+---
+
+## Modèle 1 : Orchestrateur + Sous-agent
+
+Le modèle multi-agent le plus courant. Un agent **orchestrateur** reçoit l'objectif de haut niveau, le décompose en sous-tâches, distribue ces sous-tâches à des **sous-agents**, collecte les résultats et produit la sortie finale.
+
+```
+Utilisateur
+ └── Orchestrateur
+      ├── Sous-agent A : "Écrire des tests unitaires pour le module auth"
+      ├── Sous-agent B : "Mettre à jour la documentation API"
+      └── Sous-agent C : "Refactoriser la couche de requêtes base de données"
+```
+
+### Comment ça fonctionne dans Claude Code
+
+L'orchestrateur utilise l'outil `Task` pour créer des sessions de sous-agents :
+
+```
+Prompt de l'orchestrateur :
+"Vous gérez un sprint d'amélioration de la qualité du code. 
+Distribuez à trois sous-agents :
+1. Écrire des tests pour src/lib/auth/ — viser 80% de couverture
+2. Mettre à jour docs/api.md pour refléter le nouveau point de terminaison /refresh
+3. Refactoriser src/db/queries.ts pour utiliser le modèle de dépôt
+
+Chaque sous-agent doit travailler indépendamment. Collectez leurs résumés 
+et produisez un rapport combiné des modifications effectuées."
+```
+
+Chaque sous-agent obtient son propre contexte isolé. L'orchestrateur synthétise leurs sorties.
+
+### Quand l'utiliser
+
+- Des modules distincts qui peuvent être améliorés indépendamment
+- Des tâches où un réviseur de niveau humain (l'orchestrateur) devrait valider le travail des sous-agents
+- Des situations où vous voulez un planificateur séparé des exécutants
+
+---
+
+## Modèle 2 : Déploiement parallèle
+
+Une variante plus simple du modèle orchestrateur où toutes les sous-tâches sont indépendantes et le seul rôle de l'orchestrateur est d'éclater et de collecter les résultats. Il n'y a pas de dépendance séquentielle entre les sous-agents.
+
+```
+Répartiteur
+ ├── Agent 1 : Traduire les docs en français    ─┐
+ ├── Agent 2 : Traduire les docs en espagnol    ─┤ → tous s'exécutent simultanément
+ ├── Agent 3 : Traduire les docs en allemand    ─┘
+```
+
+C'est le modèle à utiliser quand vous avez N versions de la même tâche (N fichiers à traiter, N modules à tester, N services à analyser).
+
+### Exemple pratique : Analyse de sécurité parallèle
+
+```bash
+# Démarrer trois sessions Claude Code parallèles
+claude --session auth-scan "Analyse src/lib/auth/ pour les injections SQL et les secrets codés en dur. Rapporte uniquement les constats." &
+claude --session api-scan "Analyse src/app/api/ pour les gardes d'authentification manquants et les références directes d'objets non sécurisées." &
+claude --session deps-scan "Exécute npm audit et résume les vulnérabilités critiques et de haute sévérité." &
+wait
+```
+
+Chaque session s'exécute en parallèle. Les résultats atterrissent dans des transcriptions séparées ; vous révisez les trois.
+
+### Quand l'utiliser
+
+- La même opération appliquée à plusieurs entrées indépendantes
+- Le traitement par lot (résumer N documents, migrer N fichiers)
+- Paralléliser des opérations lentes (appels API, longues suites de tests)
+
+---
+
+## Modèle 3 : Pipeline séquentiel
+
+Les agents forment une chaîne : l'agent 1 produit une sortie qui devient l'entrée de l'agent 2, qui produit une sortie pour l'agent 3.
+
+```
+Agent 1 : Recherche → Agent 2 : Rédaction → Agent 3 : Révision → Agent 4 : Publication
+```
+
+Chaque agent a une responsabilité unique et ciblée. Le transfert entre agents est explicite et révisable.
+
+### Exemple : Pipeline de production de contenu
+
+```
+Étape 1 — Chercheur :
+"Recherchez les 5 principales vulnérabilités OWASP affectant les API Node.js en 2026. 
+Produisez un JSON structuré avec : nom de la vulnérabilité, description, exemple de code, 
+modèle de correction. Sauvegardez dans /tmp/research.json"
+
+Étape 2 — Rédacteur (lit /tmp/research.json) :
+"En utilisant la recherche dans /tmp/research.json, rédigez un article de blog technique de 1500 mots. 
+Incluez des exemples de code pour chaque vulnérabilité et sa correction. 
+Sauvegardez dans /tmp/draft.md"
+
+Étape 3 — Éditeur (lit /tmp/draft.md) :
+"Révisez /tmp/draft.md pour l'exactitude technique, la clarté et la qualité SEO. 
+Corrigez les problèmes en place. Produisez un rapport d'édition listant les modifications effectuées."
+```
+
+Chaque étape peut être révisée et corrigée avant que la suivante s'exécute. Cela vous donne des points de contrôle humains dans les pipelines automatisés.
+
+### Quand l'utiliser
+
+- Production de contenu ou de documents en plusieurs étapes
+- Flux de travail ETL (extraire → transformer → valider → charger)
+- Pipelines de génération de code + révision + test
+- Tâches où chaque étape a des exigences d'expertise différentes
+
+---
+
+## Modèle 4 : Agents en arrière-plan
+
+Claude Code prend en charge les tâches longue durée qui s'exécutent de façon asynchrone pendant que vous travaillez sur autre chose. Un agent en arrière-plan est instancié, s'exécute jusqu'à la complétion (ou l'échec), et vous notifie quand il a terminé.
+
+```bash
+# Démarrer un agent en arrière-plan
+claude --background "Exécute la suite de tests complète, identifie tous les tests en échec, 
+corrige-les un par un, et committe chaque correction séparément. 
+Notifie-moi quand tous les tests passent."
+```
+
+L'agent s'exécute en arrière-plan. Vous continuez à travailler dans d'autres sessions. Quand il termine, vous recevez une notification et un résumé.
+
+Les agents en arrière-plan sont idéaux pour :
+
+- Les exécutions complètes de la suite de tests avec des corrections automatisées
+- Les refactorisations à grande échelle sur de nombreux fichiers
+- Les tâches de recherche et de synthèse nocturnes
+- Les flux de travail de surveillance et d'alertes
+
+Une contrainte importante : les agents en arrière-plan doivent avoir des conditions d'arrêt très claires. « Corriger tous les tests en échec » est bien. « Améliorer le code source » ne l'est pas — un agent en arrière-plan sans condition terminale s'exécutera indéfiniment.
+
+---
+
+## Passage de contexte entre agents
+
+Les agents dans un pipeline ont besoin de transmettre des informations vers l'avant. Les trois mécanismes principaux :
+
+### 1. Transfert par système de fichiers
+
+La méthode la plus robuste. L'agent 1 écrit une sortie structurée dans un fichier ; l'agent 2 le lit.
+
+```
+Agent 1 : "... sauvegardez vos constats dans /tmp/analysis.json avec ce schéma : { issues: [{file, line, severity, description}] }"
+Agent 2 : "Lisez /tmp/analysis.json et corrigez chaque problème listé. Marquez chaque problème comme corrigé ou ignoré avec une raison."
+```
+
+Avantages : la sortie est inspectable, persistante, facilement transmise à plusieurs agents.
+
+### 2. Injection dans le prompt
+
+L'orchestrateur inclut directement la sortie de l'agent 1 dans le prompt de l'agent 2. Fonctionne pour les sorties courtes ; se dégrade pour les grandes.
+
+```python
+result_a = run_agent("Résumez la conception du module auth en 200 mots")
+run_agent(f"Étant donné ce résumé d'architecture : {result_a}\n\nMaintenant écrivez des tests unitaires pour le module auth.")
+```
+
+### 3. État partagé via un store externe
+
+Pour les pipelines complexes, une instance Redis ou une base de données SQLite simple agit comme état partagé. Les agents lisent/écrivent des données structurées via les outils MCP.
+
+C'est excessif pour la plupart des tâches, mais approprié pour les systèmes automatisés longue durée où plusieurs agents collaborent dans le temps.
+
+---
+
+## Quand ne PAS utiliser le multi-agent
+
+Les architectures multi-agents ajoutent de la complexité. N'y recourez pas quand :
+
+- **Les tâches sont séquentielles et interdépendantes** — si l'agent 2 ne peut pas démarrer avant que l'agent 1 termine, vous ne gagnez pas de parallélisme ; vous ajoutez des frais généraux de coordination.
+- **Le partage de contexte est important** — si chaque agent a besoin d'accéder au même grand contexte, le coût de distribution de ce contexte peut dépasser le bénéfice.
+- **Le débogage est critique** — les flux de travail à agent unique produisent une transcription unique lisible de bout en bout. Les flux de travail multi-agents produisent plusieurs transcriptions ; les corréler en cas de problème est plus difficile.
+- **La tâche est petite** — orchestrer trois agents pour écrire une fonction de 50 lignes est absurde. Restez simple.
+- **Vous apprenez encore le système** — comprenez Claude Code en mode agent unique en profondeur avant d'ajouter la complexité multi-agent. La plupart des problèmes qui semblent nécessiter de l'orchestration sont en fait résolubles avec de meilleurs prompts et des skills.
+
+Le bon modèle est le plus simple qui répond à vos exigences. Commencez en agent unique. Ajoutez de la structure seulement quand vous atteignez une limitation concrète.
+
+---
+
+## Configuration de démarrage recommandée
+
+Pour les équipes qui adoptent les flux de travail agent, une progression pratique :
+
+**Semaine 1 :** Utilisez l'agent unique avec des skills bien structurés et CLAUDE.md. Identifiez les tâches que vous exécutez de façon répétée.
+
+**Semaine 2 :** Identifiez 2 à 3 tâches qui sont genuinement parallélisables (modules indépendants, ensembles de fichiers indépendants). Mettez en place le déploiement parallèle pour celles-là.
+
+**Semaine 3 :** Construisez un pipeline séquentiel pour un flux de travail répété à forte valeur (ex. : recherche → rédaction → révision pour la documentation).
+
+**Mois 2 :** Envisagez des agents en arrière-plan pour l'automatisation nocturne si vous avez des tâches qui nécessitent actuellement que vous les surveilliez.
+
+Au moment où vous atteignez les modèles orchestrateur+sous-agent, vous aurez un modèle mental clair de votre graphe de dépendances de tâches et pourrez concevoir l'orchestration correctement.
+
+---
+
+Pour obtenir de l'aide dans la conception de flux de travail agent spécifiques à votre code source et à votre équipe, [l'équipe de conseil ClawHelp](https://clawhlp.com/services) se spécialise dans l'architecture Claude Code et l'automatisation.

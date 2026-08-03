@@ -1,0 +1,235 @@
+---
+slug: agent-workflow
+title: "Claude Code Agent Workflows: Orchestration Patterns"
+description: "A practical guide to Claude Code agent workflow patterns — from single-agent tasks to orchestrator-subagent architectures, parallel dispatch, and sequential pipelines."
+category: how-to
+tags: [agents, workflow, orchestration, multi-agent, automation, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [workflow-automation, consulting]
+seoTitle: "Claude Code Agent Workflow Patterns — Orchestration Guide"
+seoDescription: "Learn the key Claude Code agent orchestration patterns: single-agent, orchestrator+subagent, parallel dispatch, sequential pipelines, and background agents. With practical examples."
+schema: HowTo
+---
+
+# Claude Code Agent Workflows: Orchestration Patterns
+
+Most Claude Code usage is single-agent: you give Claude a task, it executes it, you review the result. That covers a lot of ground. But some problems — large codebases, parallel workstreams, long-running automation — benefit from structured multi-agent coordination.
+
+This guide maps the main patterns, when each applies, and how to set them up.
+
+---
+
+## Single-Agent vs Multi-Agent: The Core Trade-off
+
+A single agent is simpler, cheaper, and easier to debug. Everything happens in one context window, one thread, one set of tool calls. You can read the transcript and understand exactly what happened.
+
+Multi-agent architectures pay a coordination cost in exchange for:
+
+- **Parallelism** — multiple agents working simultaneously on independent tasks
+- **Context isolation** — each agent has a clean context window for its subtask
+- **Specialization** — agents tuned for specific roles (planner, executor, reviewer)
+- **Scale** — tasks larger than a single context window
+
+Choose single-agent by default. Reach for multi-agent when you have genuinely independent parallelizable work, or when a task is too large for one context.
+
+---
+
+## Pattern 1: Orchestrator + Subagent
+
+The most common multi-agent pattern. One **orchestrator** agent receives the high-level goal, decomposes it into subtasks, dispatches those subtasks to **subagents**, collects results, and produces the final output.
+
+```
+User
+ └── Orchestrator
+      ├── Subagent A: "Write unit tests for auth module"
+      ├── Subagent B: "Update API documentation"
+      └── Subagent C: "Refactor database query layer"
+```
+
+### How It Works in Claude Code
+
+The orchestrator uses the `Task` tool to create subagent sessions:
+
+```
+Orchestrator prompt:
+"You are managing a code quality improvement sprint. 
+Dispatch three subagents:
+1. Write tests for src/lib/auth/ — target 80% coverage
+2. Update docs/api.md to reflect the new /refresh endpoint
+3. Refactor src/db/queries.ts to use the repository pattern
+
+Each subagent should work independently. Collect their summaries 
+and produce a combined report of changes made."
+```
+
+Each subagent gets its own isolated context. The orchestrator synthesizes their outputs.
+
+### When to Use It
+
+- Distinct modules that can be improved independently
+- Tasks where a human-level reviewer (the orchestrator) should validate subagent work
+- Situations where you want a planner separate from the executors
+
+---
+
+## Pattern 2: Parallel Dispatch
+
+A simpler variant of the orchestrator pattern where all subtasks are independent and the orchestrator's only job is to fan out and collect results. There's no sequential dependency between subagents.
+
+```
+Dispatcher
+ ├── Agent 1: Translate docs to French    ─┐
+ ├── Agent 2: Translate docs to Spanish   ─┤ → all run simultaneously
+ ├── Agent 3: Translate docs to German    ─┘
+```
+
+This is the pattern to reach for when you have N versions of the same task (N files to process, N modules to test, N services to scan).
+
+### Practical Example: Parallel Security Scan
+
+```bash
+# Start three parallel Claude Code sessions
+claude --session auth-scan "Scan src/lib/auth/ for SQL injection and hardcoded secrets. Report only findings." &
+claude --session api-scan "Scan src/app/api/ for missing auth guards and insecure direct object references." &
+claude --session deps-scan "Run npm audit and summarize critical and high severity vulnerabilities." &
+wait
+```
+
+Each session runs concurrently. Results land in separate transcripts; you review all three.
+
+### When to Use It
+
+- Same operation applied to multiple independent inputs
+- Batch processing (summarize N documents, migrate N files)
+- Parallelizing slow operations (API calls, long test suites)
+
+---
+
+## Pattern 3: Sequential Pipeline
+
+Agents form a chain: Agent 1 produces output that becomes Agent 2's input, which produces output for Agent 3.
+
+```
+Agent 1: Research → Agent 2: Draft → Agent 3: Review → Agent 4: Publish
+```
+
+Each agent has a single focused responsibility. The handoff between agents is explicit and reviewable.
+
+### Example: Content Production Pipeline
+
+```
+Stage 1 — Researcher:
+"Research the top 5 OWASP vulnerabilities affecting Node.js APIs in 2026. 
+Output a structured JSON with: vulnerability name, description, example code, 
+fix pattern. Save to /tmp/research.json"
+
+Stage 2 — Writer (reads /tmp/research.json):
+"Using the research in /tmp/research.json, write a 1500-word technical blog 
+post. Include code examples for each vulnerability and its fix. 
+Save to /tmp/draft.md"
+
+Stage 3 — Editor (reads /tmp/draft.md):
+"Review /tmp/draft.md for technical accuracy, clarity, and SEO quality. 
+Fix any issues in place. Produce an editing report listing changes made."
+```
+
+Each stage can be reviewed and corrected before the next runs. This gives you human checkpoints in automated pipelines.
+
+### When to Use It
+
+- Multi-stage content or document production
+- ETL workflows (extract → transform → validate → load)
+- Code generation + review + test pipelines
+- Tasks where each stage has different expertise requirements
+
+---
+
+## Pattern 4: Background Agents
+
+Claude Code supports long-running tasks that execute asynchronously while you work on something else. A background agent is spawned, runs to completion (or failure), and notifies you when done.
+
+```bash
+# Start background agent
+claude --background "Run the full test suite, identify all failing tests, 
+fix them one by one, and commit each fix separately. 
+Notify me when all tests pass."
+```
+
+The agent runs in the background. You continue working in other sessions. When it finishes, you get a notification and a summary.
+
+Background agents are ideal for:
+
+- Full test suite runs with automated fixes
+- Large-scale refactors across many files
+- Overnight research and synthesis tasks
+- Monitoring and alerting workflows
+
+One important constraint: background agents should be given very clear stop conditions. "Fix all failing tests" is fine. "Improve the codebase" is not — a background agent with no terminal condition will run indefinitely.
+
+---
+
+## Context Passing Between Agents
+
+Agents in a pipeline need to pass information forward. The three main mechanisms:
+
+### 1. Filesystem Handoff
+
+The most robust method. Agent 1 writes structured output to a file; Agent 2 reads it.
+
+```
+Agent 1: "... save your findings to /tmp/analysis.json in this schema: { issues: [{file, line, severity, description}] }"
+Agent 2: "Read /tmp/analysis.json and fix each issue listed. Mark each issue as fixed or skipped with a reason."
+```
+
+Advantages: output is inspectable, persistent, easily passed to multiple agents.
+
+### 2. Prompt Injection
+
+The orchestrator includes Agent 1's output directly in Agent 2's prompt. Works for short outputs; degrades for large ones.
+
+```python
+result_a = run_agent("Summarize the auth module's design in 200 words")
+run_agent(f"Given this architecture summary: {result_a}\n\nNow write unit tests for the auth module.")
+```
+
+### 3. Shared State via External Store
+
+For complex pipelines, a Redis instance or simple SQLite database acts as shared state. Agents read/write structured data via MCP tools.
+
+This is overkill for most tasks but appropriate for long-running automated systems where multiple agents collaborate over time.
+
+---
+
+## When NOT to Use Multi-Agent
+
+Multi-agent architectures add complexity. Don't reach for them when:
+
+- **Tasks are sequential and interdependent** — if Agent 2 can't start until Agent 1 finishes, you don't gain parallelism; you add coordination overhead.
+- **Context sharing is heavy** — if every agent needs access to the same large context, the overhead of distributing that context may exceed the benefit.
+- **Debugging is critical** — single-agent workflows produce a single transcript you can read end-to-end. Multi-agent workflows produce multiple transcripts; correlating them when something goes wrong is harder.
+- **The task is small** — orchestrating three agents to write a 50-line function is absurd. Keep it simple.
+- **You're still learning the system** — understand single-agent Claude Code deeply before adding multi-agent complexity. Most problems that seem to require orchestration are actually solvable with better prompts and skills.
+
+The right pattern is the simplest one that meets your requirements. Start single-agent. Add structure only when you hit a concrete limitation.
+
+---
+
+## Recommended Starting Configuration
+
+For teams adopting agent workflows, a practical progression:
+
+**Week 1:** Use single-agent with well-structured skills and CLAUDE.md. Identify which tasks you run repeatedly.
+
+**Week 2:** Identify 2–3 tasks that are genuinely parallelizable (independent modules, independent file sets). Set up parallel dispatch for those.
+
+**Week 3:** Build one sequential pipeline for a high-value repeated workflow (e.g., research → draft → review for documentation).
+
+**Month 2:** Consider background agents for overnight automation if you have tasks that currently require you to babysit them.
+
+By the time you reach orchestrator+subagent patterns, you'll have a clear mental model of your task dependency graph and will be able to design the orchestration correctly.
+
+---
+
+For help designing agent workflows specific to your codebase and team, [ClawHelp's consulting team](https://clawhlp.com/services) specializes in Claude Code architecture and automation.

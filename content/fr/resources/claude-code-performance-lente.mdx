@@ -1,0 +1,265 @@
+---
+slug: claude-code-performance-lente
+title: "Claude Code lent? Diagnostic des problèmes de performance"
+description: "Guide systématique pour diagnostiquer et corriger les temps de réponse lents de Claude Code — surcharge du contexte, latence MCP, choix du modèle et confusion avec les limites de débit."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, performance, contexte, mcp, choix-modèle]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 8
+lang: "fr"
+seoTitle: "Claude Code lent — Diagnostiquer et résoudre les problèmes de performance | ClawHelp"
+seoDescription: "Corrigez les réponses lentes de Claude Code. Couvre la surcharge de la fenêtre de contexte, la taille du CLAUDE.md, les allers-retours MCP, la commande /compact, le choix du modèle (Sonnet vs Opus) et la latence API."
+---
+
+# Claude Code lent? Diagnostic des problèmes de performance
+
+**Problème** : Les réponses de Claude Code semblent molles — vous attendez plusieurs secondes (ou beaucoup plus) entre l'envoi d'un message et l'apparition du résultat, ou les appels d'outils prennent bien plus longtemps qu'ils ne devraient.
+
+Les problèmes de performance dans Claude Code ont presque toujours une cause concrète. Ce guide passe en revue les causes les plus fréquentes par ordre de fréquence, vous donne une liste de contrôle pour isoler le problème, et propose un correctif précis pour chacune.
+
+---
+
+## Symptômes
+
+- Les réponses prennent 10–30+ secondes alors qu'elles étaient quasi-instantanées auparavant
+- Claude semble « réfléchir » longuement avant de produire le moindre résultat
+- Les appels d'outils (bash, lecture de fichiers, MCP) semblent plus lents que l'opération elle-même
+- La réponse en streaming commence, puis se fige, puis reprend par à-coups
+- La performance était bonne en début de session mais s'est dégradée au fil du temps
+
+---
+
+## Liste de contrôle de diagnostic
+
+Parcourez ces questions avant de plonger dans les correctifs :
+
+1. Le ralentissement a-t-il commencé en cours de session (surcharge de contexte) ou dès le premier message (problème de configuration ou de modèle)?
+2. Utilisez-vous des serveurs MCP? Les désactiver accélère-t-il les choses?
+3. Quel modèle utilisez-vous — Sonnet ou Opus?
+4. Quelle est la longueur de votre fichier CLAUDE.md?
+5. Observez-vous des délais dans la réponse API, ou des délais pendant que Claude traite une tâche (il affiche des étapes de réflexion)?
+6. Êtes-vous sur un forfait API payant ou une clé gratuite/d'essai?
+
+---
+
+## Cause 1 : Surcharge de la fenêtre de contexte
+
+**C'est la cause la plus fréquente de dégradation des performances au cours d'une session.**
+
+Claude traite chaque token du contexte de conversation à chaque réponse. Au fil de la session — surtout si vous avez collé de gros fichiers, lu du code de plusieurs milliers de lignes, ou enchaîné beaucoup d'appels d'outils — la fenêtre de contexte se remplit. Chaque nouvelle réponse nécessite de traiter l'intégralité du contexte accumulé, ce qui augmente linéairement le temps de calcul et la latence API.
+
+**Signes que vous avez une surcharge de contexte :**
+- La performance était bonne en début de session
+- Vous travaillez dans la même session depuis 30+ minutes
+- Vous avez demandé à Claude de lire beaucoup de gros fichiers
+
+**Correctif : Exécutez `/compact`**
+
+La commande `/compact` résume l'historique de conversation en une version compressée, réduisant drastiquement le nombre de tokens tout en préservant le contexte essentiel de ce sur quoi vous travailliez.
+
+```
+/compact
+```
+
+Exécutez cette commande aux points de rupture naturels — après avoir terminé une fonctionnalité, après une session de débogage, ou dès que vous remarquez que les temps de réponse augmentent. Cela prend quelques secondes mais peut réduire la taille du contexte de 70–90%, restaurant immédiatement la vitesse de réponse.
+
+**Bonnes pratiques supplémentaires :**
+- Évitez de coller entièrement de gros fichiers dans la conversation. Laissez plutôt Claude utiliser l'outil `Read` pour accéder à des plages de lignes spécifiques.
+- Quand vous avez fini d'explorer, dites explicitement à Claude : « Tu n'as plus besoin de te souvenir du contenu du fichier X. » Cela lui signale de supprimer ce contenu de la mémoire de travail lors du prochain compact.
+
+---
+
+## Cause 2 : Chargement du CLAUDE.md à chaque requête
+
+Claude Code lit votre fichier CLAUDE.md au début de chaque interaction. Un CLAUDE.md long s'ajoute directement au contexte de base à chaque message — même les courts comme « lance les tests ».
+
+**Signes :**
+- La première réponse d'une session est déjà lente, avant que le contexte ne s'accumule
+- Votre CLAUDE.md fait plusieurs centaines de lignes ou plus
+
+**Correctif : Gardez CLAUDE.md concis**
+
+Le CLAUDE.md doit être un document de référence compact — contexte du projet, commandes clés, patterns interdits, règles de style de code. Il ne doit pas contenir :
+
+- De longues explications en prose
+- Du contenu d'intégration utile seulement aux nouveaux membres de l'équipe
+- D'anciennes instructions commentées
+- Des notes de tâche ou des mises à jour de statut
+
+Un CLAUDE.md bien optimisé fait moins de 100 lignes. Voici un exemple de structure concise :
+
+```markdown
+# Projet : MonApp
+
+## Stack
+Node 20, TypeScript, PostgreSQL, Prisma, Next.js 14
+
+## Commande de test
+pnpm test
+
+## Règles de code
+- Pas de `any` en TypeScript
+- Tout accès DB via le client Prisma (jamais de SQL brut)
+- Exécuter `pnpm lint` avant de committer
+
+## Interdit
+- Ne jamais modifier les fichiers générés dans /generated/
+- Ne jamais committer les fichiers .env
+```
+
+Si votre CLAUDE.md est long parce qu'il couvre plusieurs sous-projets, envisagez de le diviser : placez des fichiers CLAUDE.md spécifiques dans les sous-répertoires et gardez la racine minimale.
+
+---
+
+## Cause 3 : Latence des serveurs MCP
+
+Chaque appel d'outil MCP ajoute un aller-retour : Claude génère un appel d'outil, votre serveur MCP le reçoit, exécute l'action et renvoie le résultat. Si vous avez plusieurs serveurs MCP configurés, Claude peut appeler plusieurs outils en séquence, chacun ajoutant de la latence.
+
+**Signes :**
+- La lenteur se produit spécifiquement quand Claude utilise des outils (vous voyez des appels d'outils dans la sortie)
+- La performance est bonne pour les réponses en texte pur mais se dégrade quand Claude accède à des fichiers ou des services externes
+
+**Diagnostiquer quel serveur MCP est lent :**
+
+```bash
+# Vérifier les logs des serveurs MCP (si vous utilisez des serveurs locaux)
+tail -f /tmp/mcp-*.log
+
+# Tester directement le temps de réponse d'un serveur MCP
+time npx @modelcontextprotocol/inspector
+```
+
+**Correctifs :**
+- Supprimez de votre configuration les serveurs MCP que vous n'utilisez pas activement. Chaque serveur connecté ajoute une surcharge au démarrage.
+- Pour les opérations sur fichiers locaux, préférez les outils fichiers intégrés de Claude Code à un serveur MCP système de fichiers — les outils intégrés n'ont aucun aller-retour.
+- Si un serveur MCP distant (ex. : un MCP de base de données pointant vers un BD en nuage) est lent, vérifiez si le service sous-jacent est le goulot d'étranglement.
+
+---
+
+## Cause 4 : Choix du modèle — Sonnet vs. Opus
+
+Claude Code utilise par défaut claude-sonnet-4-5 pour la plupart des tâches, mais certaines configurations ou indicateurs de modèle explicites peuvent le basculer vers Opus. La différence de temps de réponse est significative :
+
+| Modèle | Vitesse | Profondeur de raisonnement | Idéal pour |
+|--------|---------|---------------------------|------------|
+| claude-sonnet-4-5 | Rapide (2–8s typique) | Solide | La plupart des tâches de développement |
+| claude-opus-4 | Plus lent (10–30s typique) | La plus profonde | Raisonnement multi-étapes complexe, décisions d'architecture |
+
+**Correctif : Utilisez Sonnet pour le travail sensible à la vitesse**
+
+```bash
+claude --model claude-sonnet-4-5
+```
+
+Utilisez Opus quand vous avez besoin d'une profondeur de raisonnement maximale — conception d'algorithmes complexes, décisions architecturales, ou débogage de problèmes particulièrement épineux. Pour les modifications de fichiers de routine, l'écriture de tests et la génération de code, Sonnet produit des résultats quasi-identiques à une fraction de la latence.
+
+---
+
+## Cause 5 : Délais d'expiration des commandes bash
+
+Quand Claude exécute des commandes bash, il attend qu'elles se terminent avant de continuer. Si vos commandes sont longues à s'exécuter (processus de build, suites de tests, démarrages de serveur), Claude semble « figé » pendant l'attente.
+
+Ce n'est pas Claude qui est lent — il attend correctement votre outillage. Mais ça peut ressembler à une mauvaise performance.
+
+**Correctif : Comprendre ce que Claude attend**
+
+Quand vous ne voyez aucune sortie pendant longtemps, vérifiez si Claude est en train d'exécuter une commande :
+- Cherchez `Bash (running...)` dans l'affichage des appels d'outils
+- La commande elle-même peut être le goulot d'étranglement (une suite de tests de 60 secondes prendra toujours 60 secondes)
+
+Si vous avez besoin que Claude continue à travailler pendant qu'un processus long tourne, utilisez les processus en arrière-plan :
+
+```bash
+# Dites à Claude : "Lance le serveur de dev en arrière-plan, puis continue"
+npm run dev &
+```
+
+Vous pouvez aussi ajuster les délais dans votre CLAUDE.md :
+
+```markdown
+## Notes d'environnement
+- `pnpm test` prend ~90 secondes pour la suite complète — c'est normal
+- Utilisez `pnpm test --testPathPattern=<fichier>` pour un fichier unique
+```
+
+Ce contexte aide Claude à prendre de meilleures décisions sur les commandes à exécuter.
+
+---
+
+## Cause 6 : Limites de débit vs. réponses lentes
+
+Les erreurs de limite de débit et les réponses lentes se ressemblent mais peuvent être confondues :
+
+- **Limite de débit** : Claude Code retourne une erreur explicite (`rate limit exceeded`) et s'arrête
+- **Réponse lente** : Claude continue à travailler, juste lentement
+
+Si vous atteignez des limites de débit, consultez notre [guide des limites de débit](/resources/rate-limit). Mais si les réponses sont lentes sans erreur, les limites de débit ne sont pas en cause.
+
+**Une exception** : Si vous êtes sur un forfait API de bas niveau, vous pouvez être soumis à des limites de concurrence qui créent des délais de mise en file d'attente sans déclencher d'erreur de limite de débit formelle. Dans ce cas, la mise à niveau de votre forfait ou une demande d'augmentation de limite résout le problème.
+
+---
+
+## Cause 7 : Latence réseau
+
+Claude Code communique avec l'API d'Anthropic via HTTPS. Si vous êtes sur une connexion réseau lente ou peu fiable, chaque aller-retour vers l'API ajoute de la latence.
+
+**Diagnostic :**
+
+```bash
+# Tester la latence vers l'API Anthropic
+curl -o /dev/null -s -w "Temps : %{time_total}s\n" https://api.anthropic.com/
+
+# Vérifier les pertes de paquets
+ping -c 10 api.anthropic.com
+```
+
+Si la latence vers l'API dépasse 300ms ou si vous observez des pertes de paquets, le réseau est le goulot d'étranglement. Options :
+- Utilisez une connexion filaire plutôt que le Wi-Fi
+- Changez de réseau
+- Si vous êtes derrière un VPN, essayez de router le trafic API en dehors du VPN
+
+---
+
+## Cause 8 : Perception du streaming
+
+Claude Code diffuse les réponses au fur et à mesure qu'elles sont générées — vous voyez les tokens à leur arrivée plutôt que d'attendre la réponse complète. C'est le comportement normal. Si le streaming semble lent, considérez :
+
+- **Le premier token est-il lent?** C'est la latence pré-génération — le traitement de votre prompt par l'API. Les correctifs ci-dessus (réduire le contexte, utiliser Sonnet) s'appliquent ici.
+- **La génération elle-même est-elle lente une fois démarrée?** Cela reflète la vitesse du modèle — Opus est plus lent par token que Sonnet.
+- **La génération est rapide mais l'affichage est saccadé?** Cela peut être un problème de rendu du terminal. Essayez un autre émulateur de terminal ou redimensionnez votre fenêtre de terminal.
+
+---
+
+## Résumé : Liste de contrôle des correctifs de performance
+
+| Symptôme | Cause la plus probable | Correctif |
+|----------|----------------------|-----------|
+| Ralentit au cours d'une longue session | Surcharge de contexte | `/compact` |
+| Lent dès le premier message | CLAUDE.md trop long | Raccourcir CLAUDE.md |
+| Lent spécifiquement lors des appels d'outils | Latence MCP | Supprimer les serveurs MCP inutilisés |
+| Constamment lent peu importe la session | Mauvais modèle | `--model claude-sonnet-4-5` |
+| Semble figé pendant les commandes | Bash longue durée | Normal — vérifier ce qui tourne |
+| Lent sur toutes les requêtes, pas d'erreur de débit | Latence réseau | Vérifier `ping api.anthropic.com` |
+
+---
+
+## Toujours lent après tout ça?
+
+Si vous avez parcouru la liste de contrôle et que la performance est toujours mauvaise, l'étape suivante est de mesurer précisément où le temps passe :
+
+1. Démarrez une nouvelle session Claude Code fraîche (élimine la surcharge de contexte)
+2. Utilisez un CLAUDE.md minimal (exclut la surcharge CLAUDE.md)
+3. Désactivez temporairement tous les serveurs MCP (isole MCP comme variable)
+4. Exécutez un prompt simple et chronométrez-le : « Combien font 2+2? »
+
+Si ce prompt simple est toujours lent, le problème est probablement côté API (limitation de débit, niveau de forfait, ou latence API régionale). Contactez le support Anthropic ou contactez-nous chez ClawHelp pour une session de diagnostic approfondie.
+
+---
+
+## Ressources connexes
+
+- [Limite de débit Claude Code](/resources/rate-limit) — si les réponses lentes s'accompagnent d'erreurs de débit
+- [Service de configuration Claude Code](/services/claude-code-setup) — inclut l'optimisation de CLAUDE.md pour des sessions plus rapides
+- [Développement d'agents personnalisés](/services/agent-development) — nous concevons des agents avec la performance comme contrainte de conception

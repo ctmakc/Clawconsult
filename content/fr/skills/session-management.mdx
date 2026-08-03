@@ -1,0 +1,246 @@
+---
+slug: session-management
+title: "Gestion des sessions Claude Code : contexte, compaction et continuité"
+description: "Comment fonctionnent les sessions Claude Code, quand le contexte est compressé, comment utiliser /compact efficacement, et stratégies pour les projets à long terme."
+category: how-to
+lang: "fr"
+tags: [sessions, contexte, mémoire, compaction, claude-code, flux-de-travail]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 10
+relatedServices: [claude-code-setup]
+seoTitle: "Gestion des sessions Claude Code : contexte et compaction | ClawHelp"
+seoDescription: "Maîtrisez la gestion des sessions Claude Code — comprenez les fenêtres de contexte, utilisez /compact efficacement, reprenez le travail entre sessions, et évitez les erreurs liées au contexte."
+schema: HowTo
+---
+
+# Gestion des sessions Claude Code : contexte, compaction et continuité
+
+Chaque session Claude Code fonctionne dans une fenêtre de contexte — une quantité finie de texte sur laquelle Claude peut raisonner activement à la fois. Comprendre comment fonctionnent les sessions, comment le contexte est géré et comment structurer un travail à long terme, c'est ce qui distingue les projets multijournes qui se déroulent en douceur des conversations frustrantes et répétitives.
+
+## Comment fonctionnent les sessions Claude Code
+
+### La fenêtre de contexte
+
+Claude Code utilise une grande fenêtre de contexte (la taille exacte dépend du modèle — Sonnet 4.6 et Opus 4.x ont des fenêtres de 200K tokens), mais elle est finie. Chaque fichier que vous lisez, chaque résultat d'outil, chaque échange dans la conversation consomme des tokens de contexte.
+
+**Ce qui consomme rapidement le contexte :**
+- La lecture de grands fichiers (un fichier TypeScript de 500 lignes ≈ 2 000 tokens)
+- Les sorties de commandes volumineuses (exécuter `npm run build` avec de nombreux avertissements)
+- Les longues conversations allers-retours sur des sujets complexes
+- La lecture répétée des mêmes fichiers
+- Les résultats d'outils bash volumineux
+
+**Ce qui reste léger :**
+- Les questions courtes et ciblées
+- La lecture uniquement des lignes spécifiques dont vous avez besoin (avec `offset` et `limit` sur Read)
+- Les commandes bash concises qui produisent une sortie ciblée
+
+### Compression du contexte
+
+Quand la conversation approche de la limite de contexte, Claude Code compresse automatiquement les messages précédents en un résumé. Cette compression préserve les faits et décisions essentiels mais perd la formulation exacte. Le système vous informe quand la compression se produit par une note dans la conversation.
+
+**Ce que la compression préserve :**
+- Quel travail a été accompli
+- Quelles décisions ont été prises
+- Quels fichiers ont été créés ou modifiés
+- Quelles erreurs ont été rencontrées et comment elles ont été résolues
+
+**Ce que la compression peut perdre :**
+- La formulation exacte des messages antérieurs
+- Le raisonnement détaillé du début de session
+- Les contenus de fichiers spécifiques qui ont été lus mais pas utilisés
+
+## La commande /compact
+
+`/compact` déclenche une compression manuelle du contexte avant que le système ne le fasse automatiquement. Utilisez-la de façon proactive — avant de perdre le contrôle de la session plutôt qu'après.
+
+### Quand utiliser /compact
+
+**Utilisez /compact quand :**
+- Vous avez terminé un bloc de travail logique (une fonctionnalité, un ensemble de modifications de fichiers, une session de débogage)
+- Vous êtes sur le point de commencer une nouvelle tâche distincte dans la même session
+- Vous remarquez que la session devient « lourde » — les réponses commencent à dériver ou à perdre le contexte
+- Vous êtes en session depuis plus de 2 heures et il reste encore beaucoup de travail à accomplir
+
+**N'utilisez pas /compact quand :**
+- Vous êtes au milieu d'une opération complexe en plusieurs étapes où perdre l'état intermédiaire exact poserait des problèmes
+- Claude vient de lire un grand fichier dont vous aurez besoin à la prochaine étape
+- Vous êtes dans une boucle de débogage qui nécessite que l'historique complet des erreurs soit frais
+
+### Ce que fait /compact
+
+`/compact` demande à Claude de résumer la conversation courante en une représentation compacte, puis de continuer à partir de ce résumé. Vous pouvez optionnellement lui donner un point de focus :
+
+```
+/compact focus sur les modifications du module d'authentification que nous avons effectuées
+```
+
+Sans focus, Claude décide de ce qui est le plus important à préserver. Avec un focus, il donne la priorité à ces éléments dans le résumé.
+
+Après `/compact`, la session continue avec Claude conscient de ce qui s'est passé (à travers le résumé) mais sans l'historique complet de la conversation dans le contexte actif.
+
+## Structurer les projets à long terme
+
+### Limites de session et continuité
+
+Les sessions ne persistent pas entre les processus Claude Code. Quand vous quittez et redémarrez, Claude commence avec un contexte vierge. C'est intentionnel — cela empêche les hypothèses périmées de contaminer un nouveau travail.
+
+**Comment maintenir la continuité entre les sessions :**
+
+**1. CLAUDE.md — La mémoire persistante de votre projet**
+
+`CLAUDE.md` à la racine de votre projet est toujours chargé dans le contexte de Claude quand il démarre une session dans ce répertoire. Utilisez-le pour documenter :
+- Ce qu'est le projet et ce que vous construisez
+- L'état actuel (ce qui est fait, en cours, à venir)
+- Les décisions architecturales clés et leur justification
+- Ce que Claude doit savoir mais ne peut pas inférer du code
+- Les blocages actifs ou les questions ouvertes
+
+Mettez à jour CLAUDE.md à la fin de chaque session. À la session suivante, Claude le lit et dispose du contexte actuel.
+
+```markdown
+# MonApp CLAUDE.md
+
+## Statut (2026-05-15)
+- Module auth : TERMINÉ ✅
+- Tableau de bord : EN COURS — la récupération des données fonctionne, le rendu est cassé sur mobile
+- Intégration paiement : NON COMMENCÉ
+
+## Problèmes actifs
+- Tableau de bord : `useInfiniteQuery` retourne undefined au premier rendu (désynchronisation hydratation SSR)
+  - Essayé : désactivation SSR, utilisation de Suspense, définition de initialData
+  - Pas encore essayé : alimentation manuelle du cache côté serveur, composant client séparé
+
+## Décisions clés
+- Zustand plutôt que Redux (plus simple pour cette portée)
+- Supabase pour l'auth, pas NextAuth (projet Supabase existant déjà)
+- Breakpoints de mise en page mobile-first (base 375px)
+```
+
+**2. Suivi des tâches**
+
+Utilisez les outils TaskCreate/TaskUpdate pendant les sessions pour maintenir une liste de tâches. Les tâches persistent et peuvent être consultées au début d'une nouvelle session pour rétablir le contexte.
+
+**3. Git comme mémoire de session**
+
+Committez fréquemment et rédigez des messages de commit significatifs. Quand vous démarrez une nouvelle session, `git log --oneline -20` donne à Claude une image claire des progrès récents sans avoir à relire tout le code.
+
+```
+git log --oneline -20
+# 3ae2e33 fix: bug de défilement infini du tableau de bord sur Safari
+# 2a1b4c5 feat: page profil utilisateur avec upload d'avatar
+# 9f8d2e1 fix: condition de course lors du rafraîchissement du token auth
+```
+
+**4. Documents d'état**
+
+Pour les grands projets, maintenez un `PROGRESS.md` ou `STATUS.md` que vous mettez à jour à la fin de chaque session :
+
+```markdown
+# Module auth — terminé
+# Tableau de bord — couche données prête ; bug UI actif (voir CLAUDE.md)
+# Paiements — non commencé ; compte Stripe requis d'abord
+```
+
+## Erreurs courantes de gestion de session
+
+### Lire les mêmes fichiers de façon répétée
+
+Si Claude lit `app/page.tsx` cinq fois dans une session parce qu'il doit vérifier différentes choses, c'est 5× le coût en tokens. À la place :
+
+**Meilleur modèle :** Lisez le fichier une seule fois au début d'une tâche, effectuez tout le travail qui le requiert, puis passez à la tâche suivante.
+
+**Encore mieux :** Quand vous savez que la session impliquera un grand fichier, lisez-le tôt et donnez à Claude un résumé clair de ce que vous en avez besoin. « Ce fichier gère notre routage — nous allons ajouter une nouvelle route à la ligne 87 et mettre à jour le middleware à la ligne 134. »
+
+### Demander à Claude de résumer sans direction
+
+`/compact` sans focus produit un résumé générique. Si votre session était composée à 80 % du débogage d'un bug obscur et à 20 % de la rédaction de documentation, la compaction les traitera comme équivalents. Donnez une direction à Claude :
+
+```
+/compact focus sur le débogage du middleware de routage — en particulier le problème d'en-tête CORS et la solution à laquelle nous sommes parvenus
+```
+
+### Commencer de nouvelles tâches sans réinitialiser le contexte
+
+Si vous terminez une fonctionnalité et pivotez immédiatement vers un module différent sans compaction, Claude porte le poids complet de la tâche précédente. Cinq minutes de `/compact` et un prompt frais et précis produisent un meilleur travail que demander à Claude de changer de contexte avec une session déjà bien remplie.
+
+### Ne pas mettre à jour CLAUDE.md
+
+L'échec de continuité de session le plus courant : un travail significatif est accompli, des décisions sont prises, puis la session se termine sans que CLAUDE.md soit mis à jour. La session suivante commence sans ce contexte et Claude redécouvre les mêmes informations ou prend des décisions incohérentes.
+
+Faites des mises à jour de CLAUDE.md une partie de votre routine de fin de session : « Avant de terminer, mets à jour CLAUDE.md avec ce que nous avons accompli et les prochaines étapes. »
+
+## Gestion du budget de contexte
+
+Pensez aux tokens de contexte comme un budget que vous voulez dépenser sagement, pas comme une limite que vous essayez de ne pas dépasser.
+
+**Dépense de tokens à forte valeur :**
+- Lire les fichiers que vous allez réellement modifier
+- Exécuter des commandes dont la sortie informe la prochaine décision
+- Discuter de l'architecture avant de l'implémenter
+
+**Dépense de tokens à faible valeur :**
+- Lire des fichiers par curiosité (utilisez grep ou des recherches ciblées à la place)
+- Exécuter des commandes dont vous pourriez prédire la sortie
+- De longs échanges sur des décisions déjà prises
+
+**Gestion du budget de contexte en pratique :**
+
+Pour l'implémentation d'une fonctionnalité complexe :
+1. Démarrage : lire CLAUDE.md (contexte du projet), exécuter `git log --oneline -10` (historique récent)
+2. Recherche : lectures ciblées des fichiers pertinents, grep ciblé pour des modèles
+3. Planification : discuter brièvement de l'approche d'implémentation
+4. Implémentation : modifier les fichiers, exécuter des tests ciblés
+5. Validation : exécuter la suite de tests complète une fois, corriger les problèmes
+6. Clôture : mettre à jour CLAUDE.md, committer, `/compact` ou terminer la session
+
+Ce modèle maintient la fenêtre de contexte focalisée sur le travail actif plutôt que sur l'exploration accumulée.
+
+## Projets multi-sessions
+
+Pour les projets s'étalant sur des jours ou des semaines :
+
+**Rituel de démarrage de session :**
+1. Claude lit CLAUDE.md automatiquement (gardez-le à jour !)
+2. Demandez la tâche courante : « Lis CLAUDE.md, puis dis-moi sur quoi nous devrions travailler ensuite selon l'état actuel. »
+3. Revue rapide avec `git log`
+
+**Rituel de fin de session :**
+1. Committez toutes les modifications avec un message significatif
+2. Mettez à jour CLAUDE.md avec l'état actuel
+3. Rédigez une note d'un paragraphe sur ce que vous voudriez savoir à la prochaine session : blocages actifs, décisions en cours, prochaines étapes
+
+**Contexte entre les sessions :** Maintenez un `DECISIONS.md` pour les décisions architecturales qui n'appartiennent pas à CLAUDE.md mais que Claude pourrait avoir besoin de redériver sans documentation :
+
+```markdown
+# 2026-05-12 : RSA-OAEP choisi plutôt qu'ECDH pour l'échange de clés
+Raison : l'infrastructure PKI existante utilise RSA ; passer à ECDH nécessiterait de migrer toutes les paires de clés existantes.
+Envisagé : ECDH (meilleures performances), RSA-OAEP (compatible avec l'infra existante) → compatibilité choisie.
+```
+
+## Sessions parallèles et worktrees
+
+Claude Code prend en charge l'exécution de plusieurs sessions indépendantes simultanément à l'aide de git worktrees. Chaque worktree est une copie isolée du dépôt sur une branche séparée.
+
+```bash
+# Créer un worktree pour une fonctionnalité parallèle
+git worktree add ../monapp-auth-feature auth/feature-oauth
+
+# Ouvrir un nouveau terminal, démarrer Claude Code dans le worktree
+cd ../monapp-auth-feature
+claude
+```
+
+Chaque session Claude Code dans chaque worktree est indépendante — elles ne partagent pas de contexte. C'est utile pour :
+- Le développement de fonctionnalités parallèles sans conflits de branches
+- L'exécution d'un agent de longue durée dans un worktree pendant qu'on travaille de façon interactive dans un autre
+- L'expérimentation avec des modifications risquées sans affecter l'espace de travail principal
+
+Utilisez `ExitWorktree` pour nettoyer quand vous avez terminé (ou `git worktree remove` manuellement).
+
+---
+
+**Guides liés :** [Hooks Claude Code](/skills/claude-code-hooks/) · [Comment créer des sous-agents](/skills/build-subagent/) · [Pratiques efficaces avec Claude Code](/skills/effective-claude-code/)
+
+**Besoin d'aide pour configurer Claude Code pour votre équipe ?** [Service de configuration ClawHelp →](/services/claude-code-setup/)

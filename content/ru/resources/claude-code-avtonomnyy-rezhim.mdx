@@ -1,0 +1,671 @@
+---
+slug: claude-code-avtonomnyy-rezhim
+title: "Claude Code в автономном режиме: --print, CI/CD и batch-обработка"
+description: "Флаг --print для неинтерактивного режима, stdin-ввод, --allowedTools, GitHub Actions и GitLab CI workflows, batch-обработка, --dangerously-skip-permissions, обработка JSON вывода и retry логика для rate limits."
+category: guide
+schema: Article
+tags: [автономный-режим, CI/CD, --print, автоматизация, GitHub-Actions]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+lang: "ru"
+seoTitle: "Claude Code в автономном режиме: --print, CI/CD и batch-обработка | ClawHelp"
+seoDescription: "Настройте Claude Code для неинтерактивной работы: флаг --print, GitHub Actions для автоматической ревью PR, генерация тестов, GitLab CI, batch-скрипты и безопасное использование --dangerously-skip-permissions."
+---
+
+# Claude Code в автономном режиме: --print, CI/CD и batch-обработка
+
+Большинство разработчиков используют Claude Code интерактивно — открыл терминал, написал промпт, получил ответ. Но Claude Code поддерживает полностью неинтерактивный режим: он может работать как часть CI/CD пайплайна, обрабатывать сотни файлов через shell-скрипты, запускаться в GitHub Actions без вашего участия. Этот режим открывает возможности, недоступные в интерактивном сценарии.
+
+---
+
+## Флаг `--print` / `-p`: неинтерактивный режим
+
+Флаг `--print` (краткая форма `-p`) переключает Claude Code из интерактивного режима в одноразовый режим вывода. Claude Code выполняет задачу, выводит результат в stdout и завершается с кодом `0` (успех) или ненулевым кодом при ошибке.
+
+**Базовый синтаксис:**
+
+```bash
+claude --print "Какой TypeScript-тип должен быть у этой функции?"
+claude -p "Объясни, что делает этот код" < myfile.ts
+```
+
+**Почему это важно:**
+
+- Вывод идёт в stdout — его можно перенаправить, записать в файл, передать в следующую команду пайплайна
+- Нет интерактивных запросов — скрипт не зависнет в ожидании ввода
+- Можно использовать в cron jobs, git hooks, CI/CD пайплайнах
+
+---
+
+## Ввод через stdin
+
+Claude Code принимает контекст через stdin. Это фундаментальный паттерн для batch-обработки:
+
+```bash
+# Передать файл как контекст
+cat src/auth/token.ts | claude -p "Найди потенциальные уязвимости безопасности"
+
+# Передать git diff
+git diff HEAD~1 | claude -p "Напиши описание коммита для этих изменений"
+
+# Передать лог
+tail -100 /var/log/app.log | claude -p "Что значат эти ошибки и как их исправить?"
+
+# Комбинировать файлы
+{ cat schema.sql; echo "---"; cat queries.ts; } | claude -p "Оптимизируй эти SQL-запросы"
+```
+
+При передаче через stdin Claude Code воспринимает содержимое как часть промпта с полным контекстом. Это позволяет обрабатывать файлы большего размера, чем умещается в командной строке.
+
+---
+
+## Флаги `--allowedTools` и `--disallowedTools`
+
+По умолчанию в автономном режиме Claude Code работает с теми же разрешениями, что и в интерактивном — но без возможности запросить разрешение у пользователя. Это меняет семантику: инструмент либо разрешён, либо недоступен.
+
+**`--allowedTools`** — whitelist: разрешить только эти инструменты:
+
+```bash
+# Разрешить только чтение файлов и bash-команды
+claude -p "Найди все TODO-комментарии в проекте" \
+  --allowedTools "Read,Bash"
+
+# Разрешить только чтение — никаких изменений
+claude -p "Проанализируй архитектуру проекта" \
+  --allowedTools "Read,LS,Glob"
+```
+
+**`--disallowedTools`** — blacklist: запретить конкретные инструменты:
+
+```bash
+# Запретить запись и выполнение bash
+claude -p "Найди проблемы в коде" \
+  --disallowedTools "Write,Edit,Bash"
+```
+
+**Рекомендация:** В CI/CD пайплайнах используйте `--allowedTools` с явным whitelist — это явная и безопасная политика. `--disallowedTools` оставляйте для случаев, когда нужно заблокировать конкретный инструмент, оставив остальные доступными.
+
+---
+
+## `--dangerously-skip-permissions`
+
+Флаг `--dangerously-skip-permissions` отключает все запросы подтверждений. Claude Code будет выполнять любые действия без остановки.
+
+```bash
+claude -p "Отрефактори все файлы в src/" --dangerously-skip-permissions
+```
+
+**Когда это оправдано:**
+
+- Изолированная sandbox-среда (контейнер, виртуальная машина без важных данных)
+- Пайплайн, где все изменения ревьюируются через git diff после выполнения
+- Автоматическая генерация кода в чистой директории
+
+**Когда это опасно:**
+
+- На вашей рабочей машине с реальными данными
+- В пайплайнах с доступом к продакшн-окружению
+- Без последующего ревью результатов
+
+Название флага не случайно содержит `dangerously` — это сигнал, что применять его нужно осознанно. В большинстве CI/CD сценариев правильная альтернатива — явный `--allowedTools` whitelist.
+
+---
+
+## GitHub Actions: автоматическая ревью PR
+
+Типичный use case: при открытии или обновлении PR автоматически запускать Claude Code для code review.
+
+**`.github/workflows/claude-pr-review.yml`:**
+
+```yaml
+name: Claude Code PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Нужна полная история для diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
+          echo "diff_lines=$(wc -l < pr_diff.txt)" >> $GITHUB_OUTPUT
+
+      - name: Run Claude Code review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          REVIEW=$(cat pr_diff.txt | claude -p "
+          Проведи code review этого PR diff.
+          
+          Сфокусируйся на:
+          1. Потенциальные баги и edge cases
+          2. Проблемы безопасности
+          3. Производительность
+          4. Читаемость и поддерживаемость
+          
+          Формат ответа:
+          ## Summary
+          Краткое описание изменений.
+          
+          ## Issues Found
+          - [CRITICAL/HIGH/MEDIUM/LOW] Описание проблемы (file:line)
+          
+          ## Suggestions
+          Рекомендации по улучшению.
+          
+          Если проблем нет — скажи об этом явно.
+          " --allowedTools "")
+          
+          # Сохранить в env для следующего шага
+          echo "review_text<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const review = `## Claude Code Review\n\n${{ steps.review.outputs.review_text }}`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: review
+            });
+```
+
+**Важные детали этого workflow:**
+
+- `--allowedTools ""` — пустой whitelist: Claude не может выполнять никаких инструментов, только анализировать переданный текст. Безопасно.
+- `fetch-depth: 0` — необходимо для корректного git diff между ветками
+- `secrets.ANTHROPIC_API_KEY` — API-ключ должен быть добавлен в Settings → Secrets репозитория
+
+---
+
+## GitHub Actions: автоматическая генерация тестов
+
+```yaml
+name: Generate Tests for New Code
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  generate-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Find new functions without tests
+        id: find_gaps
+        run: |
+          # Получить список новых/изменённых файлов (только исходный код, не тесты)
+          CHANGED_FILES=$(git diff origin/${{ github.base_ref }}...HEAD \
+            --name-only \
+            --diff-filter=AM \
+            | grep -E '\.(ts|js)$' \
+            | grep -v '\.(test|spec)\.' \
+            | head -10)  # Ограничить до 10 файлов
+          
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+
+      - name: Generate tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          for file in ${{ steps.find_gaps.outputs.changed_files }}; do
+            if [[ -f "$file" ]]; then
+              test_file="${file%.*}.test.${file##*.}"
+              
+              if [[ ! -f "$test_file" ]]; then
+                echo "Генерирую тесты для $file -> $test_file"
+                
+                cat "$file" | claude -p "
+                Напиши unit-тесты для этого файла.
+                
+                Требования:
+                - Используй Jest + TypeScript
+                - Покрой основные сценарии и edge cases
+                - Mock внешние зависимости
+                - Тесты должны быть независимы друг от друга
+                - Используй describe/it структуру
+                
+                Верни только код тестов без пояснений.
+                " --allowedTools "" > "$test_file"
+              fi
+            fi
+          done
+
+      - name: Commit generated tests
+        run: |
+          git config user.name "Claude Code Bot"
+          git config user.email "claude-bot@example.com"
+          git add "*.test.ts" "*.test.js" 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "chore: add generated tests for new code [skip ci]"
+          git push
+```
+
+---
+
+## GitLab CI
+
+Тот же подход работает в GitLab CI. Основное отличие — синтаксис YAML и способ хранения secrets.
+
+**`.gitlab-ci.yml`:**
+
+```yaml
+stages:
+  - review
+  - test
+
+claude-code-review:
+  stage: review
+  image: node:20-alpine
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  before_script:
+    - npm install -g @anthropic-ai/claude-code
+    - apk add --no-cache git
+  script:
+    - |
+      git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+      git diff origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD > mr_diff.txt
+      
+      REVIEW=$(cat mr_diff.txt | claude -p "
+      Проведи code review этого MR diff.
+      Верни структурированный анализ в Markdown.
+      " --allowedTools "")
+      
+      # Записать в артефакт
+      echo "$REVIEW" > review_report.md
+      
+      # Вывести в лог
+      cat review_report.md
+  artifacts:
+    reports:
+      dotenv: review_report.md
+    paths:
+      - review_report.md
+    expire_in: 7 days
+  variables:
+    ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY  # Из GitLab CI/CD Variables
+```
+
+В GitLab secrets хранятся в **Settings → CI/CD → Variables**. Используйте тип **Masked** для токенов — они не будут отображаться в логах.
+
+---
+
+## Batch-обработка через скрипты
+
+Для обработки большого количества файлов пишите shell-скрипты, которые последовательно вызывают Claude Code.
+
+### Пример: добавить JSDoc ко всем функциям
+
+```bash
+#!/bin/bash
+# add-jsdoc.sh — добавить JSDoc комментарии к TypeScript функциям
+
+set -euo pipefail
+
+SRC_DIR="${1:-./src}"
+PROCESSED=0
+FAILED=0
+
+find "$SRC_DIR" -name "*.ts" -not -name "*.d.ts" -not -name "*.test.ts" | while read -r file; do
+  echo "Обрабатываю: $file"
+  
+  # Пропустить файлы, в которых уже есть JSDoc
+  if grep -q "@param\|@returns\|@description" "$file" 2>/dev/null; then
+    echo "  → Пропущен (уже есть JSDoc)"
+    continue
+  fi
+  
+  # Создать временный файл
+  tmp_file=$(mktemp)
+  
+  # Запустить Claude Code с таймаутом
+  if timeout 60 cat "$file" | claude -p "
+  Добавь JSDoc комментарии к каждой экспортированной функции в этом TypeScript файле.
+  Верни полное содержимое файла с добавленными комментариями.
+  Не изменяй логику кода, только добавь документацию.
+  Верни только код файла без пояснений.
+  " --allowedTools "" > "$tmp_file"; then
+    mv "$tmp_file" "$file"
+    echo "  ✓ Готово"
+    ((PROCESSED++)) || true
+  else
+    rm -f "$tmp_file"
+    echo "  ✗ Ошибка"
+    ((FAILED++)) || true
+  fi
+  
+  # Пауза между запросами чтобы не превысить rate limit
+  sleep 2
+done
+
+echo ""
+echo "Обработано: $PROCESSED файлов"
+echo "Ошибок: $FAILED файлов"
+```
+
+### Пример: генерация changelog из коммитов
+
+```bash
+#!/bin/bash
+# generate-changelog.sh
+
+SINCE_TAG="${1:-$(git describe --tags --abbrev=0 2>/dev/null || echo 'HEAD~50')}"
+VERSION="${2:-$(date +%Y.%m.%d)}"
+
+echo "Генерирую changelog с $SINCE_TAG до HEAD..."
+
+git log "$SINCE_TAG"..HEAD --format="%h %s" | claude -p "
+На основе этих git-коммитов составь changelog для версии $VERSION.
+
+Формат:
+## v$VERSION — $(date +%Y-%m-%d)
+
+### Новые возможности
+- ...
+
+### Исправления
+- ...
+
+### Изменения
+- ...
+
+Коммиты типа 'chore:', 'refactor:', 'test:' включать только если они значимы для пользователей.
+Пиши для разработчиков, используй технический язык.
+" --allowedTools "" > CHANGELOG_NEW.md
+
+echo "Готово: CHANGELOG_NEW.md"
+```
+
+---
+
+## Обработка структурированного JSON вывода
+
+Для интеграции с другими инструментами удобно получать от Claude Code структурированный JSON, а не plain text.
+
+**Запрос структурированного JSON:**
+
+```bash
+ANALYSIS=$(cat src/api/users.ts | claude -p "
+Проанализируй этот файл и верни ТОЛЬКО валидный JSON без пояснений:
+{
+  \"functions\": [
+    {
+      \"name\": \"имя функции\",
+      \"complexity\": \"low|medium|high\",
+      \"has_tests\": boolean,
+      \"issues\": [\"описание проблемы\"]
+    }
+  ],
+  \"overall_score\": 1-10,
+  \"recommendations\": [\"рекомендация\"]
+}
+" --allowedTools "")
+
+# Парсить JSON
+echo "$ANALYSIS" | jq '.functions[] | select(.complexity == "high") | .name'
+echo "$ANALYSIS" | jq '.overall_score'
+```
+
+**Проблема:** LLM иногда добавляет пояснения вокруг JSON. Надёжная обработка:
+
+```bash
+# Извлечь JSON из ответа даже если он окружён текстом
+extract_json() {
+  local response="$1"
+  # Попробовать извлечь JSON-блок
+  echo "$response" | python3 -c "
+import sys, json, re
+text = sys.stdin.read()
+# Найти JSON-блок между первой { и последней }
+match = re.search(r'\{.*\}', text, re.DOTALL)
+if match:
+    try:
+        obj = json.loads(match.group())
+        print(json.dumps(obj, ensure_ascii=False))
+        sys.exit(0)
+    except:
+        pass
+sys.exit(1)
+"
+}
+
+ANALYSIS=$(cat myfile.ts | claude -p "Верни JSON анализ..." --allowedTools "")
+CLEAN_JSON=$(extract_json "$ANALYSIS")
+echo "$CLEAN_JSON" | jq '.recommendations[]'
+```
+
+---
+
+## Retry логика для rate limits
+
+Anthropic API имеет rate limits: ограничения по запросам в минуту и токенам в минуту. При batch-обработке нужна retry логика.
+
+**Обёртка с exponential backoff:**
+
+```bash
+#!/bin/bash
+# claude-with-retry.sh
+
+claude_with_retry() {
+  local max_attempts=5
+  local attempt=1
+  local delay=10  # Начальная задержка в секундах
+  
+  while [[ $attempt -le $max_attempts ]]; do
+    # Запустить Claude Code
+    output=$(claude "$@" 2>&1)
+    exit_code=$?
+    
+    if [[ $exit_code -eq 0 ]]; then
+      echo "$output"
+      return 0
+    fi
+    
+    # Проверить, является ли ошибка rate limit
+    if echo "$output" | grep -qi "rate.limit\|too.many.requests\|429"; then
+      echo "Rate limit достигнут. Попытка $attempt/$max_attempts. Ждём ${delay}с..." >&2
+      sleep $delay
+      delay=$((delay * 2))  # Exponential backoff
+      ((attempt++))
+    else
+      # Другая ошибка — не retry
+      echo "Ошибка Claude Code (не rate limit):" >&2
+      echo "$output" >&2
+      return $exit_code
+    fi
+  done
+  
+  echo "Превышено максимальное количество попыток ($max_attempts)" >&2
+  return 1
+}
+
+# Использование
+claude_with_retry -p "Проанализируй этот код" --allowedTools "" < myfile.ts
+```
+
+**Параллельная обработка с контролем rate limit:**
+
+```bash
+#!/bin/bash
+# parallel-process.sh — обработать файлы параллельно с ограничением
+
+MAX_PARALLEL=3  # Не более 3 параллельных запросов
+DELAY_BETWEEN=5  # 5 секунд между запусками
+
+process_file() {
+  local file="$1"
+  echo "Обрабатываю: $file"
+  
+  result=$(cat "$file" | claude -p "Краткое описание файла в одном предложении." \
+    --allowedTools "" 2>&1) || { echo "Ошибка: $file" >&2; return 1; }
+  
+  echo "$file: $result"
+}
+
+export -f process_file
+
+find ./src -name "*.ts" | \
+  xargs -P "$MAX_PARALLEL" -I{} bash -c 'process_file "$@"' _ {}
+```
+
+---
+
+## Что хорошо работает в автономном режиме
+
+Не все задачи одинаково подходят для автономного выполнения. Понимание этого сэкономит время и деньги.
+
+**Хорошо работает автономно:**
+
+| Задача | Почему |
+|--------|--------|
+| Code review diff | Детерминированный вход, не требует решений |
+| Генерация документации | Есть чёткий шаблон выхода |
+| Добавление типов/JSDoc | Аддитивная задача, легко верифицировать |
+| Поиск паттернов (TODO, deprecated API) | Grep-подобная задача |
+| Генерация тестов для существующего кода | Контракт функции известен |
+| Форматирование commit messages | Фиксированный вход (diff) |
+| Генерация changelog | Структурированный вход (git log) |
+
+**Требует человека:**
+
+| Задача | Почему |
+|--------|--------|
+| Архитектурные решения | Требует контекста, который не в коде |
+| Отладка нетривиальных багов | Нужны итерации и гипотезы |
+| Рефакторинг со сменой архитектуры | Риск сломать незаметно |
+| Задачи с неоднозначными требованиями | Claude угадает неправильно |
+| Работа с продакшн данными | Слишком высокая цена ошибки |
+| Интеграции с внешними API | Нужна верификация результата |
+
+**Практическое правило:** Если задачу можно описать как «возьми X, примени Y, получи Z» — хороший кандидат для автономного режима. Если в задаче есть «разберись», «реши», «выбери» — нужен человек в контуре.
+
+---
+
+## Переменные окружения для CI/CD
+
+При запуске Claude Code в CI/CD среде несколько переменных меняют поведение:
+
+```bash
+# Отключить цветной вывод для чистых логов
+NO_COLOR=1 claude -p "..."
+
+# Указать модель явно (не полагаться на дефолт)
+ANTHROPIC_MODEL=claude-sonnet-4-5 claude -p "..."
+
+# Установить таймаут для команд (в миллисекундах)
+CLAUDE_TIMEOUT=120000 claude -p "..."
+```
+
+**Полный пример переменных для GitHub Actions:**
+
+```yaml
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  ANTHROPIC_MODEL: claude-sonnet-4-5  # Явно зафиксировать модель
+  NO_COLOR: "1"                        # Чистые логи
+  CI: "true"                           # Claude Code знает, что в CI
+```
+
+---
+
+## Шаблон production-ready CI/CD job
+
+Полный шаблон с обработкой ошибок, таймаутами и артефактами:
+
+```yaml
+claude-analysis:
+  runs-on: ubuntu-latest
+  timeout-minutes: 15  # Общий таймаут job
+  
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup
+      run: |
+        npm install -g @anthropic-ai/claude-code
+        claude --version
+
+    - name: Run analysis
+      id: analysis
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        NO_COLOR: "1"
+      timeout-minutes: 10  # Таймаут конкретного шага
+      run: |
+        set -euo pipefail
+        
+        # Основная задача
+        git diff origin/main...HEAD | claude -p "
+        Проанализируй изменения и верни JSON:
+        {\"risk_level\": \"low|medium|high\", \"summary\": \"...\", \"issues\": []}
+        " --allowedTools "" > analysis.json
+        
+        # Верифицировать что получили валидный JSON
+        jq empty analysis.json
+        
+        # Извлечь risk level для следующих шагов
+        RISK=$(jq -r '.risk_level' analysis.json)
+        echo "risk_level=$RISK" >> $GITHUB_OUTPUT
+
+    - name: Upload analysis
+      uses: actions/upload-artifact@v4
+      if: always()  # Загружать даже при ошибке
+      with:
+        name: claude-analysis
+        path: analysis.json
+
+    - name: Block high-risk PRs
+      if: steps.analysis.outputs.risk_level == 'high'
+      run: |
+        echo "::error::High-risk changes detected. Manual review required."
+        exit 1
+```
+
+---
+
+Если вам нужно интегрировать Claude Code в корпоративный CI/CD пайплайн, настроить автоматическую ревью кода или построить batch-обработку для большого репозитория — команда ClawHelp реализует это с нуля. Мы настраиваем GitHub Actions, GitLab CI, Jenkins и кастомные пайплайны с учётом требований безопасности и rate limit вашего плана. Напишите нам, чтобы обсудить задачу.

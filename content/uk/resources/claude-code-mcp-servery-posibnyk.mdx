@@ -1,0 +1,531 @@
+---
+slug: claude-code-mcp-servery-posibnyk
+title: "MCP-сервери в Claude Code: налаштування та найкращі практики"
+description: "Повний посібник з MCP (Model Context Protocol) у Claude Code — архітектура client-server, конфігурація mcpServers, популярні сервери GitHub, PostgreSQL, Brave Search, кастомний MCP-сервер на Node.js та безпека."
+category: guide
+schema: Article
+tags: [mcp, інтеграції, налаштування, розширення, інструменти]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+lang: "uk"
+seoTitle: "MCP-сервери в Claude Code: налаштування та найкращі практики | ClawHelp"
+seoDescription: "Підключіть MCP-сервери до Claude Code: GitHub, PostgreSQL, Brave Search. Напишіть власний MCP-сервер на Node.js (~80 рядків). Конфігурація, безпека, налагодження."
+---
+
+# MCP-сервери в Claude Code: налаштування та найкращі практики
+
+Model Context Protocol (MCP) — це стандартизований протокол, який дозволяє Claude Code взаємодіяти із зовнішніми інструментами і джерелами даних через уніфікований інтерфейс. За допомогою MCP-серверів Claude Code отримує доступ до баз даних, API, файлових систем та будь-яких зовнішніх сервісів — без необхідності писати кастомну інтеграцію в кожному разі.
+
+У цьому посібнику — архітектура MCP, конфігурація популярних серверів, покрокове створення власного MCP-сервера на Node.js та найкращі практики безпеки.
+
+---
+
+## Архітектура MCP: client-server
+
+MCP використовує класичну client-server архітектуру:
+
+```
+Claude Code (клієнт)
+    │
+    │  JSON-RPC 2.0 (stdio / HTTP)
+    │
+MCP Server (сервер)
+    │
+    ├── Tools (інструменти для виклику)
+    ├── Resources (дані для читання)
+    └── Prompts (шаблони промптів)
+```
+
+**Три типи можливостей MCP-сервера:**
+
+| Тип | Опис | Приклад |
+|-----|------|---------|
+| `Tools` | Функції, які Claude може викликати | `execute_sql`, `create_pr`, `search_web` |
+| `Resources` | Дані тільки для читання | `file://schema.sql`, `db://users` |
+| `Prompts` | Шаблони промптів | `code-review-checklist`, `commit-message` |
+
+**Транспортний рівень:**
+
+- **stdio** — найпростіший варіант: Claude Code запускає MCP-сервер як subprocess і спілкується через stdin/stdout. Підходить для локальних інструментів.
+- **HTTP/SSE** — для віддалених серверів або серверів з довгими з'єднаннями.
+
+---
+
+## Конфігурація mcpServers
+
+MCP-сервери налаштовуються у файлі `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "node",
+      "args": ["/path/to/server.js"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}",
+        "API_KEY": "${MY_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**Основні поля:**
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `command` | string | Виконувана команда (node, python, npx тощо) |
+| `args` | array | Аргументи командного рядка |
+| `env` | object | Змінні середовища для сервера |
+| `disabled` | boolean | Тимчасово відключити сервер |
+
+**Підстановка змінних:** `${VAR_NAME}` підставляє значення зі змінних середовища Claude Code. Ніколи не пишіть секрети безпосередньо в `settings.json`.
+
+---
+
+## Популярні MCP-сервери
+
+### GitHub MCP Server
+
+Дозволяє Claude Code безпосередньо взаємодіяти з GitHub: читати PR, issues, код репозиторіїв.
+
+**Встановлення та конфігурація:**
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+**Доступні інструменти після підключення:**
+
+- `list_repositories` — список репозиторіїв
+- `get_file_contents` — вміст файлу з репозиторію
+- `search_code` — пошук коду по GitHub
+- `create_pull_request` — створення PR
+- `list_issues` / `create_issue` — робота з issues
+- `get_commit` — деталі коміту
+
+**Токен GitHub:** потрібен Personal Access Token (PAT) з правами `repo`, `read:org`. Зберігайте його в `.env` або в менеджері секретів.
+
+---
+
+### PostgreSQL MCP Server
+
+Надає Claude Code прямий read-only доступ до бази даних для аналізу схеми та виконання запитів.
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}"
+      }
+    }
+  }
+}
+```
+
+**Доступні інструменти:**
+
+- `query` — виконання SQL-запитів (SELECT)
+- `list_tables` — список таблиць і схем
+- `describe_table` — структура таблиці
+
+**Важливо:** стандартний PostgreSQL MCP-сервер надає доступ тільки на читання. Якщо потрібні write-операції — необхідний кастомний сервер з явними перевірками.
+
+---
+
+### Brave Search MCP Server
+
+Надає можливість виконувати пошук у реальному часі з актуальними даними.
+
+```json
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**Доступні інструменти:**
+
+- `brave_web_search` — веб-пошук з результатами та сніпетами
+- `brave_local_search` — пошук локальних бізнесів і місць
+
+Brave Search API надає безкоштовний tier з 2000 запитів на місяць. Підходить для отримання актуальної інформації про документацію, пакети, новини.
+
+---
+
+### Filesystem MCP Server
+
+Розширює доступ до файлової системи — наприклад, до директорій поза поточним проектом.
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/user/documents",
+        "/home/user/downloads"
+      ]
+    }
+  }
+}
+```
+
+Аргументи після імені пакету — це список директорій, до яких надається доступ. Принцип мінімальних привілеїв: вказуйте тільки потрібні директорії.
+
+---
+
+## Кастомний MCP-сервер на Node.js
+
+Якщо стандартний сервер не підходить — написати власний займає менше 80 рядків коду.
+
+**Встановлення SDK:**
+
+```bash
+npm install @modelcontextprotocol/sdk
+```
+
+**Повний приклад: сервер для роботи з TODO API**
+
+```javascript
+// mcp-todo-server.js
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+
+const API_BASE = process.env.TODO_API_URL || "http://localhost:3000";
+
+const server = new Server(
+  { name: "todo-server", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
+
+// Оголошення доступних інструментів
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: "list_todos",
+      description: "Отримати список усіх TODO завдань",
+      inputSchema: {
+        type: "object",
+        properties: {
+          status: {
+            type: "string",
+            enum: ["all", "open", "done"],
+            description: "Фільтр за статусом",
+          },
+        },
+      },
+    },
+    {
+      name: "create_todo",
+      description: "Створити нове TODO завдання",
+      inputSchema: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Назва завдання" },
+          priority: {
+            type: "string",
+            enum: ["low", "medium", "high"],
+            description: "Пріоритет",
+          },
+        },
+        required: ["title"],
+      },
+    },
+    {
+      name: "complete_todo",
+      description: "Відмітити завдання як виконане",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "ID завдання" },
+        },
+        required: ["id"],
+      },
+    },
+  ],
+}));
+
+// Обробник викликів інструментів
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    if (name === "list_todos") {
+      const status = args?.status || "all";
+      const url = status === "all"
+        ? `${API_BASE}/todos`
+        : `${API_BASE}/todos?status=${status}`;
+      const response = await fetch(url);
+      const todos = await response.json();
+      return {
+        content: [{ type: "text", text: JSON.stringify(todos, null, 2) }],
+      };
+    }
+
+    if (name === "create_todo") {
+      const response = await fetch(`${API_BASE}/todos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: args.title,
+          priority: args?.priority || "medium",
+        }),
+      });
+      const todo = await response.json();
+      return {
+        content: [{ type: "text", text: `Створено: ${JSON.stringify(todo)}` }],
+      };
+    }
+
+    if (name === "complete_todo") {
+      await fetch(`${API_BASE}/todos/${args.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "done" }),
+      });
+      return {
+        content: [{ type: "text", text: `Завдання ${args.id} виконане.` }],
+      };
+    }
+
+    throw new Error(`Невідомий інструмент: ${name}`);
+  } catch (error) {
+    return {
+      content: [{ type: "text", text: `Помилка: ${error.message}` }],
+      isError: true,
+    };
+  }
+});
+
+// Запуск сервера
+const transport = new StdioServerTransport();
+await server.connect(transport);
+console.error("TODO MCP Server запущено");
+```
+
+**Конфігурація в `.claude/settings.json`:**
+
+```json
+{
+  "mcpServers": {
+    "todo": {
+      "command": "node",
+      "args": ["/path/to/mcp-todo-server.js"],
+      "env": {
+        "TODO_API_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+Тепер Claude Code може викликати `list_todos`, `create_todo` та `complete_todo` як звичайні інструменти.
+
+---
+
+## Безпека MCP-серверів
+
+### Принцип найменших привілеїв
+
+Надавайте серверу тільки ті права, які реально потрібні:
+
+- PostgreSQL: виділіть окремого read-only користувача для MCP, не використовуйте адмін-акаунт
+- GitHub: використовуйте fine-grained PAT з мінімальними правами
+- Filesystem: вказуйте конкретні директорії, не `/`
+
+### Управління секретами
+
+```json
+// НЕ робіть так:
+{
+  "mcpServers": {
+    "db": {
+      "env": {
+        "DATABASE_URL": "postgresql://admin:secretpassword@localhost/prod"
+      }
+    }
+  }
+}
+
+// Робіть так:
+{
+  "mcpServers": {
+    "db": {
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    }
+  }
+}
+```
+
+Зберігайте реальні значення в `.env` файлі (у `.gitignore`), а в `settings.json` — тільки посилання через `${VAR}`.
+
+### Sandbox для небезпечних операцій
+
+Якщо MCP-сервер виконує write-операції, додайте рівень підтвердження:
+
+```javascript
+// У обробнику інструменту
+if (name === "delete_record" && process.env.NODE_ENV === "production") {
+  // Логувати всі delete-операції
+  await appendFile("/var/log/mcp-audit.log",
+    JSON.stringify({ ts: new Date(), action: name, args }) + "\n"
+  );
+}
+```
+
+---
+
+## Налагодження MCP-серверів
+
+### Перегляд логів підключення
+
+Claude Code логує MCP-активність. Щоб побачити детальні логи:
+
+```bash
+# Запустити Claude Code з детальним логуванням
+CLAUDE_MCP_DEBUG=1 claude
+
+# Або переглянути логи після сесії
+cat ~/.claude/logs/mcp.log | jq .
+```
+
+### Тестування сервера без Claude Code
+
+```bash
+# Тест через npx @modelcontextprotocol/inspector
+npx @modelcontextprotocol/inspector node /path/to/your-server.js
+```
+
+MCP Inspector відкриває веб-інтерфейс для тестування tools, resources та prompts вашого сервера.
+
+### Типові помилки та вирішення
+
+| Помилка | Причина | Вирішення |
+|---------|---------|-----------|
+| `Server not found` | Неправильний шлях у `command` | Перевірте абсолютний шлях |
+| `Connection refused` | Сервер впав при запуску | Перевірте помилки в stderr |
+| `Tool not found` | Опечатка в імені інструменту | Перевірте `ListToolsRequestSchema` |
+| `Timeout` | Сервер відповідає надто повільно | Оптимізуйте або збільшіть timeout |
+| `Permission denied` | Недостатні права | Перевірте токени і права доступу |
+
+### Перезапуск MCP-серверів
+
+Якщо сервер завис або поводить себе некоректно:
+
+```
+/mcp restart my-server-name
+```
+
+Або перезапустіть Claude Code повністю — при кожному запуску MCP-сервери ініціалізуються заново.
+
+---
+
+## Конфігурація кількох серверів
+
+Можна підключити довільну кількість серверів одночасно:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": { "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}" }
+    },
+    "internal-api": {
+      "command": "node",
+      "args": [".claude/mcp-servers/internal-api.js"],
+      "env": {
+        "API_BASE_URL": "${INTERNAL_API_URL}",
+        "API_KEY": "${INTERNAL_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Claude Code завантажить усі три сервери при старті і зробить їх інструменти доступними одночасно. При конфлікті імен інструментів — буде використано сервер, який першим їх зареєстрував.
+
+---
+
+## Розширення MCP: Resources та Prompts
+
+Окрім Tools, MCP-сервери можуть надавати Resources (статичні або динамічні дані) та Prompts (шаблони).
+
+**Resources — приклад (схема БД):**
+
+```javascript
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: [
+    {
+      uri: "db://schema",
+      name: "Database Schema",
+      description: "Поточна схема бази даних",
+      mimeType: "application/json",
+    },
+  ],
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === "db://schema") {
+    const schema = await getDbSchema(); // ваша функція
+    return {
+      contents: [{ uri: "db://schema", mimeType: "application/json",
+                   text: JSON.stringify(schema) }],
+    };
+  }
+});
+```
+
+**Prompts — приклад (шаблон для code review):**
+
+```javascript
+server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+  prompts: [
+    {
+      name: "security-review",
+      description: "Шаблон для security review",
+      arguments: [{ name: "file", description: "Файл для аналізу", required: true }],
+    },
+  ],
+}));
+```
+
+---
+
+Якщо вам потрібна допомога з розробкою кастомного MCP-сервера або інтеграцією Claude Code з вашою внутрішньою інфраструктурою — команда ClawHelp розробить і задокументує рішення під ваш стек. Напишіть нам, щоб обговорити деталі.

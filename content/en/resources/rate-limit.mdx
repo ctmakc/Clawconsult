@@ -1,0 +1,107 @@
+---
+slug: rate-limit
+title: "Claude Code Rate Limit — What It Means and How to Handle It"
+description: "What triggers Claude Code API rate limits, how to see your current limits, and strategies to avoid hitting them during heavy sessions."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, rate-limit, api, performance]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 3
+seoTitle: "Claude Code Rate Limit Exceeded — Causes and Solutions | ClawHelp"
+seoDescription: "What causes claude code rate limit errors, how to check your limits, and strategies like /compact, reducing parallel agents, and upgrading your plan."
+---
+
+# Claude Code Rate Limit
+
+**Problem**: Claude Code returns a rate limit error mid-session. Work stops, context is interrupted, and you have to wait before continuing.
+
+Rate limits are an API constraint on how many tokens you can send or receive within a given time window. Here's what triggers them, how to know where you stand, and how to work around them.
+
+---
+
+## What Triggers Rate Limits
+
+Claude Code rate limits operate on two axes: **requests per minute** (RPM) and **tokens per minute** (TPM). Heavy sessions hit TPM limits far more often than RPM limits.
+
+**High-token operations that burn through limits fast**:
+
+- Reading large files into context — a 3,000-line file passed to the model is 3,000+ tokens of input
+- Long back-and-forth sessions where context grows with every message
+- Running multiple parallel subagents simultaneously (each one consumes tokens independently)
+- Generating long outputs: complete test suites, large refactors, full component rewrites
+- Repeated retries after a failed tool call (each retry resends context)
+
+**Signs you're approaching a rate limit** (before hitting the hard error):
+- Responses become noticeably slower
+- Tool calls take longer to complete
+- You see partial responses before the API cuts off
+
+---
+
+## How to Check Your Current Limits
+
+Rate limits depend on your Anthropic plan tier. To see where you stand:
+
+**Via the Anthropic Console**:
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Navigate to **Settings → Limits**
+3. Your current RPM and TPM limits are listed per model tier
+
+**In-session**: Claude Code doesn't display a live token counter, but you can ask Claude mid-session: "How much context do we have left?" — it will give you an approximate estimate.
+
+**From the error message**: When you hit a limit, the error response includes a `retry-after` header indicating how many seconds to wait.
+
+---
+
+## Strategies to Avoid Rate Limits
+
+### Use `/compact` Regularly
+
+The most effective tool. Running `/compact` in Claude Code summarizes the conversation so far and replaces the full message history with a compressed version. This dramatically reduces the token count of the context Claude carries forward.
+
+Run `/compact` after completing a major subtask — after a refactor is done, after a debugging session resolves, before starting a new feature. Think of it as clearing your desk.
+
+### Reduce Parallel Agents
+
+If you're running multi-agent workflows where several subagents execute simultaneously, each one is burning tokens in parallel. Hitting a rate limit mid-agent is worse than a slow session because it interrupts work in progress.
+
+For heavy parallel workloads: stagger agent execution (run 2 at a time instead of 5), or use a lower-tier model for simpler subagents and reserve the full model for the orchestrator.
+
+### Scope Your File Reads
+
+Avoid pasting or reading entire large files when you only need part of them. Instead of "read the whole codebase," ask for specific functions or files. Claude Code's filesystem tools can read specific line ranges — use them.
+
+```
+Read lines 120–180 of src/auth/middleware.ts
+```
+
+instead of reading the whole file.
+
+### Batch Requests Where Possible
+
+If you're asking Claude to do 10 similar things (rename 10 variables, generate 10 test cases), batch them into one request rather than 10 sequential requests. One large request uses fewer tokens than 10 round-trips with repeated context.
+
+### Upgrade Your Plan
+
+If you consistently hit rate limits during normal work, your usage has outgrown your plan tier. Anthropic's higher tiers offer significantly higher TPM limits. Check the [Anthropic pricing page](https://anthropic.com/pricing) for current tier limits.
+
+For teams with multiple developers running heavy sessions simultaneously, the per-developer token usage compounds — team accounts on higher tiers are the right solution.
+
+---
+
+## Pro Tips
+
+**Start new sessions for new problems**: A fresh session starts with zero context. If you've been working in a long session and are approaching limits, wrapping up and starting fresh for the next task is often the cleanest solution.
+
+**Use `CLAUDE.md` instead of re-explaining context**: If you find yourself typing the same background information every session, that's wasted tokens. Put it in your `CLAUDE.md` file — Claude reads it automatically and you don't pay for re-explaining it each time.
+
+**Monitor session length on large tasks**: For tasks that will run for hours (large migrations, full codebase refactors), plan `/compact` checkpoints in advance. Don't wait until you hit the limit mid-task.
+
+---
+
+## Related Resources
+
+- [Claude Code Setup Service](/services/claude-code-setup) — includes `CLAUDE.md` setup that reduces token waste from repeated context
+- [Custom Agent Development](/services/agent-development) — we design agents with rate limit awareness built in
+- [Permission Denied Error](/resources/permission-denied-error) — a different error that sometimes appears alongside rate limit issues

@@ -1,0 +1,132 @@
+---
+slug: team-onboarding
+title: "Intégration d'Équipe Claude Code"
+description: "Programme d'intégration structuré pour que toute votre équipe d'ingénierie utilise Claude Code efficacement — sessions, configuration et suivi de 30 jours."
+category: service
+tags: [onboarding, team, training, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 4
+lang: "fr"
+seoTitle: "Intégration et Formation d'Équipe Claude Code | ClawHelp"
+seoDescription: "Mettez votre équipe d'ingénierie à niveau rapidement sur Claude Code. Sessions de groupe, configuration CLAUDE.md par dépôt, bibliothèque de skills, config de hooks et suivi de 30 jours."
+---
+
+# Intégration d'Équipe Claude Code
+
+Donner à votre équipe un nouvel outil IA et espérer qu'elle s'en débrouille ne fonctionne pas. Les développeurs reviennent à leurs vieilles habitudes, l'adoption stagne, et les gains de productivité ne se matérialisent jamais. Une intégration efficace change tout ça.
+
+Notre **programme d'intégration d'équipe Claude Code** donne à votre équipe d'ingénierie le contexte, la configuration et les habitudes dont elle a besoin pour utiliser Claude Code de manière productive dès le premier jour — pas le troisième mois.
+
+## Ce Qui est Inclus
+
+### Session d'Intégration de Groupe
+
+Une session interactive en direct (à distance ou sur site à Ottawa) couvrant :
+
+- **Ce qu'est réellement Claude Code** — le modèle, la CLI, l'architecture d'utilisation des outils, et en quoi il diffère de Copilot ou de ChatGPT
+- **Démos en direct de vrais flux de travail** — révision de PR, écriture de tests, débogage avec des sous-agents, requêtes de base de données avec MCP
+- **Modèles de prompts qui fonctionnent** — comment formuler les demandes pour que Claude produise des résultats utiles et corrects ; comment corriger le cap quand il ne le fait pas
+- **Le système de skills** — comment invoquer des skills intégrés, comment écrire les vôtres, et quand utiliser les skills vs. le prompting libre
+- **Quand NE PAS utiliser Claude Code** — éviter les modes d'échec qui frustrent les développeurs et érodent la confiance dans l'outil
+
+Les sessions durent 2–3 heures pour des groupes allant jusqu'à 15. Les groupes plus grands obtiennent des sessions fractionnées. Toutes les sessions sont enregistrées et livrées pour révision async.
+
+### Configuration de CLAUDE.md par Dépôt
+
+La configuration à effet de levier le plus élevé pour une équipe. Nous rédigeons des fichiers `CLAUDE.md` pour chacun de vos dépôts actifs qui encodent :
+
+- Contexte de stack et de framework (plus besoin d'expliquer votre ORM à chaque session)
+- Conventions de codage et application du guide de style
+- Patterns de test et attentes de couverture
+- Flux de travail Git (nommage des branches, format des messages de commit, exigences de PR)
+- Notes d'architecture et contraintes connues
+- Liens vers la documentation interne que Claude devrait référencer
+
+Ces fichiers sont commitées dans le contrôle de version pour que chaque développeur et chaque nouvelle recrue obtienne automatiquement la même expérience Claude.
+
+### Bibliothèque de Skills
+
+Nous installons et configurons une bibliothèque de skills partagée adaptée aux tâches courantes de votre équipe. Les skills sont des flux de travail réutilisables et invocables que Claude exécute à la demande. Nous configurons :
+
+- `commit-commands` — commit standardisé + création de PR avec les conventions de votre équipe
+- `pr-review` — révision de PR structurée avec vérifications de sécurité, de couverture et de conventions
+- `systematic-debugging` — protocole guidé d'investigation de bugs
+- `test-driven-development` — boucle d'application TDD
+- Skills spécifiques au domaine pour votre stack (skills de déploiement Next.js, skills de migration Django, etc.)
+
+### Configuration des Hooks
+
+Les hooks automatisent les garde-fous dont votre équipe a besoin. Nous configurons :
+
+- Des hooks pré-commit qui lancent votre linter et suite de tests avant que Claude commite
+- Des hooks d'auto-formatage post-édition
+- Des hooks de sécurité qui font une pause avant les opérations destructives
+- Des hooks de notification pour les tâches d'agents longues
+
+Les hooks sont configurés au niveau du projet et commitées avec vos fichiers CLAUDE.md.
+
+### Support de Suivi de 30 Jours
+
+Après la session, votre équipe aura des questions qui n'ont pas surgi avant qu'elle essaie de faire du vrai travail. Notre suivi de 30 jours inclut :
+
+- Q&R async via un canal Slack partagé ou un fil d'email
+- Un appel de suivi de groupe (30 minutes) à la marque des deux semaines
+- Mises à jour des fichiers CLAUDE.md et des skills au fur et à mesure que vous découvrez ce qui manque
+- Voie d'escalade pour tout ce qui nécessite une session de configuration plus approfondie
+
+## Options de Format
+
+**À distance (standard)** — Zoom ou Google Meet. Fonctionne pour les équipes distribuées. Tous les matériaux livrés numériquement.
+
+**Sur site à Ottawa** — Nous venons dans vos bureaux pour la session. Idéal pour les équipes co-localisées qui veulent l'expérience atelier complète. Des frais de déplacement s'appliquent pour les lieux hors d'Ottawa.
+
+**Hybride** — Session de groupe à distance, sessions de configuration de suivi sur site.
+
+## Tailles d'Équipe
+
+| Taille | Format | Durée |
+|--------|--------|-------|
+| 1–5 développeurs | Session de groupe unique | 2 heures |
+| 6–15 développeurs | Session de groupe unique | 3 heures |
+| 16–30 développeurs | Deux sessions (divisées par rôle/ancienneté) | 2 × 2,5 heures |
+| 30+ développeurs | Programme personnalisé avec pistes par rôle | Contactez-nous |
+
+## Tarification
+
+| Forfait | Inclut | Prix par Siège |
+|---------|--------|----------------|
+| **Starter** (jusqu'à 5) | Session + configuration CLAUDE.md + support async 14 jours | 120 $ / siège |
+| **Équipe** (6–15) | Session + bibliothèque de skills complète + CLAUDE.md + support 30 jours | 95 $ / siège |
+| **Croissance** (16–30) | Deux sessions + skills personnalisés + hooks + support 30 jours + appel de suivi | 75 $ / siège |
+| **Entreprise** (30+) | Programme personnalisé, pistes par rôle, canal Slack dédié, support 90 jours | Contactez-nous |
+
+Engagement minimum : 499 $. Tous les prix en USD.
+
+## Questions Fréquentes
+
+**Quel niveau technique atteint la session d'intégration ?**
+
+Nous calibrons la session au niveau de votre équipe lors d'un appel pré-session avec l'organisateur. Une équipe d'ingénieurs backend seniors obtient une profondeur différente d'une équipe mixte avec des développeurs juniors. Nous effectuons toujours des démos en direct, pas des diaporamas.
+
+**Les développeurs ont-ils besoin d'installer quelque chose avant la session ?**
+
+Oui. Nous envoyons une liste de vérification pré-session : Claude Code installé, clé API Anthropic configurée, et un dépôt de test prêt. La liste de vérification prend environ 20 minutes à compléter. Nous l'envoyons une semaine avant la session.
+
+**Pouvons-nous enregistrer la session pour les développeurs qui ne peuvent pas y assister en direct ?**
+
+Oui, toutes les sessions sont enregistrées par défaut. Nous livrons l'enregistrement dans les 24 heures. Les développeurs qui rejoignent de manière async peuvent poser des questions via le canal de support de suivi.
+
+**Que se passe-t-il si notre équipe utilise plusieurs stacks technologiques ?**
+
+Nous rédigeons des fichiers CLAUDE.md séparés par dépôt. Si vous avez un backend Python et un frontend React, chacun obtient un fichier personnalisé. Les équipes multi-stack sont courantes — ce n'est pas un obstacle.
+
+**Comment maintenons-nous les fichiers CLAUDE.md après l'intégration ?**
+
+Nous documentons les conventions que nous avons suivies pour que votre équipe puisse mettre à jour les fichiers indépendamment. Déclencheurs courants pour les mises à jour : ajout d'un nouveau framework, changement de stratégie de test, intégration d'un nouveau dépôt. Nous recommandons une révision trimestrielle de CLAUDE.md — nous pouvons le faire sous forme de retainer async léger.
+
+## Réservez votre Intégration d'Équipe
+
+Plus vite votre équipe adopte les bonnes habitudes, plus vite vous voyez de vrais gains de productivité.
+
+[**Obtenez un devis d'intégration d'équipe**](/contact?service=onboarding) — dites-nous la taille de votre équipe et les dates préférées et nous enverrons une proposition dans un jour ouvrable.

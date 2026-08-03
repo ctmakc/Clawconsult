@@ -1,0 +1,218 @@
+---
+slug: claude-md-starter
+title: "Gabarit CLAUDE.md pour projets Next.js + TypeScript"
+description: "Un gabarit CLAUDE.md prêt à l'emploi pour une application web Next.js / TypeScript — stack, commandes, conventions, configuration des tests, notes de déploiement et fichiers intouchables."
+category: template
+tags: [claude-md, next-js, typescript, configuration, project-setup, templates]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 7
+lang: "fr"
+relatedServices: [claude-code-setup, team-onboarding]
+seoTitle: "Gabarit CLAUDE.md — Next.js + TypeScript | ClawHelp"
+seoDescription: "Gabarit CLAUDE.md à copier-coller pour projets Next.js 15 / TypeScript. Couvre stack, commandes de développement, tests, conventions, déploiement et fichiers intouchables. Claude opérationnel en quelques minutes."
+schema: HowTo
+---
+
+# Gabarit CLAUDE.md — Next.js + TypeScript
+
+`CLAUDE.md` est le fichier le plus impactant que vous puissiez ajouter à un projet Claude Code. Il est chargé automatiquement au démarrage de chaque session et fournit à Claude un contexte persistant sur votre stack, votre structure, vos conventions et vos contraintes — pour que vous n'ayez jamais à les réexpliquer.
+
+Ce gabarit couvre un projet standard Next.js 15 + TypeScript. Copiez-le à la racine de votre dépôt, remplissez les champs, et supprimez les sections qui ne s'appliquent pas.
+
+---
+
+## Comment utiliser ce gabarit
+
+1. Copiez le bloc de code ci-dessous dans un fichier nommé `CLAUDE.md` à la racine de votre projet.
+2. Remplacez les valeurs entre `<chevrons>` par vos paramètres réels.
+3. Supprimez toute section non pertinente afin de garder le fichier sous 300 lignes.
+4. Committez `CLAUDE.md` dans le contrôle de version — c'est une documentation dont toute l'équipe bénéficie.
+
+Gardez `CLAUDE.md` sous 300 lignes. Un fichier qui prend 15 minutes à lire va à l'encontre de son propre objectif.
+
+---
+
+## Le gabarit
+
+```markdown
+# <Nom du projet> — Contexte Claude Code
+
+> Lire ce fichier au début de chaque session. Ne pas sauter cette étape.
+
+## Stack
+
+- **Framework :** Next.js 15, App Router, React 19
+- **Langage :** TypeScript 5, mode strict activé
+- **Style :** Tailwind CSS 3, bibliothèque de composants shadcn/ui
+- **Base de données :** PostgreSQL via Prisma ORM (ou Drizzle — choisissez l'un ou l'autre)
+- **Auth :** NextAuth.js v5 (Auth.js)
+- **Tests :** Vitest pour unitaires/intégration, Playwright pour E2E
+- **Gestionnaire de paquets :** pnpm
+- **Version Node :** 20 LTS (voir `.nvmrc`)
+
+## Structure du projet
+
+```
+src/
+  app/           # App Router Next.js — pages, layouts, routes API
+  components/    # Composants UI partagés
+  lib/           # Logique métier, utilitaires, server actions
+    db/          # Client base de données et helpers de requêtes
+    auth/        # Utilitaires d'auth et helpers de session
+    api/         # Wrappers clients API externes
+  hooks/         # Hooks React (côté client uniquement)
+  types/         # Types TypeScript partagés et interfaces
+public/          # Assets statiques
+prisma/          # Schéma et migrations (ne jamais éditer manuellement)
+tests/
+  unit/          # Tests unitaires Vitest, miroir de src/
+  e2e/           # Tests E2E Playwright
+```
+
+## Commandes de développement
+
+```bash
+pnpm dev          # Démarrer le serveur de développement sur http://localhost:3000
+pnpm build        # Build de production (lancer avant de déployer)
+pnpm test         # Lancer tous les tests unitaires Vitest
+pnpm test:watch   # Lancer les tests en mode watch
+pnpm test:e2e     # Lancer les tests E2E Playwright (nécessite un serveur actif)
+pnpm lint         # Vérification ESLint + Prettier
+pnpm lint:fix     # Correction automatique des problèmes de lint
+pnpm db:migrate   # Appliquer les migrations Prisma en attente
+pnpm db:studio    # Ouvrir Prisma Studio sur http://localhost:5555
+pnpm typecheck    # Lancer tsc --noEmit
+```
+
+## Conventions de codage
+
+### Nommage des fichiers
+- Composants React : PascalCase (`UserProfile.tsx`)
+- Utilitaires, hooks, lib : camelCase (`useSession.ts`, `formatDate.ts`)
+- Handlers de routes API : `route.ts` dans le dossier de la route
+- Fichiers de test : `*.test.ts` pour les tests unitaires, `*.spec.ts` pour E2E
+
+### TypeScript
+- Types de retour explicites obligatoires sur les fonctions exportées
+- Préférer `type` à `interface` sauf en cas d'extension
+- Pas de `any` — utiliser `unknown` et affiner
+- Importer les types avec `import type { ... }`
+
+### Gestion des erreurs
+- Logique métier : utiliser le patron `Result<T, E>` (voir `src/types/result.ts`), pas de try/catch
+- Routes API : retourner des objets d'erreur typés `{ error: string; code: string }`
+- Composants client : utiliser des error boundaries, pas de try/catch inline dans le rendu
+
+### Base de données
+- Toutes les requêtes DB se trouvent dans `src/lib/db/` — ne jamais interroger directement depuis des composants ou des routes API
+- Chaque fichier de requête exporte des fonctions typées ; le client Prisma brut reste dans `src/lib/db/client.ts`
+- Transactions pour toute opération touchant plus d'une table
+
+### Composants
+- Server Components par défaut — ajouter `"use client"` uniquement si nécessaire
+- Interfaces de props dans le même fichier que le composant
+- Les composants shadcn/ui se trouvent dans `src/components/ui/` — ne pas éditer les fichiers générés directement
+
+## Variables d'environnement
+
+Requises dans `.env.local` pour le développement local :
+
+```
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=http://localhost:3000
+# Ajoutez les vôtres ci-dessous
+```
+
+Ne jamais committer `.env.local` ou `.env`. Les secrets de production sont dans les paramètres d'environnement de <Vercel / Railway / votre plateforme>.
+
+## Tests
+
+- Les tests unitaires doivent être dans `tests/unit/` et refléter la structure de `src/`
+- Chaque nouvelle fonction dans `src/lib/` nécessite au moins un test de cas nominal et un test d'erreur
+- Les tests Playwright s'exécutent contre `http://localhost:3000` — démarrez le serveur de développement d'abord
+- Lancer `pnpm typecheck && pnpm lint && pnpm test` avant chaque commit
+
+## Déploiement
+
+- **Plateforme :** <Vercel / Railway / Fly.io>
+- **Mapping branche → environnement :**
+  - `main` → production (déploiement automatique au merge)
+  - `staging` → environnement de staging
+- **Avant de merger vers main :** le CI doit passer (lint + typecheck + tests)
+- **Migrations de base de données :** lancer `pnpm db:migrate` dans le CI avant l'étape de déploiement
+
+## Fichiers intouchables
+
+Ne jamais modifier ces fichiers directement — ils sont auto-générés ou gérés par des outils :
+
+- `prisma/migrations/` — généré par Prisma, ne jamais éditer
+- `src/components/ui/` — généré par le CLI shadcn/ui, régénérer avec `pnpm shadcn add`
+- `.next/` — output du build
+- `playwright-report/` — rapports de tests
+
+## Vocabulaire du domaine
+
+> Utiliser ces termes de façon cohérente. Ne pas inventer de synonymes.
+
+- **User** — personne authentifiée avec un compte
+- **Guest** — visiteur non authentifié
+- **<Terme>** — <définition>
+- **<Terme>** — <définition>
+
+## Contacts / Responsabilités
+
+- Backend / DB : <nom ou équipe>
+- Frontend : <nom ou équipe>
+- Infrastructure / déploiements : <nom ou équipe>
+```
+
+---
+
+## Notes section par section
+
+### Section Stack
+Indiquez les numéros de version exacts pour tout ce qui est sensible aux versions. « Next.js » n'est pas suffisant — « Next.js 15, App Router » indique à Claude quelles APIs utiliser.
+
+### Structure du projet
+Il n'est pas nécessaire de lister chaque répertoire. Concentrez-vous sur les parties non évidentes — où réside la logique métier, où vivent les requêtes, pourquoi les choses sont organisées de cette façon.
+
+### Commandes
+Toutes les commandes que Claude pourrait avoir besoin d'exécuter en travaillant sur votre code. Si l'exécution d'une commande nécessite un drapeau ou une variable d'environnement, incluez-le ici.
+
+### Conventions
+La section avec le meilleur retour sur investissement. Chaque convention que vous documentez ici est un commentaire de révision de code que Claude ne vous forcera pas à écrire.
+
+### Fichiers intouchables
+Cela prévient une classe d'erreurs où Claude « améliore » utilement des fichiers auto-générés qui seront écrasés lors du prochain cycle d'outil.
+
+### Vocabulaire du domaine
+Si votre codebase utilise des termes métier qui diffèrent de l'usage courant (par exemple, « Membre » a un sens spécifique qui diffère d'« Utilisateur »), documentez-les. Une terminologie incohérente est l'une des sources les plus courantes de malentendus de Claude sur l'intention.
+
+---
+
+## Prochaines étapes
+
+- [Pratiques efficaces avec Claude Code](/skills/effective-claude-code) — comment tirer le meilleur parti des sessions une fois votre CLAUDE.md configuré
+- [Guide des hooks Claude Code](/skills/claude-code-hooks) — automatiser le formatage, le lint et les sauvegardes sur les événements du cycle de vie
+- [Gabarit de prompt de démarrage de projet](/templates/project-kickstart) — le prompt à utiliser pour démarrer un tout nouveau projet avec Claude Code
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Configurer CLAUDE.md pour un projet Next.js TypeScript",
+  "description": "Créer un fichier CLAUDE.md qui donne à Claude Code un contexte persistant sur votre projet Next.js — stack, commandes, conventions et contraintes.",
+  "step": [
+    { "@type": "HowToStep", "name": "Copier le gabarit", "text": "Copiez le gabarit CLAUDE.md depuis cette page dans un fichier nommé CLAUDE.md à la racine de votre projet." },
+    { "@type": "HowToStep", "name": "Remplir les détails du projet", "text": "Remplacez toutes les valeurs entre chevrons par le nom réel de votre projet, les versions de la stack, les commandes et les contacts de l'équipe." },
+    { "@type": "HowToStep", "name": "Supprimer les sections non pertinentes", "text": "Supprimez les sections qui ne s'appliquent pas à votre projet pour garder le fichier sous 300 lignes." },
+    { "@type": "HowToStep", "name": "Committer dans le contrôle de version", "text": "Ajoutez CLAUDE.md à git et committez-le pour que tous les membres de l'équipe bénéficient du contexte partagé." },
+    { "@type": "HowToStep", "name": "Vérifier que Claude le lit", "text": "Démarrez une nouvelle session Claude Code et demandez 'Quelle est la commande de développement pour ce projet ?' — Claude devrait répondre depuis CLAUDE.md sans que vous le lui indiquiez." }
+  ]
+}
+*/}

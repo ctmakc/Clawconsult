@@ -1,0 +1,593 @@
+---
+slug: claude-code-integration-ci-cd
+title: "Claude Code en CI/CD : automatisation et pipelines GitHub Actions"
+description: "Utiliser Claude Code en mode non-interactif avec --print, automatiser la revue de code dans GitHub Actions et GitLab CI, contrôler les outils avec --allowedTools et --disallowedTools, traitement par lot avec scripts, et bonnes pratiques de sécurité pour l'automatisation."
+category: guide
+schema: Article
+tags: [CI/CD, github-actions, gitlab-ci, automatisation, pipelines, non-interactif]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+lang: "fr"
+seoTitle: "Claude Code en CI/CD : automatisation et pipelines GitHub Actions | ClawHelp"
+seoDescription: "Intégrez Claude Code dans vos pipelines CI/CD. Mode non-interactif --print, GitHub Actions pour la revue automatique, GitLab CI, contrôle des outils --allowedTools, scripts de traitement par lot, sécurité de l'automatisation."
+---
+
+# Claude Code en CI/CD : automatisation et pipelines GitHub Actions
+
+Claude Code n'est pas que pour le développement interactif. En mode non-interactif, il devient un outil d'automatisation puissant que vous pouvez intégrer dans vos pipelines CI/CD — revue automatique de code, analyse de sécurité, génération de documentation, validation d'architecture.
+
+Ce guide couvre les patterns concrets pour utiliser Claude Code dans des environnements automatisés, avec des exemples YAML prêts à l'emploi.
+
+---
+
+## Mode non-interactif avec --print
+
+Le flag `--print` est la clé pour utiliser Claude Code dans des scripts et des pipelines. Il indique à Claude Code de traiter la requête, imprimer la réponse sur stdout, et quitter immédiatement — sans interface interactive, sans attendre de saisie utilisateur.
+
+```bash
+claude --print "Analyse ce fichier et identifie les problèmes potentiels de sécurité"
+```
+
+Combiné avec des pipes et des redirections shell standard :
+
+```bash
+# Analyser un fichier spécifique
+claude --print "Revise ce composant React pour les problèmes de performance" \
+  < src/components/DataTable.tsx
+
+# Capturer la sortie dans une variable
+ANALYSE=$(claude --print "Résume les changements dans ce diff" < changes.diff)
+
+# Passer le résultat à un autre outil
+claude --print "Génère des tests unitaires pour cette fonction" \
+  < src/utils/validation.ts \
+  > tests/utils/validation.test.ts
+```
+
+### Flags importants pour l'automatisation
+
+**`--print`** — Mode non-interactif, sortie sur stdout, quitte après la réponse.
+
+**`--allowedTools`** — Liste blanche des outils que Claude Code peut utiliser. Crucial pour la sécurité en CI/CD.
+
+**`--disallowedTools`** — Liste noire des outils interdits.
+
+**`--model`** — Spécifier le modèle Claude à utiliser (utile pour le contrôle des coûts).
+
+**`--max-turns`** — Limite le nombre d'échanges agentic. Utile pour éviter des boucles infinies.
+
+```bash
+# Exemple avec plusieurs flags
+claude --print \
+  --allowedTools "read_file,list_files" \
+  --max-turns 5 \
+  "Analyse l'architecture de ce projet et génère un rapport"
+```
+
+### Format de sortie
+
+Par défaut, `--print` retourne la réponse en texte brut. Pour des pipelines qui traitent la sortie programmatiquement, vous pouvez demander du JSON dans votre prompt :
+
+```bash
+claude --print "Analyse ce code et retourne un JSON avec les clés: 
+'score' (0-10), 'problèmes' (liste), 'suggestions' (liste)" < code.ts
+```
+
+---
+
+## GitHub Actions pour la revue automatique de code
+
+L'intégration la plus populaire : lancer une revue Claude Code automatique sur chaque pull request.
+
+### Configuration de base — revue de PR
+
+```yaml
+# .github/workflows/claude-review.yml
+name: Revue de code Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  revue-claude:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Nécessaire pour avoir le diff complet
+      
+      - name: Installer Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      
+      - name: Générer le diff de la PR
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > pr.diff
+          echo "lines=$(wc -l < pr.diff)" >> $GITHUB_OUTPUT
+      
+      - name: Revue de code par Claude
+        if: steps.diff.outputs.lines < 1000  # Éviter les PRs trop volumineuses
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          REVUE=$(claude --print \
+            --allowedTools "read_file" \
+            "Tu es un réviseur de code senior. Analyse ce diff et fournis:
+            1. Un résumé des changements (2-3 phrases)
+            2. Problèmes potentiels (bugs, sécurité, performance)
+            3. Suggestions d'amélioration
+            4. Points positifs
+            
+            Sois concis et actionnable. Format Markdown." \
+            < pr.diff)
+          echo "REVUE<<EOF" >> $GITHUB_ENV
+          echo "$REVUE" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      
+      - name: Publier le commentaire de revue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Revue automatique Claude Code\n\n${process.env.REVUE}\n\n---\n*Revue générée automatiquement — toujours valider avec un humain.*`
+            })
+```
+
+### Revue ciblée par type de fichier
+
+Pour des revues plus précises, adaptez le prompt selon les fichiers modifiés :
+
+```yaml
+- name: Détecter le type de changements
+  id: types
+  run: |
+    if git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -q "\.sql$"; then
+      echo "has_sql=true" >> $GITHUB_OUTPUT
+    fi
+    if git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -q "auth\|security\|token"; then
+      echo "has_security=true" >> $GITHUB_OUTPUT
+    fi
+
+- name: Revue de sécurité si fichiers sensibles modifiés
+  if: steps.types.outputs.has_security == 'true'
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  run: |
+    git diff origin/${{ github.base_ref }}...HEAD -- \
+      '*auth*' '*security*' '*token*' '*password*' > security.diff
+    
+    claude --print \
+      --allowedTools "read_file" \
+      "Effectue une revue de sécurité approfondie de ces changements.
+      Vérifie spécifiquement :
+      - Injection SQL ou NoSQL
+      - XSS et injection de contenu
+      - Gestion des tokens et sessions
+      - Exposition de données sensibles
+      - Problèmes d'authentification et d'autorisation
+      Sois exhaustif sur les risques de sécurité." \
+      < security.diff > security-review.txt
+    
+    # Publier comme commentaire séparé avec label [SÉCURITÉ]
+```
+
+---
+
+## Analyse de qualité de code automatique
+
+### Workflow d'analyse quotidienne
+
+```yaml
+# .github/workflows/analyse-qualite.yml
+name: Analyse qualité quotidienne
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'  # Lundi au vendredi à 8h UTC
+  workflow_dispatch:
+
+jobs:
+  analyse-qualite:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Installer Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      
+      - name: Analyser les fichiers les plus complexes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p rapports
+          
+          # Trouver les 5 fichiers TypeScript les plus longs
+          find src -name "*.ts" -o -name "*.tsx" | \
+            xargs wc -l | sort -rn | head -6 | tail -5 | \
+            awk '{print $2}' > fichiers-complexes.txt
+          
+          while IFS= read -r fichier; do
+            echo "Analyse de $fichier..."
+            NOM=$(basename "$fichier" | sed 's/\.[^.]*$//')
+            
+            claude --print \
+              --allowedTools "read_file" \
+              "Analyse ce fichier TypeScript pour :
+              1. Complexité cyclomatique élevée
+              2. Fonctions trop longues (>50 lignes)
+              3. Couplage excessif
+              4. Manque de typage
+              5. Opportunités de refactoring
+              Format: points de liste concis." \
+              < "$fichier" > "rapports/$NOM.md"
+            
+          done < fichiers-complexes.txt
+      
+      - name: Créer un rapport consolidé
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cat rapports/*.md > tous-rapports.md
+          
+          claude --print \
+            "Voici des analyses individuelles de fichiers. Génère un rapport 
+            consolidé avec :
+            - Top 3 priorités de refactoring
+            - Tendances générales de qualité
+            - Recommandations d'équipe
+            Maximum 300 mots." \
+            < tous-rapports.md > rapport-final.md
+      
+      - name: Sauvegarder le rapport
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-qualite-${{ github.run_id }}
+          path: rapport-final.md
+```
+
+---
+
+## Intégration GitLab CI
+
+Les patterns sont similaires pour GitLab CI, avec quelques différences de syntaxe :
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - review
+
+revue-code-claude:
+  stage: review
+  image: node:22-alpine
+  
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  
+  before_script:
+    - npm install -g @anthropic-ai/claude-code
+    - apk add --no-cache git
+  
+  script:
+    - |
+      # Générer le diff de la MR
+      git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+      git diff origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD > mr.diff
+      
+      # Vérifier que le diff n'est pas vide
+      if [ ! -s mr.diff ]; then
+        echo "Pas de diff — rien à analyser"
+        exit 0
+      fi
+      
+      # Lancer la revue
+      REVUE=$(claude --print \
+        --allowedTools "read_file" \
+        "Revue de code senior : analyse ce diff et fournis un résumé, 
+        les problèmes potentiels, et les suggestions d'amélioration. 
+        Format Markdown concis." \
+        < mr.diff)
+      
+      echo "$REVUE" > revue-claude.md
+      cat revue-claude.md
+    
+    # Poster comme note sur la MR via l'API GitLab
+    - |
+      REVUE_ESCAPED=$(cat revue-claude.md | python3 -c "
+      import sys, json
+      content = sys.stdin.read()
+      print(json.dumps('## Revue automatique Claude Code\n\n' + content))
+      ")
+      
+      curl --request POST \
+        --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
+        --header "Content-Type: application/json" \
+        --data "{\"body\": $REVUE_ESCAPED}" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
+  
+  variables:
+    ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY_CI  # Défini dans GitLab CI/CD variables
+```
+
+---
+
+## Contrôle précis avec --allowedTools et --disallowedTools
+
+En environnement CI/CD, vous voulez un contrôle strict sur ce que Claude Code peut faire. Les flags `--allowedTools` et `--disallowedTools` vous donnent ce contrôle.
+
+### Liste des outils disponibles
+
+Les outils principaux que vous pouvez contrôler :
+- `read_file` — lecture de fichiers
+- `write_file` — écriture de fichiers
+- `list_files` — liste de répertoires
+- `bash` — exécution de commandes shell
+- `web_search` — recherche web
+- `mcp__*` — outils MCP (wildcard par serveur)
+
+### Profils de permission par type de tâche
+
+**Revue de code (lecture seule) :**
+```bash
+claude --print \
+  --allowedTools "read_file,list_files" \
+  "Revue ce module"
+```
+
+**Génération de documentation :**
+```bash
+claude --print \
+  --allowedTools "read_file,list_files,write_file" \
+  --disallowedTools "bash" \
+  "Génère la documentation pour ce module et écris-la dans docs/"
+```
+
+**Analyse avec exécution de tests :**
+```bash
+claude --print \
+  --allowedTools "read_file,list_files,bash" \
+  --disallowedTools "write_file,web_search" \
+  "Lance les tests et analyse les échecs"
+```
+
+**Sécurité maximale (lecture seule absolue) :**
+```bash
+claude --print \
+  --allowedTools "read_file" \
+  "Analyse de sécurité de ce fichier"
+```
+
+---
+
+## Traitement par lot avec scripts
+
+Pour des tâches qui s'appliquent à de nombreux fichiers, des scripts bash avec Claude Code en boucle sont efficaces.
+
+### Script d'analyse de tout un module
+
+```bash
+#!/bin/bash
+# analyser-module.sh
+# Usage: ./analyser-module.sh src/modules/auth/
+
+MODULE=$1
+RAPPORT_DIR="rapports/$(date +%Y-%m-%d)"
+mkdir -p "$RAPPORT_DIR"
+
+echo "Analyse du module : $MODULE"
+echo "================================"
+
+# Traiter chaque fichier TypeScript
+find "$MODULE" -name "*.ts" -o -name "*.tsx" | sort | while read -r fichier; do
+  NOM=$(echo "$fichier" | sed 's|/|_|g' | sed 's|\.[^.]*$||')
+  RAPPORT="$RAPPORT_DIR/$NOM.txt"
+  
+  echo "  → $fichier"
+  
+  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" claude --print \
+    --allowedTools "read_file" \
+    --max-turns 3 \
+    "Analyse rapide de ce fichier : types bien définis, fonctions trop longues, 
+    imports inutilisés, problèmes de performance évidents. 
+    5 points maximum, très concis." \
+    < "$fichier" > "$RAPPORT" 2>&1
+  
+  # Petite pause pour éviter le rate limiting
+  sleep 2
+done
+
+echo ""
+echo "Rapports sauvegardés dans $RAPPORT_DIR/"
+echo "Fichiers analysés : $(ls "$RAPPORT_DIR" | wc -l)"
+```
+
+### Script de génération de tests manquants
+
+```bash
+#!/bin/bash
+# generer-tests-manquants.sh
+
+find src -name "*.ts" -not -name "*.test.ts" -not -name "*.d.ts" | while read -r source; do
+  # Vérifier si un fichier de test existe
+  TEST="${source%.ts}.test.ts"
+  
+  if [ ! -f "$TEST" ]; then
+    echo "Génération de tests pour $source..."
+    
+    ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" claude --print \
+      --allowedTools "read_file" \
+      "Génère des tests unitaires Vitest complets pour ce fichier TypeScript.
+      Couvre les cas normaux, les cas limites, et les cas d'erreur.
+      Utilise les imports et le format standard Vitest.
+      Retourne uniquement le code TypeScript des tests, sans explication." \
+      < "$source" > "$TEST"
+    
+    echo "  → $TEST créé"
+    sleep 3
+  fi
+done
+```
+
+---
+
+## Bonnes pratiques de sécurité pour l'automatisation
+
+### Gestion des secrets
+
+Ne jamais inclure la clé API directement dans le YAML :
+
+```yaml
+# BON — utiliser les secrets du dépôt
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+# MAUVAIS — jamais faire ça
+env:
+  ANTHROPIC_API_KEY: "sk-ant-..."
+```
+
+Dans GitHub Actions, configurez le secret dans **Settings → Secrets and variables → Actions → New repository secret**.
+
+### Limiter les permissions du job
+
+```yaml
+jobs:
+  revue-claude:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read        # Lire le code
+      pull-requests: write  # Commenter les PRs
+      # Tout le reste implicitement interdit
+```
+
+N'accordez que les permissions GitHub Actions minimales nécessaires pour la tâche.
+
+### Éviter de passer des données sensibles à Claude
+
+Ne passez jamais à Claude Code en CI/CD :
+- Fichiers contenant des variables d'environnement réelles (`.env.production`)
+- Fichiers de credentials ou de certificats
+- Logs qui pourraient contenir des tokens ou des données personnelles
+
+Filtrez le diff avant de le passer à Claude si nécessaire :
+
+```bash
+# Exclure les fichiers sensibles du diff
+git diff origin/main...HEAD -- \
+  ':!**/.env*' \
+  ':!**/secrets*' \
+  ':!**/*.pem' \
+  ':!**/*.key' \
+  > safe.diff
+```
+
+### Limiter la taille des entrées
+
+Protégez contre les PRs qui submergent la fenêtre de contexte :
+
+```yaml
+- name: Vérifier la taille du diff
+  id: taille
+  run: |
+    LIGNES=$(wc -l < pr.diff)
+    echo "lignes=$LIGNES" >> $GITHUB_OUTPUT
+    if [ $LIGNES -gt 2000 ]; then
+      echo "too_large=true" >> $GITHUB_OUTPUT
+    fi
+
+- name: Revue Claude (PRs raisonnables seulement)
+  if: steps.taille.outputs.too_large != 'true'
+  run: |
+    # ... lancer la revue
+```
+
+### Gérer les coûts
+
+Claude Code en CI/CD consomme des tokens à chaque exécution. Stratégies pour maîtriser les coûts :
+
+```yaml
+# Ne lancer que sur les PRs vers main, pas toutes les branches
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize]
+
+# Ou utiliser des labels pour contrôler quand lancer la revue
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  revue-claude:
+    if: contains(github.event.pull_request.labels.*.name, 'revue-ia')
+```
+
+---
+
+## Exemples de cas d'usage en production
+
+### Validation des messages de commit
+
+```yaml
+- name: Valider les messages de commit
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  run: |
+    # Obtenir les messages de commit de la PR
+    COMMITS=$(git log origin/${{ github.base_ref }}...HEAD --format="%s" | head -20)
+    
+    VALIDATION=$(echo "$COMMITS" | claude --print \
+      --allowedTools "" \
+      "Valide ces messages de commit selon les conventions Conventional Commits
+      (feat, fix, docs, refactor, test, chore + scope optionnel).
+      Pour chaque message non conforme, explique pourquoi.
+      Retourne: OK si tous conformes, sinon liste les problèmes.")
+    
+    echo "$VALIDATION"
+    
+    if echo "$VALIDATION" | grep -q "^OK$"; then
+      echo "Tous les messages de commit sont conformes"
+    else
+      echo "::warning::Certains messages de commit ne sont pas conformes aux conventions"
+    fi
+```
+
+### Détection de régressions de documentation
+
+```yaml
+- name: Vérifier que la doc est à jour
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  run: |
+    # Fichiers modifiés
+    FICHIERS=$(git diff origin/main...HEAD --name-only | grep "\.ts$")
+    
+    if [ -z "$FICHIERS" ]; then exit 0; fi
+    
+    claude --print \
+      --allowedTools "read_file" \
+      "Vérifie si les changements dans ces fichiers TypeScript nécessitent 
+      une mise à jour de la documentation dans le répertoire docs/.
+      Fichiers modifiés : $FICHIERS
+      
+      Lis les fichiers concernés et leur documentation correspondante.
+      Indique : 'DOC À JOUR' ou liste les sections de doc qui doivent être mises à jour."
+```
+
+---
+
+## Pour aller plus loin avec ClawHelp
+
+Intégrer Claude Code dans vos pipelines CI/CD de façon sécurisée et efficace — avec le bon contrôle des permissions, la gestion des coûts, et des prompts bien calibrés pour votre codebase — est un travail de configuration qui prend du temps.
+
+ClawHelp aide les équipes à concevoir et déployer des intégrations Claude Code dans leurs pipelines existants (GitHub Actions, GitLab CI, Bitbucket Pipelines). Contactez-nous si vous voulez accélérer cette intégration dans votre organisation.

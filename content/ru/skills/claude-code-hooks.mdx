@@ -1,0 +1,446 @@
+---
+slug: claude-code-hooks
+lang: "ru"
+title: "Хуки Claude Code: автоматизация действий по событиям"
+description: "Полное руководство по хукам Claude Code — как настраивать UserPromptSubmit, PreToolCall, PostToolCall, SessionStart и SessionEnd с реальными примерами."
+category: how-to
+tags: [хуки, автоматизация, настройки, claude-code, конфигурация]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 11
+relatedServices: [claude-code-setup]
+seoTitle: "Хуки Claude Code: полное руководство по настройке 2026 | ClawHelp"
+seoDescription: "Настройте хуки Claude Code для автоматизации действий по событиям. Полное руководство по всем 5 типам хуков с примерами settings.json, реальными скриптами и лучшими практиками."
+schema: HowTo
+---
+
+# Хуки Claude Code: автоматизация действий по событиям
+
+Хуки Claude Code — это команды оболочки, которые автоматически запускаются при наступлении событий Claude Code: до вызова инструмента, после записи файла, при запуске сессии или её завершении. Они позволяют применять политики, запускать валидацию, взаимодействовать с внешними системами и автоматизировать всё, что иначе требовало бы ручного шага.
+
+Хуки настраиваются в `~/.claude/settings.json` и выполняются на вашей локальной машине. Claude Code видит их вывод в stdout, что позволяет хукам передавать информацию обратно модели.
+
+---
+
+## Что такое хуки
+
+Хук — это команда оболочки (или путь к скрипту), связанная с событием Claude Code. Когда это событие происходит, Claude Code запускает вашу команду синхронно, захватывает её вывод и, в зависимости от типа хука, либо передаёт вывод модели, либо использует код завершения для принятия решения о продолжении.
+
+Хуки — это не плагины и не расширения: это простые команды оболочки. Всё, что можно запустить в bash, можно использовать как хук.
+
+Сценарии использования:
+- **Проверка безопасности** — блокировать bash-команды, соответствующие опасным паттернам, до их выполнения.
+- **Форматирование кода** — автоматически форматировать файлы после их редактирования Claude.
+- **Журнал аудита** — логировать каждый вызов инструмента в файл для последующего ревью.
+- **Авто-коммит** — коммитить изменения в git в конце каждой сессии.
+- **Уведомления** — отправить сообщение в Slack или воспроизвести звук по завершении длинной сессии.
+- **Инъекция контекста** — добавить информацию в контекст модели при запуске сессии.
+
+---
+
+## Типы хуков
+
+Claude Code генерирует пять различных типов событий.
+
+### UserPromptSubmit
+
+Запускается, когда пользователь отправляет промпт (нажимает Enter), до того как модель его обработала. Используйте для инъекции дополнительного контекста, санитизации ввода или логирования промптов для аудита.
+
+- **Может изменить промпт?** Нет. Вывод хука показывается Claude как дополнительный контекст, но исходный промпт не заменяется.
+- **Может заблокировать выполнение?** Нет. Ненулевые коды завершения логируются, но не препятствуют обработке промпта.
+- **Время:** До того как модель увидит промпт.
+
+### PreToolCall
+
+Запускается непосредственно перед вызовом инструмента. Хук получает информацию о том, какой инструмент будет вызван и с какими аргументами (через переменные окружения). Если хук завершается с ненулевым статусом, вызов инструмента **блокируется** — Claude Code не выполнит инструмент и сообщит модели, что вызов отклонён.
+
+Это наиболее мощный тип хука. Используйте для:
+- Блокировки опасных bash-команд (`rm -rf`, `curl | bash` и т.д.)
+- Применения политик доступа к файлам (запрет чтения определённых директорий)
+- Требования подтверждения для необратимых действий
+
+### PostToolCall
+
+Запускается после завершения вызова инструмента, до того как результат возвращается модели. Хук получает имя инструмента, аргументы и вывод инструмента. Stdout хука добавляется в начало результата инструмента, показываемого модели.
+
+Используйте для:
+- Запуска линтеров или форматтеров после записи файлов
+- Валидации вывода инструмента до того, как его увидит модель
+- Внешнего логирования результатов инструментов
+
+### SessionStart
+
+Запускается однократно при начале сессии Claude Code. Используйте для инъекции специфичного для проекта контекста, проверки доступности зависимостей или логирования начала сессии.
+
+- **Вывод:** Показывается модели как дополнение к начальному системному сообщению.
+- **Код завершения:** Ненулевой логируется как предупреждение, но не препятствует запуску сессии.
+
+### SessionEnd
+
+Запускается однократно при завершении сессии Claude Code (пользователь вводит `exit`, нажимает Ctrl+C или сессия завершается по таймауту). Используйте для очистки, финального логирования или авто-коммита изменений.
+
+- **Вывод:** Отображается в терминале после завершения сессии.
+- **Код завершения:** Логируется, но ни на что не влияет (сессия уже завершена).
+
+---
+
+## Настройка в settings.json
+
+Хуки определяются в `~/.claude/settings.json` под ключом `hooks`. Глобальный файл настроек применяется ко всем проектам; можно также поместить хуки в `.claude/settings.json` на уровне проекта для специфичного поведения.
+
+Базовая структура:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "command": "/path/to/your/script.sh"
+      }
+    ],
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "command": "/home/user/.claude/hooks/pre-bash-check.sh"
+      }
+    ],
+    "PostToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "command": "/home/user/.claude/hooks/post-edit-format.sh"
+      }
+    ],
+    "SessionStart": [
+      {
+        "command": "/home/user/.claude/hooks/session-start.sh"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "command": "/home/user/.claude/hooks/session-end-commit.sh"
+      }
+    ]
+  }
+}
+```
+
+Каждая запись хука — это объект с:
+- **`command`** — команда оболочки для запуска. Может быть inline-командой или путём к скрипту.
+- **`matcher`** (только для PreToolCall и PostToolCall) — паттерн регулярного выражения, сопоставляемый с именем инструмента. Если не указан, хук запускается при каждом вызове инструмента.
+
+Для одного события можно зарегистрировать несколько хуков — они запускаются по порядку.
+
+---
+
+## Синтаксис matcher
+
+Поле `matcher` для `PreToolCall` и `PostToolCall` — это регулярное выражение, сопоставляемое со строкой имени инструмента. Имена инструментов в Claude Code следуют паттерну `ToolName(argument)` — например, `Bash(npm test)`, `Edit(/src/auth.ts)`, `Read(/etc/passwd)`.
+
+Matcher применяется к полной строке вызова инструмента, а не только к имени инструмента. Это позволяет сопоставляться как по инструменту, так и по его аргументам.
+
+```json
+"matcher": "Bash"
+```
+Соответствует любому вызову инструмента Bash.
+
+```json
+"matcher": "Edit|Write"
+```
+Соответствует вызовам Edit или Write (любой файл).
+
+```json
+"matcher": "Bash(rm )"
+```
+Соответствует bash-командам, содержащим `rm ` — полезно для обнаружения операций удаления.
+
+```json
+"matcher": "Read(/etc/)"
+```
+Соответствует любой попытке прочитать файл в `/etc/`.
+
+```json
+"matcher": ".*"
+```
+Соответствует каждому вызову инструмента (аналогично отсутствию matcher).
+
+---
+
+## Переменные окружения в хуках
+
+Claude Code устанавливает переменные окружения, которые ваш скрипт хука может читать:
+
+| Переменная | Доступна в | Содержимое |
+|---|---|---|
+| `CLAUDE_TOOL_NAME` | PreToolCall, PostToolCall | Имя вызываемого инструмента (например, `Bash`) |
+| `CLAUDE_TOOL_INPUT` | PreToolCall, PostToolCall | JSON-закодированные аргументы инструмента |
+| `CLAUDE_TOOL_OUTPUT` | PostToolCall | JSON-закодированный результат инструмента |
+| `CLAUDE_SESSION_ID` | Все | Уникальный идентификатор текущей сессии |
+| `CLAUDE_PROJECT_DIR` | Все | Абсолютный путь к директории проекта |
+| `CLAUDE_MODEL` | Все | Используемое имя модели (например, `claude-sonnet-4-5`) |
+
+Используйте их для написания хуков, действующих на конкретные входные данные инструментов, без необходимости разбирать командную строку.
+
+---
+
+## Написание скрипта хука
+
+Вот полный bash-скрипт хука, запускающий проверку безопасности semgrep перед любой bash-командой:
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/pre-bash-check.sh
+# Блокирует bash-команды, содержащие опасные паттерны.
+# Код завершения 1 блокирует вызов инструмента.
+
+set -euo pipefail
+
+TOOL_INPUT="${CLAUDE_TOOL_INPUT:-}"
+COMMAND=$(echo "$TOOL_INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('command',''))" 2>/dev/null || echo "")
+
+# Блокировать паттерны pipe-to-shell
+if echo "$COMMAND" | grep -qE 'curl .* \| (bash|sh)|wget .* \| (bash|sh)'; then
+  echo "BLOCKED: Pipe-to-shell patterns are not allowed. Download the script first, review it, then run it."
+  exit 1
+fi
+
+# Блокировать рекурсивное удаление
+if echo "$COMMAND" | grep -qE 'rm -rf /|rm -rf \$HOME|rm -rf ~'; then
+  echo "BLOCKED: Recursive delete of root or home directory is not permitted."
+  exit 1
+fi
+
+# Разрешить всё остальное
+exit 0
+```
+
+Сделайте скрипт исполняемым:
+
+```bash
+chmod +x ~/.claude/hooks/pre-bash-check.sh
+```
+
+Затем зарегистрируйте его в `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "command": "/home/yourname/.claude/hooks/pre-bash-check.sh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Реальный пример: авто-коммит при завершении сессии
+
+Этот хук создаёт git-коммит со всем, что Claude изменил за сессию, — так у вас всегда есть контрольная точка:
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/session-end-commit.sh
+
+cd "${CLAUDE_PROJECT_DIR}" || exit 0
+
+# Коммитить только если есть изменения
+if git diff --quiet && git diff --staged --quiet; then
+  echo "No changes to commit."
+  exit 0
+fi
+
+git add -A
+git commit -m "Claude Code session ${CLAUDE_SESSION_ID}: auto-checkpoint" \
+  --no-verify \
+  --author="Claude Code <claude@anthropic.com>" \
+  2>&1
+
+echo "Changes committed. Run 'git log -1' to review."
+```
+
+Зарегистрируйте:
+
+```json
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "command": "/home/yourname/.claude/hooks/session-end-commit.sh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Реальный пример: форматирование при записи
+
+После того как Claude записывает или редактирует TypeScript-файл, автоматически запускать Prettier:
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/post-edit-format.sh
+
+TOOL_INPUT="${CLAUDE_TOOL_INPUT:-}"
+FILE=$(echo "$TOOL_INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('file_path', d.get('path','')))" 2>/dev/null || echo "")
+
+if [[ -z "$FILE" ]]; then
+  exit 0
+fi
+
+# Форматировать только TypeScript/JavaScript файлы
+if [[ "$FILE" =~ \.(ts|tsx|js|jsx)$ ]]; then
+  if command -v prettier &>/dev/null; then
+    prettier --write "$FILE" 2>&1
+    echo "Formatted: $FILE"
+  fi
+fi
+
+exit 0
+```
+
+Зарегистрируйте:
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "command": "/home/yourname/.claude/hooks/post-edit-format.sh"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Реальный пример: проверка безопасности перед bash
+
+Запустить semgrep в текущей директории перед любой bash-командой, блокируя выполнение при новых высокоуровневых находках:
+
+```bash
+#!/usr/bin/env bash
+# ~/.claude/hooks/pre-bash-semgrep.sh
+
+cd "${CLAUDE_PROJECT_DIR}" || exit 0
+
+# Запустить semgrep с лёгким набором правил — достаточно быстро для хука
+FINDINGS=$(semgrep --config=p/security-audit --severity=ERROR --quiet --json 2>/dev/null \
+  | python3 -c "import sys,json; r=json.load(sys.stdin); print(len(r.get('results',[])))" 2>/dev/null || echo "0")
+
+if [[ "$FINDINGS" -gt 0 ]]; then
+  echo "WARNING: semgrep found $FINDINGS high-severity issue(s) in the current codebase."
+  echo "Review with: semgrep --config=p/security-audit --severity=ERROR"
+  # Не блокировать — только предупреждать. Смените exit 0 на exit 1 для блокировки.
+fi
+
+exit 0
+```
+
+---
+
+## Вывод хуков
+
+**stdout** — Возвращается в Claude Code. Для хуков PreToolCall, которые успешно завершились, stdout показывается модели как дополнительный контекст о вызове инструмента. Для PostToolCall stdout добавляется в начало результата инструмента. Для SessionStart stdout показывается как начальное контекстное сообщение. Это позволяет вводить информацию в рассуждение модели.
+
+**stderr** — Идёт в лог Claude Code (не показывается модели). Используйте stderr для отладочного вывода, который вы не хотите передавать модели.
+
+**Код завершения:**
+- `0` — успех; продолжить нормально.
+- Ненулевой для `PreToolCall` — **блокирует вызов инструмента**. Claude Code сообщает модели, что вызов инструмента отклонён, и включает любой stdout хука в качестве причины. Именно так применяются политики.
+- Ненулевой для всех других типов хуков — логируется как предупреждение; выполнение продолжается.
+
+---
+
+## Отладка хуков
+
+### Тестируйте хуки вручную перед регистрацией
+
+```bash
+# Имитировать окружение PreToolCall
+export CLAUDE_TOOL_NAME="Bash"
+export CLAUDE_TOOL_INPUT='{"command": "rm -rf /tmp/test"}'
+export CLAUDE_SESSION_ID="test-session"
+export CLAUDE_PROJECT_DIR="/home/user/my-project"
+
+bash ~/.claude/hooks/pre-bash-check.sh
+echo "Exit code: $?"
+```
+
+### Проверьте лог Claude Code
+
+Claude Code записывает ошибки и предупреждения хуков в свой лог-файл. На Linux/macOS:
+
+```bash
+tail -f ~/.claude/logs/claude.log | grep -i hook
+```
+
+### Добавьте set -x для подробной трассировки хука
+
+Временно добавьте `set -x` в начало скрипта хука, чтобы увидеть каждую выполняемую команду:
+
+```bash
+#!/usr/bin/env bash
+set -x   # удалить после отладки
+...
+```
+
+Трассировка идёт в stderr, который появляется в логе Claude Code.
+
+---
+
+## Лучшие практики
+
+**Держите хуки быстрыми.** Хуки PreToolCall блокируют выполнение — 5-секундная проверка безопасности перед каждой bash-командой сделает Claude Code медленным. Запускайте лёгкие проверки inline; выносите тяжёлые сканирования в PostToolCall или SessionEnd, где они не блокируют работу.
+
+**Делайте хуки идемпотентными.** Claude Code может повторять вызовы инструментов или повторно генерировать события в граничных случаях. Хук, создающий git-коммит при каждом вызове, создаст дублирующиеся коммиты. Защищайтесь проверками вроде `git diff --quiet`.
+
+**Никогда не блокируйте без причины.** Если ваш хук PreToolCall завершается с кодом 1, Claude Code сообщает модели «вызов инструмента отклонён». Включите чёткое объяснение в stdout, чтобы модель могла скорректировать поведение:
+
+```bash
+echo "BLOCKED: Direct edits to generated/ files are not allowed. Edit the source templates instead."
+exit 1
+```
+
+**Используйте абсолютные пути в скриптах.** Хуки запускаются с минимальным окружением. Относительные пути к другим скриптам или бинарным файлам могут не разрешиться. Всегда используйте полные пути:
+
+```bash
+/home/yourname/.local/bin/semgrep  # а не просто: semgrep
+```
+
+**Разделяйте ответственности.** Пишите один скрипт на одну задачу, а не один огромный скрипт, делающий всё. Так легче включать/отключать отдельные хуки, просто закомментировав их в `settings.json`.
+
+**Логируйте идентификаторы сессий.** Каждый хук имеет доступ к `CLAUDE_SESSION_ID`. Включайте его в любые журналы аудита, чтобы можно было сопоставить события хуков с сессией, которая их вызвала.
+
+---
+
+## Следующие шаги
+
+- [Создание сабагентов](/skills/build-subagent) — совместите хуки с оркестрацией сабагентов для продвинутой автоматизации
+- [Общее руководство по установке](/skills/install-claude-code) — настройте Claude Code, если ещё не сделали этого
+- [Руководство по установке на Windows](/skills/install-claude-code-windows) — скрипты хуков на PowerShell для Windows
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Claude Code Hooks: Automate Actions on Events",
+  "description": "Configure Claude Code hooks to automate actions on UserPromptSubmit, PreToolCall, PostToolCall, SessionStart, and SessionEnd events",
+  "step": [
+    { "@type": "HowToStep", "name": "Choose a hook type", "text": "Decide which event to react to: PreToolCall to block actions, PostToolCall to validate results, SessionEnd for cleanup." },
+    { "@type": "HowToStep", "name": "Write a hook script", "text": "Create a bash script that reads CLAUDE_TOOL_INPUT and CLAUDE_TOOL_NAME environment variables. Exit 0 to allow, exit 1 to block (PreToolCall only)." },
+    { "@type": "HowToStep", "name": "Make the script executable", "text": "Run: chmod +x ~/.claude/hooks/your-hook.sh" },
+    { "@type": "HowToStep", "name": "Register in settings.json", "text": "Add the hook command and optional matcher to the hooks section of ~/.claude/settings.json." },
+    { "@type": "HowToStep", "name": "Test manually", "text": "Export the CLAUDE_TOOL_* environment variables and run the script directly to verify behavior before relying on it in a session." }
+  ]
+}
+*/}

@@ -1,0 +1,361 @@
+---
+slug: claude-code-worktrees-guide
+title: "Git Worktrees with Claude Code: Parallel Agent Tasks on Isolated Branches"
+description: "How to use git worktrees with Claude Code to run multiple autonomous agent tasks simultaneously on separate branches — without context collisions or file conflicts."
+category: guide
+schema: Article
+tags: [git, worktrees, parallel-agents, isolation, branches, workflow, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+seoTitle: "Git Worktrees with Claude Code: Run Parallel Agent Tasks | ClawHelp"
+seoDescription: "Use git worktrees with Claude Code to run multiple autonomous agents on isolated branches simultaneously. Setup, isolation parameter, merging, and practical examples."
+---
+
+# Git Worktrees with Claude Code: Parallel Agent Tasks on Isolated Branches
+
+One of Claude Code's less-understood capabilities is running multiple agent tasks in parallel — not sequentially, but truly simultaneously, each operating on an isolated branch with no file conflicts. Git worktrees make this possible at the filesystem level, and Claude Code is designed to work with them natively.
+
+This guide explains what worktrees are, why they matter for AI agents specifically, how to set them up, and the practical patterns that make parallel agent work reliable.
+
+---
+
+## What Are Git Worktrees?
+
+A git repository normally has one working tree — the directory where your files live and where `git status` shows changes. Git worktrees let you check out multiple branches from the same repository simultaneously, each into its own directory.
+
+```bash
+# Standard repository — one working tree
+/projects/myapp/         ← main branch checked out here
+  .git/
+  src/
+  tests/
+
+# With worktrees — two working trees from the same repo
+/projects/myapp/         ← main branch
+  .git/
+  src/
+/projects/myapp-feat-auth/   ← feature/auth branch
+  src/                        ← same repo, different branch
+/projects/myapp-hotfix/      ← hotfix/session-bug branch
+  src/                        ← same repo, different branch
+```
+
+Each worktree directory is a full, functional checkout of that branch. You can run builds, tests, edit files — everything works as expected. The `.git/` directory is shared between all worktrees, so they all know about each other's commits and branches.
+
+The critical property for AI agents: **two agents running in two different worktree directories can never conflict at the file level**. They're literally working in different directories with different branch states.
+
+---
+
+## Why Worktrees Matter for AI Agents
+
+When you run a single Claude Code session, it has one working directory and one branch. That's fine for sequential work. But Claude Code supports running multiple agents via the Agent tool — and when two agents write to the same files simultaneously, they'll collide.
+
+The naive solution is to run agents one at a time. The better solution is to give each agent its own isolated branch in a worktree, so they work in parallel without interfering.
+
+**Common scenarios where this matters:**
+
+- **Feature + hotfix simultaneously**: One agent implements a new feature on `feature/auth`, another fixes a production bug on `hotfix/session-timeout`, both happening at once while you review
+- **Parallel test runs**: One agent writes unit tests, another writes integration tests, merge both when done
+- **Large-scale refactoring**: Split a big refactor into independently scoped pieces, run each as a parallel agent, review and merge the results
+- **Multi-component development**: Backend API changes, frontend updates, and infrastructure changes all happen in parallel on separate branches
+
+Without worktrees, you'd have to serialize these tasks. With worktrees, they happen concurrently.
+
+---
+
+## Setting Up Worktrees
+
+### Creating a Worktree
+
+```bash
+# Basic syntax
+git worktree add <path> <branch>
+
+# Example: create a worktree for a new feature branch
+git worktree add ../myapp-feat-auth feature/auth
+
+# Create a worktree with a new branch (doesn't exist yet)
+git worktree add ../myapp-feat-auth -b feature/auth
+
+# Create a worktree from a specific commit or remote branch
+git worktree add ../myapp-hotfix -b hotfix/session-bug origin/main
+```
+
+The path can be anywhere — inside or outside the main repository directory. A common convention is to use a sibling directory:
+
+```
+/projects/
+  myapp/           ← main repo
+  myapp-feat-auth/ ← worktree for feature/auth
+  myapp-hotfix/    ← worktree for hotfix
+```
+
+### Listing Active Worktrees
+
+```bash
+git worktree list
+# Output:
+# /projects/myapp            abc1234 [main]
+# /projects/myapp-feat-auth  def5678 [feature/auth]
+# /projects/myapp-hotfix     ghi9012 [hotfix/session-bug]
+```
+
+### Removing a Worktree
+
+```bash
+# After you're done with the branch and have merged/discarded
+git worktree remove ../myapp-feat-auth
+
+# Force remove if there are uncommitted changes you're discarding
+git worktree remove --force ../myapp-feat-auth
+
+# Also prune stale worktree references
+git worktree prune
+```
+
+---
+
+## Running Claude Code in a Worktree Directory
+
+Running Claude Code in a worktree is exactly the same as running it in any other directory — because from Claude's perspective, it's just a directory with files and a git repository.
+
+```bash
+# Navigate to the worktree and run Claude Code
+cd /projects/myapp-feat-auth
+claude "Implement OAuth authentication in UserService, write unit tests, update the README section on auth"
+```
+
+Claude Code will:
+- See the `feature/auth` branch as the current state
+- Read files from the worktree directory
+- Write changes to the worktree directory
+- Run `git status`, `git diff`, `git add`, `git commit` — all scoped to this worktree and its branch
+- Have no awareness of or interference with other worktrees running simultaneously
+
+You can run two Claude Code sessions in two terminal windows simultaneously — one in each worktree — and they'll never interfere.
+
+---
+
+## Using the `isolation: "worktree"` Parameter in Agent Tool Calls
+
+When using Claude Code's Agent tool to spawn sub-agents from within a Claude session, the `isolation` parameter controls whether the sub-agent gets its own isolated worktree.
+
+Setting `isolation: "worktree"` tells Claude Code to:
+1. Create a new git worktree on a fresh branch
+2. Run the sub-agent in that worktree directory
+3. The sub-agent commits its work to that branch
+4. Return control to the parent agent with the branch name and worktree path
+
+This is the cleanest way to run parallel agents from within a single Claude Code session.
+
+**Example workflow within a Claude Code session:**
+
+```
+# In your Claude Code session, describing what you want:
+"Please run two parallel agents: one to implement the new billing module on a feature branch,
+and another to write comprehensive tests for the existing payment service on a separate branch.
+Use isolated worktrees for each so they don't conflict."
+```
+
+Claude Code will internally use the Agent tool with `isolation: "worktree"` for each sub-task, managing the worktree creation and cleanup automatically.
+
+**What the parent agent receives back:**
+- The branch name each sub-agent worked on
+- A summary of what was done
+- The worktree paths (so you can inspect the work before merging)
+
+---
+
+## Reviewing and Merging Worktree Changes
+
+Once a parallel agent task completes, you review and merge its branch like any other branch — because it is a normal branch.
+
+### Review the Work
+
+```bash
+# See what the agent did on the feature branch
+cd /projects/myapp-feat-auth
+git log --oneline main..HEAD       # commits the agent made
+git diff main..HEAD                # full diff vs main
+git diff main..HEAD -- src/auth/   # diff scoped to a directory
+```
+
+Or review in your IDE — open the worktree directory as a project, browse the files normally.
+
+### Merge When Satisfied
+
+```bash
+# Switch back to main
+cd /projects/myapp
+git checkout main
+
+# Merge the agent's feature branch
+git merge feature/auth              # or --squash for a single commit
+
+# Clean up the worktree
+git worktree remove ../myapp-feat-auth
+git branch -d feature/auth
+```
+
+### Handling Merge Conflicts Between Parallel Agents
+
+If two parallel agents changed the same file (which proper task scoping should prevent), you'll hit merge conflicts at merge time — the same as any normal branch merge. Resolve them the same way: `git mergetool`, manual editing, or ask Claude Code to help resolve conflicts.
+
+To minimize conflict risk, scope each parallel task to distinct areas of the codebase. If task A touches `src/auth/` and task B touches `src/billing/`, they'll merge cleanly.
+
+---
+
+## When to Use Worktrees vs. Regular Branches
+
+Worktrees add setup overhead — creating the directory, managing cleanup, juggling multiple paths. They're not always worth it.
+
+**Use worktrees when:**
+- Two or more tasks need to happen simultaneously and truly in parallel
+- The tasks touch overlapping areas where sequential execution would require rebasing
+- You want a hotfix to land in production while feature work continues uninterrupted
+- You're running Claude Code sub-agents via the Agent tool and need file-level isolation
+
+**Regular branches are fine when:**
+- You're working sequentially — one task at a time
+- Tasks are short enough that the overhead of worktree setup exceeds the time saved
+- The parallel work is in completely separate repositories (no shared files at all)
+- You're doing exploratory work where you might abandon the branch
+
+The decision heuristic: if you'd be tempted to `git stash` your current work to start a different task, that's a signal a worktree would serve you better.
+
+---
+
+## Practical Examples
+
+### Example 1: Simultaneous Feature + Hotfix
+
+A production bug is reported while you're mid-way through a feature. Without worktrees, you'd stash the feature work, switch branches, fix the bug, commit, switch back, pop the stash. With worktrees:
+
+```bash
+# Create a hotfix worktree from main (not from feature branch)
+git worktree add ../myapp-hotfix -b hotfix/session-bug origin/main
+
+# In one terminal: continue your feature work
+cd /projects/myapp-feat-auth
+claude "Continue implementing the auth module — add the token refresh logic"
+
+# In another terminal: fix the production bug
+cd /projects/myapp-hotfix
+claude "Fix the session timeout bug in SessionManager — users are being logged out after 5 minutes instead of 24 hours"
+
+# When hotfix is done, merge to main and deploy
+cd /projects/myapp
+git merge hotfix/session-bug
+git push origin main
+
+# Feature work continues uninterrupted in its worktree
+```
+
+Both agents ran simultaneously. The hotfix didn't need to know about the feature work at all.
+
+### Example 2: Parallel Test Writing
+
+A codebase has poor test coverage and you want to add tests quickly without blocking other work:
+
+```bash
+# Create worktrees for each test domain
+git worktree add ../myapp-tests-unit -b tests/unit-coverage origin/main
+git worktree add ../myapp-tests-integration -b tests/integration origin/main
+
+# Run agents in parallel
+cd /projects/myapp-tests-unit
+claude "Add unit tests for all public methods in src/services/ — aim for >90% coverage per file"
+
+# (simultaneously, in another terminal)
+cd /projects/myapp-tests-integration
+claude "Write integration tests for all API endpoints in src/api/ — test happy path, validation errors, and auth failures"
+
+# Review and merge both when done
+cd /projects/myapp
+git merge tests/unit-coverage
+git merge tests/integration
+```
+
+### Example 3: Parallel Refactoring by Layer
+
+A large refactor that touches multiple architectural layers can be parallelized if the layers have clean separation:
+
+```bash
+# Database layer refactor
+git worktree add ../myapp-refactor-db -b refactor/db-layer origin/main
+# API layer refactor (depends on DB types — careful with interface definitions)
+git worktree add ../myapp-refactor-api -b refactor/api-layer origin/main
+
+# Run agents — note they need to agree on interface contracts
+# Best handled by defining the interface changes first, then running parallel
+claude --directory ../myapp-refactor-db "Refactor the database access layer to use the repository pattern — interfaces in src/db/interfaces.ts should stay stable"
+claude --directory ../myapp-refactor-api "Refactor the API handlers to use the repository interfaces in src/db/interfaces.ts instead of calling database directly"
+```
+
+The key: define shared interface contracts before parallelizing. Each agent works to those interfaces independently.
+
+---
+
+## CLAUDE.md and Worktrees
+
+Each worktree directory can have its own CLAUDE.md — or more commonly, inherits the CLAUDE.md from the repository. Since worktrees share the same git history, the CLAUDE.md at the repository root is present in all worktrees.
+
+If you want worktree-specific instructions (e.g., "you are working on the hotfix branch — do not add new features, only fix the reported bug"), you can create a local CLAUDE.md in the worktree directory that overrides or supplements the root one. This file won't be committed (it's in the worktree's physical directory, not tracked by that branch) unless you explicitly add it.
+
+A practical pattern: create a CLAUDE.md in the worktree directory with task-specific constraints before handing the worktree to an agent.
+
+```bash
+cat > /projects/myapp-hotfix/CLAUDE.md << 'EOF'
+# Hotfix Context
+
+This worktree is for HOTFIX ONLY. The reported bug: users are logged out after 5 minutes instead of 24 hours.
+
+- Only change files in src/session/ unless absolutely necessary
+- Do not add new features or refactor unrelated code
+- Write a regression test for the exact bug being fixed
+- Commit message must start with "fix:"
+EOF
+```
+
+---
+
+## Managing Multiple Worktrees
+
+When running several worktrees, a few operational practices help:
+
+**Naming conventions**: Use the branch name as the worktree directory name suffix. `myapp-feat-auth` maps directly to `feature/auth`. This makes it obvious which directory corresponds to which branch.
+
+**Regular pruning**: After merging or abandoning a worktree branch, remove the worktree and prune stale references:
+
+```bash
+git worktree remove ../myapp-feat-auth
+git worktree prune
+git branch -d feature/auth  # if merged
+```
+
+**Shared dependencies**: If your project has a `node_modules`, `venv`, or similar dependency directory, each worktree needs its own. Running `npm install` or `pip install` in each worktree directory creates an independent copy. This is correct behavior — you don't want two agents sharing the same dependency state if they have different package changes.
+
+**Disk space**: Each worktree is a full checkout of the working tree. On large projects, multiple worktrees can use significant disk space. For very large codebases, be selective about how many worktrees you create simultaneously.
+
+---
+
+## Worktrees in CI/CD Context
+
+Worktrees aren't just for local development. Claude Code agents running in CI/CD pipelines can use the same pattern: spin up a worktree, run the agent, merge and clean up. This is particularly useful for automated refactoring pipelines, automated PR creation, or multi-branch validation runs.
+
+The agent doesn't need to know it's running in CI — it just gets a directory and a task.
+
+---
+
+## Conclusion
+
+Git worktrees are the correct tool for running parallel Claude Code agents on isolated work. The pattern is straightforward: create a worktree for each parallel task, run Claude Code in each worktree directory, review the results, merge when done.
+
+The `isolation: "worktree"` parameter in the Agent tool automates this for sub-agent orchestration within a single Claude Code session. For manual parallel work, the `git worktree add` / `git worktree remove` commands are all you need.
+
+The practical benefit: tasks that would take four hours sequentially take one hour when properly parallelized. For large codebases with independent subsystems, this compounds substantially.
+
+---
+
+Need help designing a parallel agent workflow for your codebase? ClawHelp's Claude Code consulting services cover worktree-based agent orchestration, CLAUDE.md configuration, and production-ready automation setups. [Book a consultation](/en/contact).

@@ -1,0 +1,108 @@
+---
+slug: rate-limit
+title: "Limite de Débit Claude Code — Ce Que Ça Signifie et Comment le Gérer"
+description: "Ce qui déclenche les limites de débit de l'API Claude Code, comment voir vos limites actuelles, et des stratégies pour éviter de les atteindre lors de sessions intensives."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, rate-limit, api, performance]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 3
+lang: "fr"
+seoTitle: "Limite de Débit Claude Code Dépassée — Causes et Solutions | ClawHelp"
+seoDescription: "Ce qui cause les erreurs de limite de débit Claude Code, comment vérifier vos limites, et des stratégies comme /compact, réduire les agents parallèles et mettre à niveau votre forfait."
+---
+
+# Limite de Débit Claude Code
+
+**Problème** : Claude Code retourne une erreur de limite de débit en milieu de session. Le travail s'arrête, le contexte est interrompu, et vous devez attendre avant de continuer.
+
+Les limites de débit sont une contrainte API sur le nombre de tokens que vous pouvez envoyer ou recevoir dans une fenêtre de temps donnée. Voici ce qui les déclenche, comment savoir où vous en êtes, et comment les contourner.
+
+---
+
+## Ce Qui Déclenche les Limites de Débit
+
+Les limites de débit de Claude Code fonctionnent sur deux axes : **requêtes par minute** (RPM) et **tokens par minute** (TPM). Les sessions intensives atteignent les limites TPM bien plus souvent que les limites RPM.
+
+**Opérations à haute consommation de tokens qui épuisent rapidement les limites** :
+
+- Lire de gros fichiers dans le contexte — un fichier de 3 000 lignes passé au modèle représente 3 000+ tokens d'entrée
+- Longues sessions aller-retour où le contexte grandit à chaque message
+- Exécuter plusieurs sous-agents en parallèle simultanément (chacun consomme des tokens indépendamment)
+- Générer de longs résultats : suites de tests complètes, grands refactorings, réécritures complètes de composants
+- Tentatives répétées après un échec d'appel d'outil (chaque tentative renvoie le contexte)
+
+**Signes que vous approchez d'une limite de débit** (avant d'atteindre l'erreur dure) :
+- Les réponses deviennent nettement plus lentes
+- Les appels d'outils prennent plus de temps
+- Vous voyez des réponses partielles avant que l'API ne coupe
+
+---
+
+## Comment Vérifier vos Limites Actuelles
+
+Les limites de débit dépendent de votre niveau de forfait Anthropic. Pour voir où vous en êtes :
+
+**Via la console Anthropic** :
+1. Allez sur [console.anthropic.com](https://console.anthropic.com)
+2. Naviguez vers **Paramètres → Limites**
+3. Vos limites RPM et TPM actuelles sont listées par niveau de modèle
+
+**En session** : Claude Code n'affiche pas de compteur de tokens en temps réel, mais vous pouvez demander à Claude en milieu de session : « Combien de contexte nous reste-t-il ? » — il vous donnera une estimation approximative.
+
+**Depuis le message d'erreur** : Lorsque vous atteignez une limite, la réponse d'erreur inclut un en-tête `retry-after` indiquant combien de secondes attendre.
+
+---
+
+## Stratégies pour Éviter les Limites de Débit
+
+### Utilisez `/compact` Régulièrement
+
+L'outil le plus efficace. Exécuter `/compact` dans Claude Code résume la conversation jusqu'à présent et remplace l'historique complet des messages par une version compressée. Cela réduit considérablement le nombre de tokens du contexte que Claude porte en avant.
+
+Exécutez `/compact` après avoir terminé une grande sous-tâche — après qu'un refactoring est terminé, après qu'une session de débogage se résout, avant de commencer une nouvelle fonctionnalité. Pensez-y comme à nettoyer votre bureau.
+
+### Réduire les Agents Parallèles
+
+Si vous exécutez des flux de travail multi-agents où plusieurs sous-agents s'exécutent simultanément, chacun brûle des tokens en parallèle. Atteindre une limite de débit en milieu d'agent est pire qu'une session lente parce que cela interrompt un travail en cours.
+
+Pour les charges de travail parallèles lourdes : échelonnez l'exécution des agents (lancez-en 2 à la fois plutôt que 5), ou utilisez un modèle de niveau inférieur pour les sous-agents simples et réservez le modèle complet pour l'orchestrateur.
+
+### Délimitez vos Lectures de Fichiers
+
+Évitez de coller ou de lire des fichiers entiers volumineux lorsque vous n'en avez besoin que d'une partie. Au lieu de « lis toute la base de code », demandez des fonctions ou des fichiers spécifiques. Les outils de système de fichiers de Claude Code peuvent lire des plages de lignes spécifiques — utilisez-les.
+
+```
+Lis les lignes 120–180 de src/auth/middleware.ts
+```
+
+au lieu de lire le fichier entier.
+
+### Regroupez les Requêtes si Possible
+
+Si vous demandez à Claude de faire 10 choses similaires (renommer 10 variables, générer 10 cas de test), regroupez-les en une seule requête plutôt que 10 requêtes séquentielles. Une grande requête utilise moins de tokens que 10 allers-retours avec un contexte répété.
+
+### Mettez à Niveau votre Forfait
+
+Si vous atteignez constamment les limites de débit lors de travail normal, votre utilisation a dépassé votre niveau de forfait. Les niveaux supérieurs d'Anthropic offrent des limites TPM significativement plus élevées. Consultez la [page de tarification Anthropic](https://anthropic.com/pricing) pour les limites de niveau actuelles.
+
+Pour les équipes avec plusieurs développeurs exécutant des sessions intensives simultanément, l'utilisation de tokens par développeur se cumule — les comptes d'équipe sur des niveaux supérieurs sont la bonne solution.
+
+---
+
+## Conseils Avancés
+
+**Démarrez de nouvelles sessions pour de nouveaux problèmes** : Une session fraîche commence avec un contexte nul. Si vous avez travaillé dans une longue session et approchez des limites, conclure et démarrer fresh pour la prochaine tâche est souvent la solution la plus propre.
+
+**Utilisez `CLAUDE.md` au lieu de ré-expliquer le contexte** : Si vous vous retrouvez à taper les mêmes informations de fond à chaque session, ce sont des tokens gaspillés. Mettez-les dans votre fichier `CLAUDE.md` — Claude le lit automatiquement et vous ne payez pas pour les ré-expliquer à chaque fois.
+
+**Surveillez la durée des sessions sur les grandes tâches** : Pour les tâches qui s'étaleront sur des heures (grandes migrations, refactorings complets de base de code), planifiez des points de contrôle `/compact` à l'avance. N'attendez pas d'atteindre la limite en pleine tâche.
+
+---
+
+## Ressources Connexes
+
+- [Service de configuration Claude Code](/services/claude-code-setup) — inclut la configuration `CLAUDE.md` qui réduit le gaspillage de tokens dû au contexte répété
+- [Développement d'agents personnalisés](/services/agent-development) — nous concevons des agents avec la gestion des limites de débit intégrée
+- [Erreur Permission Denied](/resources/permission-denied-error) — une erreur différente qui apparaît parfois en même temps que les problèmes de limite de débit

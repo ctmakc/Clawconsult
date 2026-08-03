@@ -1,0 +1,238 @@
+---
+slug: project-kickstart
+title: "Gabarit de prompt de démarrage de projet pour Claude Code"
+description: "Un gabarit de prompt structuré pour démarrer un nouveau projet avec Claude Code — couvre les décisions d'architecture, la structure des fichiers, la configuration des outils, et le premier commit fonctionnel."
+category: template
+tags: [prompts, project-setup, new-project, workflow, templates]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 9
+lang: "fr"
+relatedServices: [claude-code-setup, agent-development]
+seoTitle: "Gabarit de prompt de démarrage de projet pour Claude Code | ClawHelp"
+seoDescription: "Gabarit de prompt structuré pour démarrer tout nouveau projet avec Claude Code. Couvre décisions de stack, organisation des fichiers, outillage, création de CLAUDE.md et premier commit fonctionnel — à copier et remplir."
+schema: HowTo
+---
+
+# Gabarit de prompt de démarrage de projet pour Claude Code
+
+Démarrer un nouveau projet avec Claude Code depuis un répertoire vide produit souvent des résultats incohérents — Claude prend des décisions raisonnables mais arbitraires sur la structure, l'outillage et les conventions, qui peuvent ne pas correspondre à votre façon de travailler.
+
+Ce gabarit vous donne un prompt de démarrage structuré qui force les décisions importantes dès le début, les documente dans `CLAUDE.md`, et aboutit à un premier commit fonctionnel avec les bonnes fondations en place.
+
+Utilisez-le au début de tout projet greenfield, ou lors de l'intégration d'un projet existant dans Claude Code pour la première fois.
+
+---
+
+## Quand utiliser ce gabarit
+
+- **Nouveau projet greenfield** — vous commencez depuis `mkdir mon-projet`
+- **Projet existant, première session Claude Code** — vous avez besoin que Claude comprenne votre configuration actuelle avant d'apporter des modifications
+- **Reprise après une longue pause** — réancrer Claude à l'état actuel du projet
+- **Passation à un collègue** — il ouvre le projet et exécute ce prompt pour s'orienter rapidement
+
+---
+
+## Le prompt de démarrage
+
+Copiez le bloc ci-dessous, remplissez les sections `[ENTRE CROCHETS]`, et collez-le comme premier message dans une nouvelle session Claude Code.
+
+```
+Vous démarrez le travail sur un nouveau projet. Avant d'écrire du code, complétez la séquence de configuration suivante dans l'ordre. Ne sautez pas d'étapes.
+
+## Vue d'ensemble du projet
+
+Nom du projet : [NOM_DU_PROJET]
+Ce qu'il fait : [UNE PHRASE : ce que le produit/outil/service fait et qui l'utilise]
+Utilisateurs principaux : [utilisateurs cibles — ex. : "propriétaires de petites entreprises", "ingénieurs backend dans des entreprises SaaS"]
+Critère de succès : [comment on sait que le projet a réussi — ex. : "l'utilisateur peut créer un compte et soumettre un formulaire"]
+
+## Stack technique
+
+Utiliser la stack suivante. Ne pas suggérer d'alternatives sauf si un outil listé est incompatible avec un autre.
+
+- Langage : [TypeScript / Python / Go / Rust / autre]
+- Framework : [Next.js 15 / FastAPI / Express / autre ou "aucun — outil CLI"]
+- Base de données : [PostgreSQL / SQLite / aucune] via [Prisma / Drizzle / SQLAlchemy / autre]
+- Auth : [NextAuth.js / Clerk / aucune]
+- Tests : [Vitest + Playwright / pytest / Go test / autre]
+- Gestionnaire de paquets : [pnpm / npm / yarn / pip / go mod]
+- Cible de déploiement : [Vercel / Railway / Fly.io / Docker / autre]
+
+## Contraintes
+
+- [CONTRAINTE 1 — ex. : "aucune API tierce payante — utiliser uniquement l'open-source ou les niveaux gratuits"]
+- [CONTRAINTE 2 — ex. : "doit fonctionner hors ligne / aucun appel réseau externe à l'exécution"]
+- [CONTRAINTE 3 — ex. : "déploiement en binaire unique — pas de conteneurisation"]
+- (supprimer cette ligne s'il n'y a pas de contraintes)
+
+## Séquence de configuration
+
+Compléter ces étapes dans l'ordre. Après chaque étape, faire une pause et confirmer ce qui a été fait avant de passer à la suivante.
+
+### Étape 1 — Créer le scaffold du projet
+
+Initialiser le projet avec le gestionnaire de paquets et le framework listés ci-dessus. Créer la structure des répertoires. Installer les dépendances. Ne pas écrire de code fonctionnel pour l'instant.
+
+Résultat attendu : un scaffold fonctionnel avec `[commande dev]` démarrant sans erreurs.
+
+### Étape 2 — Configurer l'outillage
+
+Configurer :
+- Lint : ESLint (ou équivalent) avec les défauts du langage du projet
+- Formatage : Prettier (ou équivalent) — config committée, pas seulement installée
+- Vérification de types : tsc --strict (ou équivalent)
+- Git : initialiser le dépôt s'il n'existe pas encore, créer .gitignore
+
+Résultat attendu : `[commande lint]` et `[commande typecheck]` s'exécutent sans erreurs sur le scaffold vide.
+
+### Étape 3 — Écrire CLAUDE.md
+
+Créer un `CLAUDE.md` à la racine du projet documentant :
+- La stack exacte (avec les versions)
+- La structure des répertoires et ce qui va où
+- Chaque commande de développement (start, test, lint, build, typecheck, migrate)
+- Les conventions de codage que nous utiliserons dans ce projet
+- Tous les fichiers ou répertoires intouchables
+- Le vocabulaire du domaine pour ce projet
+
+CLAUDE.md doit être suffisamment complet pour qu'une nouvelle session Claude Code démarrant depuis ce fichier puisse travailler sur cette codebase sans explication supplémentaire.
+
+### Étape 4 — Première fonctionnalité fonctionnelle
+
+Implémenter la version minimale de cette fonctionnalité pour prouver que le scaffold fonctionne de bout en bout :
+
+[DÉCRIRE LA PREMIÈRE FONCTIONNALITÉ — ex. : "Un endpoint /health qui retourne { status: 'ok', timestamp: ISO8601 }" ou "Une commande CLI `init` qui crée un fichier de config dans le répertoire courant"]
+
+Cette fonctionnalité doit :
+- Être implémentée au bon endroit selon la structure dans CLAUDE.md
+- Avoir au moins un test passant
+- Passer le lint et le typecheck
+
+### Étape 5 — Premier commit
+
+Une fois l'étape 4 terminée et les tests passants :
+- Stager tous les fichiers
+- Créer un commit avec le message : `feat: scaffold initial du projet avec [NOM DE LA PREMIÈRE FONCTIONNALITÉ]`
+- Me montrer le git log et l'output des tests pour que je puisse confirmer que tout est en ordre
+
+---
+
+Après avoir complété les cinq étapes, donnez-moi un bref résumé :
+- Ce qui a été configuré
+- Où se trouvent les fichiers clés
+- Quelle serait la prochaine tâche de développement naturelle
+- Toute décision que vous avez prise et dont je devrais être informé
+```
+
+---
+
+## Comment adapter le gabarit
+
+### Pour un projet existant
+
+Remplacez les étapes 1–2 par :
+
+```
+### Étape 1 — S'orienter dans le projet
+
+Lire la structure du projet existant. Exécuter les tests existants. Vérifier que le lint et le typecheck passent.
+Rapporter :
+- Ce que fait le projet (déduit du code/README)
+- La stack actuelle avec les versions
+- Tout test ou erreur de lint en échec
+- Les fichiers qui semblent auto-générés ou intouchables
+
+Ne faire aucune modification pour l'instant.
+```
+
+Puis continuer depuis l'étape 3 (écrire CLAUDE.md en se basant sur ce que vous avez trouvé).
+
+### Pour un MVP solo
+
+Réduisez l'étape 4 à un seul parcours heureux de bout en bout :
+
+```
+### Étape 4 — Parcours de test de fumée
+
+Implémenter juste assez pour exécuter manuellement un flux utilisateur de bout en bout :
+[décrire le flux]
+
+Pas de tests requis à ce stade. Nous les ajouterons lors de la prochaine session.
+```
+
+### Pour un projet d'équipe
+
+Ajoutez à l'étape 3 :
+
+```
+Dans CLAUDE.md, incluez une section "Équipe" listant :
+- Qui est responsable du backend / DB / infra / frontend
+- Comment les PRs sont révisées (1 relecteur ? 2 ?)
+- Convention de nommage des branches
+- Ce que le CI doit passer avant le merge
+```
+
+---
+
+## Que faire après le démarrage
+
+Une fois le prompt de démarrage complété et le premier commit créé :
+
+1. **Lire le CLAUDE.md que Claude a écrit.** Corrigez tout ce qui est incorrect. C'est le document que toutes les sessions futures utiliseront.
+2. **Ajouter votre vrai vocabulaire du domaine.** La première session produit des termes génériques ; remplacez-les par votre terminologie métier réelle.
+3. **Configurer les hooks.** Utilisez le [gabarit de configuration des hooks](/templates/hooks-config) pour ajouter le formatage automatique et la sauvegarde de session immédiatement.
+4. **Rédiger votre première vraie tâche sous forme de prompt ciblé.** Utilisez les conventions du CLAUDE.md pour écrire un prompt qui nomme les fichiers, définit les critères d'acceptation et précise les contraintes. Voir [les pratiques efficaces avec Claude Code](/skills/effective-claude-code) pour les conseils.
+
+---
+
+## Erreurs courantes à éviter
+
+**Sauter l'étape 3 (CLAUDE.md).** C'est l'erreur la plus fréquente. Le démarrage vaut peu s'il ne produit pas de CLAUDE.md — chaque session suivante repartira de zéro.
+
+**Choisir une trop grande « première fonctionnalité » pour l'étape 4.** La première fonctionnalité devrait être la chose la plus petite qui prouve que le scaffold fonctionne de bout en bout. Si la première fonctionnalité prend plus de 30 minutes à implémenter, elle est trop grande. Choisissez quelque chose de trivial.
+
+**Ne pas réviser les décisions de stack de Claude.** Claude fera des choix raisonnables pour tout ce que vous avez laissé non spécifié. Révisez-les dans le CLAUDE.md qu'il crée — il est plus facile de les corriger maintenant qu'après 20 commits.
+
+**Exécuter le démarrage dans un répertoire non vide.** Commencez depuis un `mkdir mon-projet && cd mon-projet` propre. Exécuter le démarrage dans un répertoire avec des fichiers existants perturbe l'étape du scaffold.
+
+---
+
+## Référence des variables du gabarit
+
+| Variable | Quoi mettre ici |
+|---|---|
+| `[NOM_DU_PROJET]` | Le nom du projet — utilisé dans les messages de commit et CLAUDE.md |
+| `[UNE PHRASE]` | Ce que fait le produit et qui l'utilise — 15 mots maximum |
+| `[CONTRAINTE N]` | Les contraintes strictes que Claude doit respecter — pas des préférences, de vraies contraintes |
+| `[commande dev]` | La commande pour démarrer le serveur de développement (ex. : `pnpm dev`) |
+| `[commande lint]` | La commande de lint (ex. : `pnpm lint`) |
+| `[DÉCRIRE LA PREMIÈRE FONCTIONNALITÉ]` | La fonctionnalité minimale de bout en bout qui prouve que le scaffold fonctionne |
+| `[NOM DE LA PREMIÈRE FONCTIONNALITÉ]` | Nom court pour le message de commit (ex. : `endpoint health`) |
+
+---
+
+## Prochaines étapes
+
+- [Gabarit CLAUDE.md](/templates/claude-md-starter) — gabarit CLAUDE.md détaillé une fois que le démarrage génère la première version
+- [Gabarit de configuration des hooks](/templates/hooks-config) — configurer le formatage automatique, la vérification de sécurité et la sauvegarde de session
+- [Pratiques efficaces avec Claude Code](/skills/effective-claude-code) — comment rédiger de bons prompts pour les sessions de développement suivantes
+
+---
+
+{/* HowTo schema
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Démarrer un nouveau projet avec Claude Code",
+  "description": "Utiliser un prompt structuré pour initialiser un nouveau projet avec Claude Code, couvrant le scaffold, l'outillage, CLAUDE.md, la première fonctionnalité et le premier commit.",
+  "step": [
+    { "@type": "HowToStep", "name": "Remplir le gabarit", "text": "Copiez le gabarit de prompt de démarrage et remplacez toutes les valeurs [ENTRE CROCHETS] par les détails de votre projet : nom, stack, contraintes et première fonctionnalité." },
+    { "@type": "HowToStep", "name": "Coller dans une nouvelle session Claude Code", "text": "Démarrez Claude Code dans un répertoire vide et collez le prompt rempli comme premier message." },
+    { "@type": "HowToStep", "name": "Réviser l'output de chaque étape", "text": "Claude fera une pause après chacune des cinq étapes. Révisez l'output avant de dire 'continuer' — c'est votre chance de corriger les décisions à moindre coût." },
+    { "@type": "HowToStep", "name": "Réviser et corriger CLAUDE.md", "text": "Après l'étape 3, lisez attentivement le CLAUDE.md généré. Corrigez toute hypothèse incorrecte sur votre stack ou vos conventions." },
+    { "@type": "HowToStep", "name": "Confirmer le premier commit", "text": "Après l'étape 5, vérifiez que le git log et l'output des tests sont conformes aux attentes. Vous avez maintenant une base solide pour le projet." }
+  ]
+}
+*/}

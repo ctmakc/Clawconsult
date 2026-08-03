@@ -1,0 +1,537 @@
+---
+slug: claude-code-hooks-rukovodstvo
+title: "Hooks в Claude Code: автоматизация и кастомизация рабочего процесса"
+description: "Полное руководство по hooks в Claude Code — pre-tool-call и post-tool-call события, конфигурация в .claude/settings.json, переменные окружения, 5 практических примеров и продвинутые паттерны."
+category: guide
+schema: Article
+tags: [hooks, автоматизация, settings, workflow, конфигурация]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+lang: "ru"
+seoTitle: "Hooks в Claude Code: автоматизация и кастомизация рабочего процесса | ClawHelp"
+seoDescription: "Настройте hooks в Claude Code для автоформатирования, safety-проверок, JSON-логирования, approval gates и автозапуска тестов. Полная справка с примерами конфигурации."
+---
+
+# Hooks в Claude Code: автоматизация и кастомизация рабочего процесса
+
+Hooks — один из самых мощных, но малоизвестных механизмов Claude Code. Они позволяют запускать произвольные shell-скрипты в ключевые моменты работы агента: перед вызовом инструмента, после него, при запуске сессии и при её завершении. С hooks Claude Code превращается из умного ассистента в полноценно интегрированный компонент вашего CI/CD и DevOps-пайплайна.
+
+В этом руководстве — полный разбор системы hooks: архитектура, конфигурация, переменные окружения и пять production-ready примеров.
+
+---
+
+## Что такое hooks и зачем они нужны
+
+Hooks — это shell-команды, которые Claude Code выполняет автоматически на определённых событиях своего жизненного цикла. Они не зависят от промптов и не требуют участия пользователя — это чистая автоматизация на уровне инфраструктуры.
+
+**Ключевые сценарии применения:**
+
+- **Форматирование кода** — автоматически запускать Prettier, Black или gofmt после каждого редактирования файла
+- **Safety-проверки** — блокировать опасные команды (удаление продакшн-данных, force-push и т.д.) ещё до их выполнения
+- **Аудит** — записывать в лог каждое действие агента в структурированном JSON
+- **Approval gates** — требовать явного подтверждения человека перед критическими операциями
+- **Автотестирование** — запускать тесты после изменения связанных файлов
+
+Без hooks вы полагаетесь на то, что Claude Code «правильно угадает» нужные шаги. С hooks эти шаги гарантированы независимо от промпта.
+
+---
+
+## Типы событий hooks
+
+Claude Code поддерживает четыре типа событий:
+
+| Событие | Когда срабатывает |
+|---------|-------------------|
+| `PreToolCall` | Непосредственно перед вызовом любого инструмента |
+| `PostToolCall` | Сразу после завершения вызова инструмента |
+| `SessionStart` | При открытии новой сессии Claude Code |
+| `SessionEnd` | При завершении сессии |
+
+Наиболее часто используемые — `PreToolCall` и `PostToolCall`. Они дают максимальный контроль над поведением агента.
+
+---
+
+## Конфигурация в `.claude/settings.json`
+
+Hooks настраиваются в файле `.claude/settings.json` вашего проекта (или в `~/.claude/settings.json` для глобальных настроек). Базовая структура:
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/your/pre-bash-hook.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolCall": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/your/post-edit-hook.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Поля конфигурации:**
+
+- `matcher` — регулярное выражение для фильтрации по имени инструмента. `".*"` матчит всё. `"Bash"` — только Bash-вызовы. `"Write|Edit"` — запись и редактирование файлов.
+- `type` — тип hook. Сейчас поддерживается только `"command"`.
+- `command` — shell-команда или путь к скрипту.
+
+Hooks выполняются в том же окружении, что и Claude Code, с унаследованными переменными окружения.
+
+---
+
+## Переменные окружения в hooks
+
+При срабатывании hook Claude Code передаёт контекст через переменные окружения и stdin в формате JSON. Это позволяет скриптам принимать решения на основе конкретного вызова инструмента.
+
+**Переменные, доступные в hooks:**
+
+```bash
+CLAUDE_TOOL_NAME        # Имя вызываемого инструмента (например, "Bash", "Write")
+CLAUDE_TOOL_INPUT       # JSON с входными параметрами инструмента
+CLAUDE_TOOL_OUTPUT      # JSON с выходными данными (только в PostToolCall)
+CLAUDE_SESSION_ID       # Уникальный идентификатор текущей сессии
+CLAUDE_PROJECT_DIR      # Корневая директория проекта
+```
+
+**Полный JSON-контекст через stdin:**
+
+```bash
+#!/bin/bash
+# Прочитать полный контекст вызова
+context=$(cat)
+tool_name=$(echo "$context" | jq -r '.tool_name')
+tool_input=$(echo "$context" | jq -r '.tool_input')
+```
+
+Для `PreToolCall` hooks — если скрипт завершается с кодом `2`, Claude Code блокирует выполнение инструмента и показывает stderr пользователю как объяснение отказа.
+
+---
+
+## Пример 1: Автоформатирование кода
+
+Самый популярный use case — форматировать файлы сразу после их создания или редактирования.
+
+**`.claude/settings.json`:**
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/auto-format.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**`~/.claude/hooks/auto-format.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+file_path=$(echo "$context" | jq -r '.tool_input.file_path // empty')
+
+if [[ -z "$file_path" ]]; then
+  exit 0
+fi
+
+case "$file_path" in
+  *.ts|*.tsx|*.js|*.jsx|*.json|*.css|*.md)
+    if command -v prettier &>/dev/null; then
+      prettier --write "$file_path" 2>/dev/null || true
+    fi
+    ;;
+  *.py)
+    if command -v black &>/dev/null; then
+      black --quiet "$file_path" 2>/dev/null || true
+    fi
+    ;;
+  *.go)
+    if command -v gofmt &>/dev/null; then
+      gofmt -w "$file_path" 2>/dev/null || true
+    fi
+    ;;
+esac
+```
+
+Сделайте скрипт исполняемым: `chmod +x ~/.claude/hooks/auto-format.sh`. Теперь каждый файл, который Claude Code создаёт или редактирует, будет автоматически отформатирован согласно настройкам вашего проекта.
+
+---
+
+## Пример 2: Safety-проверки — блокировка опасных команд
+
+PreToolCall hooks могут полностью блокировать выполнение инструментов. Код завершения `2` сигнализирует Claude Code об отказе и возвращает stderr как объяснение.
+
+**`~/.claude/hooks/safety-check.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+tool_name=$(echo "$context" | jq -r '.tool_name')
+
+if [[ "$tool_name" != "Bash" ]]; then
+  exit 0
+fi
+
+command_str=$(echo "$context" | jq -r '.tool_input.command // ""')
+
+# Паттерны, которые требуют блокировки
+DANGEROUS_PATTERNS=(
+  "DROP TABLE"
+  "DROP DATABASE"
+  "DELETE FROM.*WHERE.*1=1"
+  "git push --force.*main"
+  "git push --force.*master"
+  "rm -rf /"
+  "chmod -R 777"
+  "curl.*\| bash"
+  "wget.*\| sh"
+)
+
+for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+  if echo "$command_str" | grep -qiE "$pattern"; then
+    echo "ЗАБЛОКИРОВАНО: Команда соответствует паттерну опасной операции: $pattern" >&2
+    echo "Команда: $command_str" >&2
+    echo "Для выполнения этой операции требуется ручное подтверждение." >&2
+    exit 2
+  fi
+done
+```
+
+**Конфигурация:**
+
+```json
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/safety-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Claude Code увидит сообщение из stderr и объяснит пользователю, почему команда была отклонена, не раскрывая деталей реализации hook.
+
+---
+
+## Пример 3: JSON-логирование для аудита
+
+В enterprise-окружениях часто требуется полная запись всех действий ИИ-агента. Hook ниже пишет структурированный JSONL-лог каждого вызова инструмента.
+
+**`~/.claude/hooks/audit-log.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+
+log_entry=$(echo "$context" | jq -c --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg session "${CLAUDE_SESSION_ID:-unknown}" \
+  --arg project "${CLAUDE_PROJECT_DIR:-unknown}" \
+  '{
+    timestamp: $ts,
+    session_id: $session,
+    project: $project,
+    tool_name: .tool_name,
+    tool_input: .tool_input,
+    tool_output: (.tool_output // null),
+    exit_code: (.exit_code // null)
+  }')
+
+LOG_DIR="${HOME}/.claude/audit-logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d).jsonl"
+
+echo "$log_entry" >> "$LOG_FILE"
+```
+
+**Конфигурация для логирования всех событий:**
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/audit-log.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Лог-файлы создаются по дате: `~/.claude/audit-logs/2026-05-16.jsonl`. Каждая строка — валидный JSON, удобный для парсинга через `jq`, загрузки в Elasticsearch или отправки в SIEM-систему.
+
+---
+
+## Пример 4: Approval gate для важных операций
+
+Иногда автоматической блокировки недостаточно — нужно человеческое решение в реальном времени. Этот hook приостанавливает выполнение и ждёт явного подтверждения.
+
+**`~/.claude/hooks/approval-gate.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+tool_name=$(echo "$context" | jq -r '.tool_name')
+command_str=$(echo "$context" | jq -r '.tool_input.command // ""')
+
+# Операции, требующие одобрения
+REQUIRES_APPROVAL=(
+  "psql.*prod"
+  "kubectl.*production"
+  "aws.*--profile prod"
+  "heroku.*--app.*prod"
+  "gcloud.*--project.*production"
+)
+
+needs_approval=false
+matched_pattern=""
+
+for pattern in "${REQUIRES_APPROVAL[@]}"; do
+  if echo "$command_str" | grep -qiE "$pattern"; then
+    needs_approval=true
+    matched_pattern="$pattern"
+    break
+  fi
+done
+
+if [[ "$needs_approval" == "true" ]]; then
+  echo ""
+  echo "⚠️  APPROVAL GATE ⚠️"
+  echo "Паттерн: $matched_pattern"
+  echo "Команда: $command_str"
+  echo ""
+  read -r -p "Разрешить выполнение? [y/N] " response
+  
+  case "$response" in
+    [yY][eE][sS]|[yY])
+      echo "Операция одобрена пользователем."
+      exit 0
+      ;;
+    *)
+      echo "Операция отклонена пользователем." >&2
+      exit 2
+      ;;
+  esac
+fi
+```
+
+Обратите внимание: для работы интерактивного `read` hook должен выполняться в терминале с TTY. Если Claude Code запущен в неинтерактивном режиме (CI/CD), этот hook будет отклонять все matching-команды автоматически — что само по себе правильное поведение для продакшн-пайплайнов.
+
+---
+
+## Пример 5: Автозапуск тестов после редактирования
+
+После изменения исходных файлов автоматически запускать связанные тесты — без промптов, без напоминаний.
+
+**`~/.claude/hooks/run-tests.sh`:**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+context=$(cat)
+file_path=$(echo "$context" | jq -r '.tool_input.file_path // empty')
+
+if [[ -z "$file_path" ]]; then
+  exit 0
+fi
+
+project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Определить, является ли файл исходным кодом (не тестом, не конфигом)
+if echo "$file_path" | grep -qE '\.(test|spec)\.(ts|js|py)$'; then
+  exit 0
+fi
+
+if echo "$file_path" | grep -qE '\.(ts|js|py)$'; then
+  echo "Файл изменён: $file_path — запускаю связанные тесты..."
+  
+  if [[ -f "$project_dir/package.json" ]]; then
+    # Node.js / TypeScript проект
+    test_file="${file_path%.*}.test.${file_path##*.}"
+    spec_file="${file_path%.*}.spec.${file_path##*.}"
+    
+    if [[ -f "$test_file" ]]; then
+      cd "$project_dir" && npx jest "$test_file" --passWithNoTests 2>&1 | tail -20
+    elif [[ -f "$spec_file" ]]; then
+      cd "$project_dir" && npx jest "$spec_file" --passWithNoTests 2>&1 | tail -20
+    fi
+  elif [[ -f "$project_dir/pytest.ini" ]] || [[ -f "$project_dir/pyproject.toml" ]]; then
+    # Python проект
+    cd "$project_dir" && python -m pytest --tb=short -q 2>&1 | tail -20
+  fi
+fi
+```
+
+Вывод тестов отображается прямо в терминале Claude Code. Если тесты упадут, Claude увидит это и может немедленно предложить исправление.
+
+---
+
+## Продвинутые паттерны
+
+### Цепочки hooks
+
+Несколько hooks можно зарегистрировать на одно событие — они выполняются последовательно:
+
+```json
+{
+  "hooks": {
+    "PostToolCall": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {"type": "command", "command": "~/.claude/hooks/auto-format.sh"},
+          {"type": "command", "command": "~/.claude/hooks/audit-log.sh"},
+          {"type": "command", "command": "~/.claude/hooks/run-tests.sh"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Контекстно-зависимые hooks через переменные окружения
+
+Используйте переменные окружения для переключения поведения hooks между окружениями:
+
+```bash
+#!/bin/bash
+# Hook ведёт себя по-разному в dev и prod
+if [[ "${ENVIRONMENT:-dev}" == "production" ]]; then
+  # В продакшне — строгие проверки
+  exec ~/.claude/hooks/strict-safety-check.sh
+else
+  # В dev — только предупреждения
+  exec ~/.claude/hooks/warn-only.sh
+fi
+```
+
+### SessionStart для подготовки окружения
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {"type": "command", "command": "~/.claude/hooks/session-init.sh"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+`session-init.sh` может проверять, запущены ли нужные сервисы, активировать виртуальное окружение Python, валидировать `.env` файлы или отправлять уведомление в Slack о начале сессии.
+
+---
+
+## Полная справка по настройкам hooks
+
+| Параметр | Тип | Описание |
+|----------|-----|----------|
+| `matcher` | string (regex) | Паттерн для имени инструмента. `".*"` — все инструменты |
+| `type` | `"command"` | Тип hook (сейчас только command) |
+| `command` | string | Shell-команда или путь к скрипту |
+
+**Коды завершения скрипта:**
+
+| Код | Значение |
+|-----|----------|
+| `0` | Успех, продолжить выполнение |
+| `1` | Ошибка hook (логируется, выполнение продолжается) |
+| `2` | Блокировка инструмента (только для PreToolCall); stderr показывается пользователю |
+
+**Расположение файлов:**
+
+- Проектные hooks: `.claude/settings.json` (коммитится в репозиторий)
+- Пользовательские hooks: `~/.claude/settings.json` (применяются ко всем проектам)
+- Скрипты: рекомендуется хранить в `~/.claude/hooks/` или `.claude/hooks/`
+
+---
+
+## Частые ошибки при настройке hooks
+
+**1. Не сделали скрипт исполняемым**
+```bash
+chmod +x ~/.claude/hooks/your-hook.sh
+```
+
+**2. Используете относительные пути**
+Всегда указывайте абсолютные пути — hooks могут выполняться из разных рабочих директорий.
+
+**3. Hook работает слишком долго**
+Медленные hooks блокируют работу Claude Code. Для тяжёлых операций запускайте их в фоне: `long-operation.sh &`.
+
+**4. Забываете обрабатывать пустые значения**
+Всегда проверяйте, что `file_path` и другие поля не пустые перед использованием.
+
+**5. Смешиваете проектные и пользовательские настройки**
+`.claude/settings.json` в проекте наследует пользовательские настройки из `~/.claude/settings.json`. Если hook зарегистрирован глобально — он будет работать во всех проектах.
+
+---
+
+## Hooks или CLAUDE.md — что выбрать?
+
+| Задача | Инструмент |
+|--------|-----------|
+| Форматирование файлов | Hook (PostToolCall) |
+| Блокировка команд | Hook (PreToolCall) |
+| Аудит-логирование | Hook (PostToolCall) |
+| Стиль коммитов | CLAUDE.md |
+| Именование веток | CLAUDE.md |
+| Контекст проекта | CLAUDE.md |
+| Автозапуск тестов | Hook (PostToolCall) |
+| Бизнес-правила для агента | CLAUDE.md |
+
+Hooks — для детерминированной автоматизации. CLAUDE.md — для передачи намерений и контекста. Оптимальная настройка использует оба инструмента.
+
+---
+
+Если вы хотите настроить hooks для вашего конкретного стека или интегрировать Claude Code в корпоративный CI/CD-пайплайн — команда ClawHelp проведёт технический аудит и разработает production-ready конфигурацию под ваши требования. Напишите нам, чтобы обсудить задачу.

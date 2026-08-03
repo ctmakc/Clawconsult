@@ -1,0 +1,126 @@
+---
+slug: devops
+title: "Claude Code for DevOps"
+description: "How DevOps engineers use Claude Code to automate infrastructure, debug CI/CD pipelines, generate Kubernetes configs, and write runbooks."
+category: use-case
+tags: [devops, infrastructure, kubernetes, ci-cd, automation]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+seoTitle: "Claude Code for DevOps — AI Infrastructure Automation | ClawHelp"
+seoDescription: "How DevOps engineers use Claude Code for AI devops automation — Dockerfile generation, Kubernetes YAML, CI/CD debugging, IaC, and runbook writing."
+---
+
+# Claude Code for DevOps
+
+DevOps work is repetitive, high-stakes, and often poorly documented. Writing the twelfth Dockerfile variant for a new service, debugging a flaky GitHub Actions pipeline at 11pm, or translating a verbal runbook into structured YAML — these tasks don't require deep creativity, but they do require deep context. Claude Code provides that context.
+
+This page covers how DevOps engineers use Claude Code in real workflows: what it does well, what prompts work, and how to connect it to your infrastructure through MCP servers.
+
+## Core Use Cases
+
+### Dockerfile and Container Configuration
+
+Claude Code reads your application source — `package.json`, `requirements.txt`, `go.mod`, whatever — and generates a production-ready Dockerfile with multi-stage builds, proper non-root user setup, build cache optimization, and health check configuration.
+
+**What makes it better than a template**: it looks at your actual dependencies, identifies which ones require native build tools, and handles the complexity (compiling native Node modules, Alpine vs. Debian base tradeoffs, installing the right system packages) rather than giving you a generic starting point that half-works.
+
+Typical prompt pattern:
+
+```
+Review the application in ./src/ and generate a production-ready Dockerfile.
+Use a multi-stage build, run as non-root, and optimize layer caching for our 
+package manager. Include a HEALTHCHECK directive.
+```
+
+### Kubernetes YAML Generation
+
+Generating correct Kubernetes manifests from scratch is tedious and error-prone. Claude Code generates Deployments, Services, Ingress resources, ConfigMaps, HorizontalPodAutoscalers, and PodDisruptionBudgets with correct structure and sensible defaults.
+
+More importantly, it reasons about your constraints: if you tell it you're running on a 3-node cluster with 4GB per node, it sets appropriate resource requests and limits instead of leaving those fields empty.
+
+```
+Generate a Kubernetes Deployment for the auth-service. 
+It runs 3 replicas, needs 256Mi RAM and 200m CPU, connects to Postgres at 
+$DATABASE_URL (from a secret), and exposes port 8080. 
+Include a liveness probe at /healthz.
+```
+
+### CI/CD Pipeline Debugging
+
+Paste a failing GitHub Actions or GitLab CI log into the session. Claude Code identifies the error, explains why it happened, and proposes a fix — usually within seconds for common failure patterns like permission errors, missing cache keys, Docker layer issues, or secret injection problems.
+
+It also helps write new pipelines: describe the workflow you need (lint → test → build → deploy to staging on merge to main) and it produces the YAML with correct job dependencies, caching, and environment variable handling.
+
+### Infrastructure as Code
+
+Claude Code helps with Terraform, Pulumi, CloudFormation, and Ansible. Common patterns:
+
+- **Terraform**: generate resource blocks for new services, refactor modules, diagnose `plan` diffs that don't match expectations, write `locals` and `for_each` expressions
+- **Ansible**: write playbooks for server provisioning, generate role structures, debug `become` and idempotency issues
+- **CloudFormation**: convert between CloudFormation and CDK, generate IAM policies with least-privilege principles, explain `UPDATE_ROLLBACK_FAILED` states
+
+With a [Terraform MCP server](/services/mcp-integration), Claude can also read your existing state and generate changes that are consistent with what's already deployed.
+
+### Runbook Automation
+
+Runbooks that live as Confluence pages or Notion docs are valuable but rarely executed exactly as written. Claude Code can:
+
+- Convert a prose runbook into an executable shell script with proper error handling
+- Add observability checkpoints (log the result of each step)
+- Generate a structured incident checklist from a post-mortem
+- Translate manual steps into Ansible playbooks or kubectl commands
+
+The result is runbooks that actually run, with the institutional knowledge preserved in comments.
+
+## A Real DevOps Workflow Example
+
+Here's how a DevOps engineer might use Claude Code to handle an incident:
+
+**Situation**: A Kubernetes pod is OOMKilled repeatedly. PagerDuty fires at 2am.
+
+**Session flow**:
+
+1. Open Claude Code. Paste the pod description and recent logs.
+2. Claude identifies the memory limit is set to 128Mi but the JVM heap is configured to 256Mi — a common misconfiguration.
+3. Ask Claude to generate the corrected resource limits and a HPA with memory-based scaling.
+4. Claude writes the YAML, explains the calculation, and notes that the health check timeout should also be increased.
+5. Apply via `kubectl apply`, confirm the rollout.
+6. Ask Claude to write a post-mortem draft with timeline and root cause.
+
+Total time: 15 minutes instead of 45. No Stack Overflow tabs. No mental context switching.
+
+## Connecting Claude Code to Your Infrastructure
+
+The real power multiplier for DevOps is pairing Claude Code with MCP servers that can reach your systems:
+
+- **kubectl / Helm MCP** — inspect pod status, read logs, check rollout progress
+- **AWS / GCP / Azure MCP** — describe resources, check CloudWatch alarms, pull Cost Explorer data
+- **Datadog / Grafana MCP** — pull metrics and alert states into the session context
+- **Terraform Cloud MCP** — read workspace state and run history
+
+With these integrations, you don't paste logs into the session — Claude reads them directly from your observability stack. We build and configure these integrations as part of our [MCP integration service](/services/mcp-integration).
+
+## Prompt Patterns for DevOps
+
+**For infrastructure generation:**
+> "Generate a [resource type] for [service name]. Constraints: [list]. Must follow [convention]. Output as [format]."
+
+**For debugging:**
+> "Here is the error output: [paste]. The expected behavior is [X]. Diagnose the root cause and propose a fix."
+
+**For reviews:**
+> "Review this [Dockerfile / Terraform plan / CI config] for security issues, performance problems, and deviations from best practices. Be specific."
+
+**For documentation:**
+> "Convert this runbook into an executable script. Preserve all conditional logic. Add error handling and logging. Comment the non-obvious steps."
+
+## Getting Started
+
+If you're new to Claude Code or want to integrate it properly into your DevOps workflow, we can help with:
+
+- [Initial setup and configuration](/services/claude-code-setup) for your machines and team
+- [Custom MCP servers](/services/mcp-integration) for your specific infrastructure stack
+- [Team onboarding](/services/team-onboarding) with DevOps-focused sessions and runbook templates
+
+Claude Code for DevOps isn't about replacing your expertise — it's about removing the friction that slows you down between understanding a problem and solving it.

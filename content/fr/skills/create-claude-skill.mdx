@@ -1,0 +1,278 @@
+---
+slug: create-claude-skill
+title: "Comment créer un skill Claude Code"
+description: "Apprenez à rédiger, installer et partager des skills Claude Code — des plugins en markdown réutilisables qui étendent le comportement de Claude avec des flux de travail et des listes de contrôle personnalisés."
+category: how-to
+lang: "fr"
+tags: [skills, plugins, claude-code, flux-de-travail, automatisation]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [workflow-automation]
+seoTitle: "Comment créer un skill Claude Code — Guide complet"
+seoDescription: "Guide étape par étape pour écrire des skills Claude Code : format du frontmatter, types de skills, invocation via l'outil Skill, et partage de skills dans votre équipe."
+schema: HowTo
+---
+
+# Comment créer un skill Claude Code
+
+Claude Code est livré avec un puissant mécanisme d'extension appelé les **skills** — des fichiers markdown qui indiquent à Claude comment gérer des tâches récurrentes spécifiques. Un skill peut être aussi simple qu'une liste de contrôle (« avant de fermer un PR, suivez ces 5 étapes ») ou aussi complexe qu'un plan d'orchestration en plusieurs phases.
+
+Ce guide couvre ce que sont les skills, comment les rédiger efficacement, comment les installer et comment les partager dans une équipe.
+
+---
+
+## Ce que sont les skills
+
+Les skills sont des fichiers markdown (`.md`) stockés dans un répertoire que Claude Code surveille — typiquement `~/.claude/plugins/` pour les skills personnels ou `.claude/plugins/` dans un projet pour les skills d'équipe. Quand vous invoquez un skill par son nom, Claude lit le fichier et suit ses instructions comme guide principal pour la tâche en cours.
+
+Les skills ne sont pas du code. Ce sont des **instructions en langage naturel structuré** qui tirent parti du raisonnement de Claude pour s'exécuter de façon fiable. De la même façon qu'un fichier CLAUDE.md donne à Claude un contexte persistant sur votre projet, un fichier skill donne à Claude une procédure réutilisable pour un type de travail spécifique.
+
+Propriétés clés :
+- **Persistants** — stockés sur disque, disponibles dans chaque session
+- **Composables** — les skills peuvent référencer d'autres skills
+- **Versionnables** — ce sont du texte brut ; suivez-les dans git comme n'importe quel code
+- **Coût nul au repos** — aucun token consommé tant que vous n'invoquez pas le skill
+
+---
+
+## Structure d'un fichier skill
+
+Un fichier skill minimal comporte deux parties : un bloc frontmatter YAML et un corps markdown.
+
+```markdown
+---
+name: code-review
+description: "Liste de contrôle systématique de révision de code pour les PR"
+version: "1.0"
+tags: [révision, qualité, git]
+---
+
+# Skill de révision de code
+
+Vous effectuez une révision de code approfondie. Suivez ces étapes dans l'ordre.
+
+## Liste de contrôle
+
+- [ ] Lire la description du PR et le ticket lié avant de toucher au code
+- [ ] Vérifier la couverture de tests — les nouveaux chemins de code doivent avoir des tests
+- [ ] Vérifier qu'aucun secret ou identifiant n'est codé en dur
+- [ ] Confirmer que la gestion des erreurs est explicite (pas de blocs `catch` nus)
+- [ ] Vérifier que la modification est ciblée — pas de refactorisations sans lien mélangées
+- [ ] Rechercher des régressions de performance dans les chemins critiques
+- [ ] Vérifier que la journalisation est appropriée (ni trop bruyante, ni silencieuse sur les erreurs)
+- [ ] Laisser des commentaires en ligne avec des références de fichier et de ligne spécifiques
+
+## Format de sortie
+
+Produire une révision structurée avec trois sections :
+1. **Résumé** — un paragraphe sur ce que fait la modification
+2. **Problèmes** — liste à puces des problèmes, chacun avec une sévérité (Critique / Majeur / Mineur)
+3. **Recommandation d'approbation** — Approuver / Demander des modifications / À discuter
+```
+
+### Champs du frontmatter
+
+| Champ | Requis | Utilité |
+|-------|--------|---------|
+| `name` | Oui | Identifiant unique utilisé pour invoquer le skill |
+| `description` | Oui | Affiché dans les listes de skills ; aide Claude à choisir le bon skill |
+| `version` | Non | Version sémantique pour le suivi des changements |
+| `tags` | Non | Regroupement pour la découverte |
+| `requires` | Non | Noms d'autres skills dont ce skill dépend |
+
+---
+
+## Types de skills : rigide vs flexible
+
+Les skills se situent sur un spectre entre **rigide** (procédures strictes étape par étape) et **flexible** (principes directeurs avec des jugements laissés à Claude).
+
+### Skills rigides
+
+Idéaux pour : les flux de travail sensibles à la conformité, les listes de contrôle de mise en production, les audits de sécurité.
+
+Un skill rigide détaille chaque étape et utilise un langage impératif :
+
+```markdown
+## Étapes
+
+1. Exécutez `npm test` — si des tests échouent, ARRÊTEZ et rapportez l'échec. Ne continuez pas.
+2. Exécutez `npm run lint` — corrigez toutes les erreurs avant de continuer.
+3. Exécutez `git diff --staged` — confirmez que seuls les fichiers prévus sont indexés.
+4. Créez le commit en utilisant le format de commit conventionnel : `type(portée): message`.
+5. Exécutez `git push origin HEAD` uniquement après que toutes les étapes précédentes passent.
+```
+
+### Skills flexibles
+
+Idéaux pour : les tâches créatives ouvertes, la recherche, les décisions architecturales.
+
+Un skill flexible établit le contexte et les objectifs, puis fait confiance au jugement de Claude :
+
+```markdown
+## Votre objectif
+
+Aidez l'utilisateur à concevoir un modèle de données pour la fonctionnalité décrite. Priorisez :
+- La normalisation là où elle réduit la duplication
+- Les schémas de requêtes pratiques plutôt que la pureté théorique
+- Des noms clairs qui correspondent au langage du domaine
+
+Posez des questions de clarification si les exigences sont ambiguës. Proposez deux
+ou trois alternatives avec leurs compromis avant d'en recommander une.
+```
+
+---
+
+## Rédiger un skill efficace
+
+### À faire
+
+- **Commencez par un objectif en une phrase** — Claude lit la première ligne en premier et l'utilise pour décider si ce skill s'applique.
+- **Utilisez un ordre explicite** — listes numérotées pour les étapes séquentielles, puces pour les vérifications non ordonnées.
+- **Définissez le format de sortie** — dites à Claude exactement à quoi doit ressembler la réponse finale.
+- **Incluez des conditions d'arrêt** — « si X échoue, arrêtez et rapportez ; ne continuez pas ».
+- **Référencez les outils explicitement** — « utilisez l'outil Bash pour exécuter les tests, pas l'outil Write ».
+
+### À éviter
+
+- Ne pas rembourrer avec des conseils génériques que Claude connaît déjà (« écrire du code propre », « être minutieux »).
+- Ne pas rendre un skill trop large. Un skill qui essaie de couvrir « toutes les tâches de développement » sera invoqué de façon incohérente.
+- Ne pas omettre la gestion des erreurs. Les skills qui décrivent uniquement le chemin heureux laissent Claude improviser quand les choses tournent mal.
+- Ne pas utiliser la voix passive pour les étapes critiques. « Les tests devraient être exécutés » est plus faible que « Exécutez `npm test` avant de continuer ».
+
+---
+
+## Installer un skill
+
+### Personnel (développeur unique)
+
+1. Créez le répertoire : `mkdir -p ~/.claude/plugins/`
+2. Déposez-y votre fichier skill : `cp code-review.md ~/.claude/plugins/`
+3. Dans `~/.claude/settings.json`, assurez-vous que le chemin du plugin est enregistré :
+
+```json
+{
+  "pluginDirectories": ["~/.claude/plugins"]
+}
+```
+
+Claude Code récupère automatiquement tous les fichiers `.md` dans les répertoires de plugins configurés au démarrage.
+
+### Au niveau du projet (équipe)
+
+Ajoutez les skills au dépôt du projet :
+
+```
+votre-repo/
+  .claude/
+    plugins/
+      code-review.md
+      deploy-checklist.md
+      db-migration.md
+```
+
+Ajoutez le chemin `.claude/plugins/` au `settings.json` de votre projet :
+
+```json
+{
+  "pluginDirectories": [".claude/plugins"]
+}
+```
+
+Intégrez `.claude/plugins/` dans le contrôle de version. Chaque développeur qui clone le dépôt obtient automatiquement les mêmes skills.
+
+---
+
+## Invoquer un skill
+
+Depuis une session Claude Code, utilisez l'outil `Skill` :
+
+> « Exécute le skill code-review sur le PR courant »
+
+Ou référencez-le par son nom dans n'importe quel prompt :
+
+> « /code-review »
+
+Claude localisera le skill par son champ frontmatter `name`, chargera le fichier et l'exécutera comme ensemble d'instructions principal pour la tâche.
+
+Vous pouvez aussi chaîner des skills :
+
+> « Exécute /db-migration puis /code-review sur le résultat »
+
+---
+
+## Exemple : Un skill « code-review » complet
+
+```markdown
+---
+name: code-review
+description: "Effectue une révision de code PR structurée avec des problèmes classés par sévérité"
+version: "1.2"
+tags: [git, révision, qualité]
+---
+
+# Révision de code
+
+Vous effectuez une révision de code professionnelle. Soyez précis et constructif.
+
+## Pré-vérification
+
+- [ ] Récupérer le dernier diff : exécutez `git diff main...HEAD`
+- [ ] Lire le titre et la description du PR depuis `gh pr view`
+- [ ] Vérifier s'il y a un ticket lié : `gh issue view <numéro>`
+
+## Analyse de sécurité
+
+- [ ] Rechercher les secrets codés en dur : `grep -rn "password\|secret\|api_key\|token" --include="*.ts" .`
+- [ ] Vérifier qu'aucun fichier `.env` n'est indexé
+- [ ] Vérifier les risques d'injection SQL dans les chaînes de requête brutes
+
+## Révision de la logique
+
+Pour chaque fichier modifié :
+- La modification fait-elle ce que dit la description du PR ?
+- Les cas limites sont-ils gérés (null, tableau vide, échec réseau) ?
+- La gestion des erreurs est-elle explicite ?
+
+## Couverture de tests
+
+- [ ] Exécutez `npm test -- --coverage` et rapportez le delta de couverture
+- [ ] Chaque nouvelle fonction exportée doit avoir au moins un test
+- [ ] Les nouveaux points de terminaison API doivent avoir des tests d'intégration
+
+## Sortie
+
+Produire une révision dans ce format exact :
+
+**Résumé**
+[Un paragraphe]
+
+**Problèmes**
+- [CRITIQUE] ...
+- [MAJEUR] ...
+- [MINEUR] ...
+
+**Décision** : Approuver | Demander des modifications | À discuter
+```
+
+---
+
+## Partager des skills dans une équipe
+
+Le modèle de partage d'équipe le plus simple est un dépôt GitHub privé de fichiers skills, installé comme sous-module git dans le `.claude/plugins/` de chaque projet :
+
+```bash
+git submodule add git@github.com:votreorg/claude-skills.git .claude/plugins
+```
+
+Quand les skills sont mis à jour dans le dépôt central, les développeurs exécutent `git submodule update --remote` pour récupérer la dernière version.
+
+Pour les organisations plus importantes, un service de registre de skills (un simple point de terminaison HTTP retournant une liste JSON de fichiers skills) peut être intégré dans l'automatisation d'intégration des développeurs — les nouvelles machines téléchargent et installent automatiquement le pack de skills standard.
+
+---
+
+## Prochaines étapes
+
+Les skills sont l'une des personnalisations à plus fort retour sur investissement que vous puissiez apporter à Claude Code. Les équipes qui investissent une heure à rédiger deux ou trois skills solides pour leurs flux de travail les plus répétés — révision de code, migrations de base de données, listes de contrôle de déploiement — récupèrent ce temps en quelques jours.
+
+Parcourez la [galerie de skills ClawHelp](https://clawhlp.com/resources) pour des skills contribués par la communauté, ou [travaillez avec nous](https://clawhlp.com/services) pour créer une bibliothèque de skills personnalisée pour votre équipe d'ingénierie.

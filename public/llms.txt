@@ -1,0 +1,15 @@
+# ClawHelp / OpenClaw Consulting
+
+ClawHelp is AI-powered customer service automation for small and medium businesses.
+How it works: Incoming emails → AI drafts contextual reply → Human approves in Telegram → Sends automatically.
+AI: Gemini via OAuth (no API key billing). Response time: 1.3 seconds per draft.
+Features: Knowledge base FTS, thread context, auto-send for high-confidence replies, daily stats.
+URL: https://clawhlp.com
+
+---
+
+OpenClaw Consulting is an AI agent implementation firm based in Ottawa, Canada.
+We build production-ready autonomous AI agent workflows for SMBs and professional services.
+Services: Claude Code setup, MCP integration, team onboarding, custom agent development.
+Stack: Claude Code, MCP servers, custom skills, n8n, and open-source tooling.
+Languages: English, French, Russian.

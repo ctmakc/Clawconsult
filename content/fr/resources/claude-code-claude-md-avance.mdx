@@ -1,0 +1,458 @@
+---
+slug: claude-code-claude-md-avance
+title: "CLAUDE.md avancé : mémoire de projet et conventions d'équipe"
+description: "Utiliser CLAUDE.md comme mémoire persistante pour Claude Code — fichiers hiérarchiques global vs projet, quoi y mettre (et quoi éviter selon LPRPDE/Loi 25), gabarits par type de projet, et partage avec git."
+category: guide
+schema: Article
+tags: [CLAUDE.md, mémoire-projet, conventions, équipe, configuration]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 10
+lang: "fr"
+seoTitle: "CLAUDE.md avancé : mémoire de projet et conventions d'équipe | ClawHelp"
+seoDescription: "Maîtrisez CLAUDE.md pour Claude Code. Fichiers hiérarchiques global vs projet, contenu recommandé et interdit (LPRPDE/Loi 25), gabarits React/TypeScript, Python/FastAPI, Node.js, et partage en équipe via git."
+---
+
+# CLAUDE.md avancé : mémoire de projet et conventions d'équipe
+
+Claude Code oublie tout entre les sessions. C'est par conception — chaque conversation repart d'une ardoise vierge. Mais votre projet, lui, a une mémoire : ses conventions de code, son stack technologique, ses règles de déploiement, ses préférences d'équipe. CLAUDE.md est le pont entre ces deux réalités.
+
+Ce guide va au-delà du CLAUDE.md basique. On couvre l'hiérarchie des fichiers, ce qu'on y met (et ce qu'on n'y met surtout pas), des gabarits concrets par type de projet, et comment intégrer ça dans un workflow d'équipe.
+
+---
+
+## CLAUDE.md comme mémoire persistante
+
+Chaque fois que Claude Code démarre dans un répertoire, il lit automatiquement le fichier `CLAUDE.md` à la racine du projet. Ce fichier est chargé dans le contexte de la session avant même que vous ayez tapé la première instruction. C'est votre moyen de pré-charger Claude avec tout ce qu'il doit savoir sur votre projet.
+
+La différence entre travailler avec et sans CLAUDE.md est significative :
+
+**Sans CLAUDE.md :** Claude Code fait des suppositions raisonnables mais génériques. Il choisit un style de code standard, ignore vos conventions de nommage, ne sait pas que vous utilisez `pnpm` et non `npm`, ne connaît pas les chemins importants dans votre monorepo.
+
+**Avec CLAUDE.md bien rédigé :** Claude Code commence chaque session comme un collaborateur expérimenté qui connaît votre projet. Il utilise le bon gestionnaire de paquets, suit vos conventions de commits, sait quels répertoires ne pas toucher, et comprend l'architecture globale.
+
+Pensez à CLAUDE.md comme à un fichier d'intégration pour un nouveau développeur — sauf que vous le réécrivez une fois et il s'applique à toutes vos sessions pour toujours.
+
+---
+
+## Hiérarchie des fichiers CLAUDE.md
+
+Claude Code supporte plusieurs niveaux de fichiers CLAUDE.md qui sont tous chargés et fusionnés :
+
+### 1. Niveau global : `~/.claude/CLAUDE.md`
+
+Ce fichier s'applique à **toutes vos sessions**, quel que soit le projet. C'est l'endroit pour vos préférences personnelles qui traversent tous vos projets.
+
+Exemples de ce qui va ici :
+- Votre langue de communication préférée
+- Vos outils favoris (éditeur, gestionnaire de paquets par défaut)
+- Des règles de comportement générales (« demande toujours avant de faire un commit »)
+- Votre style de réponse préféré (concis vs détaillé)
+
+```markdown
+# Préférences globales Claude Code
+
+## Communication
+- Réponds toujours en français québécois
+- Sois direct et concis — pas de longues introductions
+
+## Comportement par défaut
+- Utilise pnpm pour les projets Node.js sauf indication contraire
+- Toujours montrer `git diff --staged` avant de committer
+- Ne force-push jamais sur main ou develop
+
+## Style de code général
+- Préfère les fonctions nommées aux fonctions fléchées pour les fonctions de haut niveau
+- Commentaires en français pour la logique complexe
+```
+
+### 2. Niveau projet : `CLAUDE.md` à la racine
+
+C'est le fichier principal, spécifique à un projet. Il est commité dans git et partagé avec toute l'équipe. Il devrait couvrir tout ce qu'un nouveau développeur devrait savoir pour contribuer au projet.
+
+### 3. Niveau sous-répertoire : `CLAUDE.md` dans les sous-dossiers
+
+Vous pouvez avoir des `CLAUDE.md` dans des sous-répertoires spécifiques. Ces fichiers sont chargés en **plus** du fichier racine quand Claude Code travaille dans ce répertoire.
+
+```
+monapp/
+├── CLAUDE.md               ← instructions générales du projet
+├── frontend/
+│   └── CLAUDE.md           ← conventions spécifiques au front (React, Tailwind)
+├── backend/
+│   └── CLAUDE.md           ← conventions spécifiques au back (FastAPI, SQLAlchemy)
+└── scripts/
+    └── CLAUDE.md           ← comment utiliser les scripts de déploiement
+```
+
+Cette hiérarchie est particulièrement utile dans les monorepos où différentes parties du code suivent des conventions différentes.
+
+### 4. Imports entre fichiers CLAUDE.md
+
+Claude Code supporte l'import d'un fichier dans un autre avec la syntaxe `@chemin/vers/fichier` :
+
+```markdown
+# CLAUDE.md principal
+
+@docs/architecture.md
+@docs/conventions-api.md
+
+## Stack du projet
+...
+```
+
+Ça vous permet de garder le CLAUDE.md principal court en déléguant les détails à des fichiers de documentation déjà existants.
+
+---
+
+## Quoi mettre dans CLAUDE.md
+
+### Stack technologique et versions
+
+```markdown
+## Stack
+
+- **Runtime :** Node.js 22 (`.nvmrc` à la racine)
+- **Framework :** Next.js 15 avec App Router
+- **Base de données :** PostgreSQL 16 via Prisma ORM
+- **Styles :** Tailwind CSS 3.4
+- **Tests :** Vitest + React Testing Library
+- **Gestionnaire de paquets :** pnpm 9 — ne jamais utiliser npm ou yarn
+```
+
+### Architecture et répertoires importants
+
+```markdown
+## Architecture
+
+```
+src/
+├── app/          ← Routes Next.js (App Router)
+├── components/   ← Composants React réutilisables
+├── lib/          ← Utilitaires et logique partagée
+├── server/       ← Actions serveur et API routes
+└── types/        ← Types TypeScript partagés
+```
+
+**Ne pas toucher :** `src/generated/` — code auto-généré par Prisma, jamais modifier manuellement.
+```
+
+### Conventions de code
+
+```markdown
+## Conventions de code
+
+### TypeScript
+- Toujours utiliser `type` plutôt que `interface` pour les nouveaux types
+- Pas de `any` — utiliser `unknown` et valider
+- Importer les types avec `import type { ... }` 
+
+### Nommage
+- Composants React : PascalCase (`UserCard.tsx`)
+- Hooks : camelCase avec préfixe `use` (`useUserData.ts`)
+- Utilitaires : camelCase (`formatDate.ts`)
+- Variables d'environnement : SCREAMING_SNAKE_CASE
+
+### Composants
+- Un composant par fichier
+- Props définies avec `type` avant le composant
+- Exporter le composant en default export
+```
+
+### Commandes importantes
+
+```markdown
+## Commandes
+
+```bash
+pnpm dev          # Démarrer le serveur de développement (port 3000)
+pnpm build        # Build de production
+pnpm test         # Lancer les tests
+pnpm test:watch   # Tests en mode watch
+pnpm db:push      # Pousser les changements de schéma Prisma
+pnpm db:studio    # Ouvrir Prisma Studio
+pnpm lint         # ESLint + Prettier check
+pnpm lint:fix     # Corriger automatiquement
+```
+
+**Ne jamais lancer en prod :** `pnpm db:reset` — efface toutes les données.
+```
+
+### Workflow Git et conventions de commits
+
+```markdown
+## Git
+
+### Messages de commit
+- Format : `type(scope): description en français`
+- Types : `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
+- Exemple : `feat(auth): ajouter connexion avec Google OAuth`
+
+### Branches
+- `feature/description-courte` pour les nouvelles fonctionnalités
+- `fix/description-courte` pour les corrections
+- Toujours brancher depuis `main`
+
+### Règles
+- Toujours montrer `git diff --staged` avant de committer
+- Ne jamais modifier les migrations Prisma existantes
+- Tous les PRs nécessitent au moins une approbation
+```
+
+### Contexte métier
+
+```markdown
+## Contexte du projet
+
+MonApp est une plateforme de gestion de projets pour les agences créatives québécoises. 
+Les utilisateurs principaux sont des directeurs de création et des chargés de projet.
+
+**Terminologie importante :**
+- "Mandat" = un projet client (pas "projet" pour éviter la confusion avec nos projets internes)
+- "Livrable" = un artefact à remettre au client
+- "Équipier" = un membre de l'équipe de l'agence (pas "employé")
+```
+
+---
+
+## Quoi NE PAS mettre dans CLAUDE.md
+
+### Secrets et credentials — jamais
+
+Ne mettez jamais dans CLAUDE.md :
+- Clés API, tokens d'accès, mots de passe
+- URLs de bases de données avec credentials
+- Clés privées ou certificats
+- Jetons JWT ou secrets de session
+
+CLAUDE.md est un fichier texte dans votre dépôt. Tout ce qui s'y trouve peut être vu par quiconque a accès au dépôt, présent et futur.
+
+### Données personnelles — obligations légales au Canada
+
+Au Québec et au Canada, deux lois encadrent la protection des données personnelles :
+
+- **LPRPDE** (Loi sur la protection des renseignements personnels et les documents électroniques) — loi fédérale
+- **Loi 25** (Loi modernisant des dispositions législatives en matière de protection des renseignements personnels) — loi québécoise, en vigueur depuis septembre 2023
+
+Ces lois s'appliquent aux renseignements personnels : noms, adresses courriels, numéros de téléphone, données de santé, données financières, identifiants uniques.
+
+**Ne mettez jamais dans CLAUDE.md :**
+- Des noms ou courriels de clients réels (même comme exemples)
+- Des données de test qui ressemblent à de vraies données personnelles
+- Des identifiants d'utilisateurs réels
+- Des exemples de réponses d'API qui contiennent des données personnelles
+
+Utilisez des données fictives évidentes pour les exemples : `jean.tremblay@exemple.com`, numéros de carte de crédit de test standards, etc.
+
+### Informations périmées
+
+CLAUDE.md doit être maintenu à jour. Un fichier avec des informations incorrectes est pire que pas de fichier — Claude Code va suivre des instructions obsolètes avec confiance. Révisez CLAUDE.md à chaque changement majeur de stack ou d'architecture.
+
+### Tout ce qui est dans d'autres fichiers de configuration
+
+Évitez de dupliquer dans CLAUDE.md des informations déjà dans :
+- `package.json` (dépendances, scripts)
+- `.eslintrc` (règles de linting)
+- `tsconfig.json` (configuration TypeScript)
+
+Référencez ces fichiers plutôt que de répéter leur contenu. Claude Code peut lire ces fichiers directement.
+
+---
+
+## Gabarits CLAUDE.md par type de projet
+
+### Gabarit React / TypeScript
+
+```markdown
+# CLAUDE.md — [Nom du projet]
+
+## Stack
+- React 19 + TypeScript 5.5
+- Vite 6 pour le build
+- Tailwind CSS + shadcn/ui
+- TanStack Query pour la gestion d'état serveur
+- pnpm — gestionnaire de paquets unique
+
+## Structure
+```
+src/
+├── components/ui/    ← Composants shadcn (ne pas modifier)
+├── components/app/   ← Composants applicatifs
+├── hooks/            ← Hooks React personnalisés
+├── lib/              ← Utilitaires
+└── pages/            ← Pages (React Router)
+```
+
+## Conventions
+- Composants : PascalCase, un par fichier
+- Hooks : préfixe `use`, camelCase
+- Types : `type` plutôt qu'`interface`
+- Pas de `any`
+- Imports absolus depuis `src/` (configuré dans tsconfig)
+
+## Commandes
+- `pnpm dev` — serveur de développement (port 5173)
+- `pnpm build` — build de production
+- `pnpm test` — Vitest
+- `pnpm lint` — ESLint + Prettier
+
+## Git
+- Commits : `type(composant): description`
+- Toujours `git diff --staged` avant commit
+```
+
+### Gabarit Python / FastAPI
+
+```markdown
+# CLAUDE.md — [Nom de l'API]
+
+## Stack
+- Python 3.12
+- FastAPI 0.115
+- SQLAlchemy 2.0 + Alembic (migrations)
+- PostgreSQL 16
+- uv pour la gestion des paquets (pas pip, pas poetry)
+- pytest pour les tests
+
+## Structure
+```
+app/
+├── api/routes/      ← Routes FastAPI
+├── core/            ← Configuration, sécurité
+├── models/          ← Modèles SQLAlchemy
+├── schemas/         ← Schémas Pydantic
+└── services/        ← Logique métier
+alembic/             ← Migrations de base de données
+tests/               ← Tests pytest
+```
+
+## Conventions
+- Nommage : snake_case partout
+- Routes : noms en anglais, pluriels pour les collections (`/users`, `/orders`)
+- Réponses : toujours via des schémas Pydantic
+- Erreurs : utiliser les exceptions HTTP de FastAPI
+- Jamais de logique dans les routes — déléguer aux services
+
+## Base de données
+- `uv run alembic upgrade head` — appliquer les migrations
+- `uv run alembic revision --autogenerate -m "description"` — créer une migration
+- Ne jamais modifier les fichiers de migration existants
+
+## Tests
+- `uv run pytest` — tous les tests
+- `uv run pytest -v tests/api/` — tests API seulement
+- Couvrir les cas d'erreur, pas seulement le chemin heureux
+- BD de test : SQLite en mémoire (définie dans conftest.py)
+
+## Commandes de démarrage
+- `uv run uvicorn app.main:app --reload` — développement (port 8000)
+- `cp .env.example .env` — configuration initiale
+```
+
+### Gabarit Node.js / Express
+
+```markdown
+# CLAUDE.md — [Nom du service]
+
+## Stack
+- Node.js 22 (LTS)
+- Express 5
+- TypeScript 5.5
+- Prisma 6 (ORM + migrations)
+- PostgreSQL 16
+- pnpm
+
+## Structure
+```
+src/
+├── routes/          ← Définition des routes Express
+├── controllers/     ← Handlers de requêtes
+├── services/        ← Logique métier
+├── middleware/      ← Middleware Express
+├── lib/             ← Utilitaires (DB, logger, etc.)
+└── types/           ← Types TypeScript
+```
+
+## Conventions API
+- REST : ressources au pluriel, verbes HTTP standard
+- Format de réponse uniforme : `{ data, meta, error }`
+- Validation des entrées : Zod sur toutes les routes
+- Erreurs : middleware centralisé `errorHandler`
+- Logging : `logger.info()` / `logger.error()` (pas `console.log`)
+
+## Authentification
+- JWT en Authorization header (`Bearer <token>`)
+- Middleware `authenticate` pour les routes protégées
+- Middleware `authorize(role)` pour les routes avec rôles
+
+## Commandes
+- `pnpm dev` — ts-node-dev, rechargement auto (port 4000)
+- `pnpm build` — compile vers dist/
+- `pnpm test` — Jest
+- `pnpm db:migrate` — Prisma migrate deploy
+- `pnpm db:seed` — données de test
+
+## Variables d'environnement
+- Copiez `.env.example` vers `.env`
+- Ne jamais committer `.env`
+- Toutes les variables documentées dans `.env.example`
+```
+
+---
+
+## Partager CLAUDE.md avec git
+
+CLAUDE.md de niveau projet **devrait être commité dans git**. C'est une ressource d'équipe, pas un fichier de configuration personnel.
+
+**Quoi committer :**
+- `CLAUDE.md` à la racine (et dans les sous-répertoires)
+- `.claude/settings.json` (permissions d'outils partagées)
+
+**Quoi exclure dans .gitignore :**
+- `.claude/settings.local.json` (overrides personnels)
+- `.claude/projects/` (mémoire de session personnelle)
+
+```gitignore
+# Claude Code — fichiers personnels uniquement
+.claude/settings.local.json
+.claude/projects/
+```
+
+### Workflow d'équipe recommandé
+
+Traitez CLAUDE.md comme n'importe quel autre fichier de documentation technique. Mettez-le à jour dans le même PR que les changements architecturaux majeurs. Révisez-le en onboarding de nouveaux développeurs.
+
+Un CLAUDE.md bien maintenu signifie que chaque membre de l'équipe — humain ou IA — commence avec le même contexte.
+
+---
+
+## CLAUDE.md comme outil d'intégration d'équipe
+
+Un avantage sous-estimé : CLAUDE.md force l'équipe à **écrire explicitement ses conventions**. Beaucoup d'équipes ont des conventions implicites que tout le monde connaît mais que personne n'a jamais documentées. Écrire CLAUDE.md force cette documentation.
+
+Quelques patterns qui fonctionnent bien en équipe :
+
+**Révision du CLAUDE.md en PR :** Quand quelqu'un modifie CLAUDE.md, ça mérite une révision attentive — ces changements affectent le comportement de Claude Code pour tout le monde.
+
+**Section « Décisions architecturales » :** Documentez non seulement les décisions mais pourquoi elles ont été prises. Ça prévient des débats répétitifs.
+
+```markdown
+## Décisions architecturales
+
+### Pourquoi TanStack Query et non Redux?
+Les données de cette app sont principalement serveur-side. TanStack Query gère 
+le cache, les états de chargement, et la revalidation sans le boilerplate de Redux. 
+Decision prise en mars 2025, révisée si on ajoute un état client complexe.
+
+### Pourquoi PostgreSQL et non MongoDB?
+Nos données sont fortement relationnelles. Décision prise au démarrage, 
+ne pas remettre en question sans discussion d'équipe.
+```
+
+---
+
+## Pour aller plus loin avec ClawHelp
+
+Un CLAUDE.md bien conçu est l'investissement le plus rentable que vous puissiez faire pour votre productivité avec Claude Code. Mais passer du CLAUDE.md basique à un système hiérarchique complet avec des gabarits d'équipe prend du temps et de l'expérience.
+
+ClawHelp offre des services de consultation pour aider les équipes à structurer leur configuration Claude Code — CLAUDE.md, hiérarchie de fichiers, conventions d'équipe, et intégration avec vos workflows existants. Contactez-nous pour en savoir plus.

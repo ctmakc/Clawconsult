@@ -1,0 +1,381 @@
+---
+slug: claude-code-permissions-model
+title: "Claude Code Permissions Model: Tool Approval, Modes, and Safe Automation"
+description: "A complete guide to Claude Code's permission system — the three operating modes, tool categories, --allowedTools and --disallowedTools flags, per-session vs persistent permissions, hooks as a permission layer, and security best practices for teams."
+category: guide
+schema: Article
+tags: [permissions, security, tools, automation, ci-cd, hooks, safety, settings]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 11
+seoTitle: "Claude Code Permissions Model: Tool Approval Modes & Safe Automation | ClawHelp"
+seoDescription: "Master Claude Code's permission system — default, auto-approve, and bypass modes; tool categories and allowlists; CLAUDE.md persistent permissions; hooks as a safety layer; GitHub Actions security; and team best practices."
+---
+
+# Claude Code Permissions Model: Tool Approval, Modes, and Safe Automation
+
+Claude Code is a tool that takes real actions: writing files, executing shell commands, making git commits, running package managers. This power is exactly what makes it useful — but it also means the permission model matters. Understanding how Claude Code decides what it can do without asking, what it asks before doing, and how to configure these defaults is essential for both productive interactive sessions and safe automated workflows.
+
+This guide covers the full permission system: the three operating modes, what each tool category requires, how to configure persistent permissions, and the security practices that keep automated Claude Code usage safe in team environments.
+
+---
+
+## The Three Operating Modes
+
+Claude Code's behavior toward tool approval falls into three modes. The mode in effect determines whether Claude asks before taking actions, proceeds automatically, or skips all checks entirely.
+
+### Default Mode: Ask for Risky Operations
+
+The default interactive mode. Claude Code proceeds with low-risk operations (file reads, semantic searches, listing directories) without asking. For higher-risk operations — writing files, executing shell commands, making git operations — it asks for confirmation before proceeding.
+
+This is what you experience in a normal `claude` session. You'll see approval prompts when Claude is about to:
+
+- Run a shell command
+- Write or overwrite a file
+- Make a git commit or push
+- Install packages
+- Make network requests outside the local project
+
+The distinction between "ask" and "don't ask" is based on Claude Code's built-in risk assessment of each tool category, which you can override via configuration (covered below).
+
+### Auto-Approve Mode: Automated Operations
+
+In automation contexts — CI/CD pipelines, scripts, batch processing — you can configure Claude Code to approve tool calls automatically without interactive prompts. This is what `--dangerously-skip-permissions` provides, or what you achieve by granting specific tool permissions in `.claude/settings.json`.
+
+Auto-approve is appropriate when:
+- You're running Claude Code in a non-interactive environment (no terminal for prompts)
+- The scope of what Claude can do is constrained by `--allowedTools`
+- The environment itself is sandboxed (ephemeral CI container, read-only filesystem mounts)
+
+Auto-approve is not appropriate when Claude has unconstrained access to a production environment or systems with external side effects.
+
+### Bypass Mode: --dangerously-skip-permissions
+
+The `--dangerously-skip-permissions` flag disables all permission checks entirely. Claude Code will execute any tool call without asking or logging.
+
+```bash
+claude --print --dangerously-skip-permissions "Apply all pending refactors"
+```
+
+**This flag exists for CI/CD environments that cannot handle interactive prompts.** It is not a convenience feature for interactive use — it's a way to tell Claude Code "I have constrained this environment in other ways; skip your checks."
+
+When you use `--dangerously-skip-permissions`, the safety burden shifts entirely to you:
+- Use `--allowedTools` to restrict the tool surface area
+- Run in an ephemeral container with no access to sensitive systems
+- Never use in an environment where Claude could reach production infrastructure
+
+---
+
+## Tool Categories and Default Approval Requirements
+
+Claude Code's tools fall into three risk categories that determine default approval behavior:
+
+### Always Allowed (No Approval Required)
+
+These tools are read-only or low-impact and proceed without prompting in default mode:
+
+| Tool | What it does |
+|------|-------------|
+| `Read` | Read file contents |
+| `Glob` | Find files matching patterns |
+| `Grep` | Search file contents with regex |
+| `LS` | List directory contents |
+| `TodoRead` | Read the session task list |
+
+These are safe because they observe but don't change anything. Claude Code can read your entire codebase without triggering a single permission prompt.
+
+### Requires Approval by Default
+
+These tools make changes and require confirmation in default interactive mode:
+
+| Tool | What it does | Why it's gated |
+|------|-------------|----------------|
+| `Write` | Create or overwrite files | Irreversible without git |
+| `Edit` | Edit existing file content | Modifies your code |
+| `MultiEdit` | Multiple edits in one operation | Same as Edit, larger scope |
+| `Bash` | Execute shell commands | Arbitrary system access |
+| `TodoWrite` | Update the session task list | Minor — often auto-approved |
+
+The `Bash` tool is the most sensitive: it can run anything the shell can run, including destructive commands, network operations, and process management.
+
+### Sensitive: Bash Sub-Operations
+
+Within the `Bash` tool, certain command patterns are treated with extra caution:
+
+- `git push` with `--force` or to protected branches
+- `npm publish` / `yarn publish`
+- `rm -rf` with broad paths
+- Package installations that modify global state
+- Commands that look like they're targeting production systems
+
+Claude Code uses pattern matching and contextual reasoning to flag these. You can add explicit rules for your environment via hooks (covered below) or `settings.json` deny patterns.
+
+---
+
+## --allowedTools and --disallowedTools: Restricting the Tool Surface
+
+The `--allowedTools` and `--disallowedTools` flags let you set a precise tool boundary for any Claude Code invocation — critical for automation where you want to be explicit about what Claude can and cannot do.
+
+### --allowedTools
+
+Specifies an exact whitelist. Only the listed tools are available; all others are blocked.
+
+```bash
+# Read-only analysis — no writes, no shell
+claude --print \
+  --allowedTools "Read,Glob,Grep,LS" \
+  "Identify all uses of the deprecated v1 API and list the files that need updating"
+
+# Read + write, no shell execution
+claude --print \
+  --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS" \
+  "Migrate all deprecated API calls to the v2 endpoints"
+
+# Include bash for build operations, but only read/write for code
+claude --print \
+  --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
+  "Refactor the authentication module and run the test suite"
+```
+
+The full list of tool names to use in `--allowedTools`:
+
+```
+Read, Write, Edit, MultiEdit, Bash, Glob, Grep, LS, TodoRead, TodoWrite
+```
+
+For MCP server tools, use the format `mcp__servername__toolname`.
+
+### --disallowedTools
+
+Blocks specific tools; everything else is allowed. Use this when you want to restrict one high-risk tool while giving Claude broad access to everything else:
+
+```bash
+# Allow everything except shell execution
+claude --print \
+  --disallowedTools "Bash" \
+  "Review and fix all TypeScript type errors across the codebase"
+
+# Allow everything except file writes (strict read-only)
+claude --print \
+  --disallowedTools "Write,Edit,MultiEdit,Bash" \
+  "Generate a security audit report for the codebase"
+```
+
+**Choosing between the two:**
+- Use `--allowedTools` when security matters and you want explicit opt-in (prefer this in CI/CD)
+- Use `--disallowedTools` when you want maximum flexibility minus one dangerous operation
+
+---
+
+## Per-Session vs Persistent Permissions
+
+`--allowedTools` and `--disallowedTools` apply to a single invocation. For persistent permissions that apply across all Claude Code sessions in a project, use `.claude/settings.json`.
+
+### Persistent Permissions in .claude/settings.json
+
+The `permissions` block in `.claude/settings.json` grants or denies specific tool calls at the project level. These apply automatically to every session in the project directory without needing flags:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm build *)",
+      "Bash(npx tsc --noEmit)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(rm -rf *)",
+      "Bash(npm publish *)",
+      "Bash(git push * main)",
+      "Bash(git push * master)"
+    ]
+  }
+}
+```
+
+The permission strings use glob patterns. `Bash(git diff *)` matches any Bash call where the command starts with `git diff`. This is how you pre-approve specific safe commands (running tests, building, checking status) while pre-blocking dangerous ones (force-push, destructive removes).
+
+**Personal permission overrides** in `.claude/settings.local.json` (not committed to git):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew *)",
+      "Bash(gh *)"
+    ]
+  }
+}
+```
+
+This lets you grant yourself additional permissions (machine-specific tools, personal workflows) without affecting your teammates' permission set.
+
+---
+
+## GitHub Actions and CI Security
+
+Running Claude Code in GitHub Actions requires specific setup to handle permissions safely in an automated context.
+
+### Using GITHUB_TOKEN for Repository Operations
+
+```yaml
+# .github/workflows/claude-automation.yml
+jobs:
+  claude-task:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # Needed if Claude writes files and pushes
+      pull-requests: write   # Needed if Claude comments on PRs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Claude Code task
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          claude --print \
+            --dangerously-skip-permissions \
+            --allowedTools "Read,Glob,Grep" \
+            "Analyze the changed files for security issues and output a structured report"
+```
+
+**Security principles for CI:**
+
+1. **Use the minimum `permissions` scope.** If Claude is only reading files, set `contents: read` — not `write`. GitHub Actions permissions are per-job and per-step; be explicit.
+
+2. **Always pair `--dangerously-skip-permissions` with `--allowedTools`.** Never use the bypass flag without a tool allowlist.
+
+3. **Pin the Claude Code version.** Use `@1.x.x` pinned versions in production CI to prevent unexpected behavior changes: `npm install -g @anthropic-ai/claude-code@1.0.0`
+
+4. **Store `ANTHROPIC_API_KEY` as a repository secret**, never hardcoded or in workflow files.
+
+5. **Use ephemeral runners.** The `runs-on: ubuntu-latest` runner is fresh for every job — no persistent state for Claude Code to accidentally affect.
+
+### Read-Only CI Pattern (Safest)
+
+For code review, auditing, and analysis pipelines where Claude should never write anything:
+
+```yaml
+- name: Claude Code Security Audit
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  run: |
+    git diff origin/${{ github.base_ref }}...HEAD > /tmp/changes.diff
+    REPORT=$(cat /tmp/changes.diff | claude --print \
+      --allowedTools "Read,Glob,Grep" \
+      "Review these changes for security vulnerabilities. Output as markdown.")
+    echo "$REPORT" > security-report.md
+```
+
+`--allowedTools "Read,Glob,Grep"` is the strictest safe configuration: Claude can read the codebase but cannot write files, run commands, or make any changes.
+
+---
+
+## Hooks as a Permission Layer
+
+Claude Code's hooks system gives you programmatic control over tool calls — complementing the settings-based permission system with logic that can inspect the actual content of tool calls before allowing them.
+
+For a complete guide to hooks, see the [Claude Code Hooks Guide](/en/resources/claude-code-hooks-guide). Here's how hooks relate specifically to permissions:
+
+### Pre-Tool-Call Hooks as Dynamic Guardrails
+
+While `settings.json` permissions use glob matching on command strings, pre-tool-call hooks let you write arbitrary logic:
+
+```bash
+#!/bin/bash
+# .claude/hooks/git-branch-safety.sh
+# Block commits directly to main/master
+
+COMMAND=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('command', ''))")
+BRANCH=$(git branch --show-current 2>/dev/null)
+
+if [[ "$BRANCH" =~ ^(main|master|develop)$ ]] && echo "$COMMAND" | grep -q "git commit"; then
+  echo "BLOCKED: Direct commits to $BRANCH are not allowed. Create a feature branch."
+  exit 1
+fi
+
+exit 0
+```
+
+```json
+{
+  "hooks": {
+    "pre-tool-call": [
+      { "matcher": "Bash", "command": ".claude/hooks/git-branch-safety.sh" }
+    ]
+  }
+}
+```
+
+When this hook exits non-zero, Claude Code sees the error message and adjusts — it won't retry the blocked command silently.
+
+### Post-Tool-Call Hooks for Audit Logging
+
+For compliance or team transparency, post-tool-call hooks can log every action Claude takes:
+
+```bash
+#!/bin/bash
+# .claude/hooks/audit.sh
+LOG_FILE=".claude/audit.log"
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | $CLAUDE_TOOL_NAME | $(echo $CLAUDE_TOOL_INPUT | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("command", d.get("path", "")))')" >> "$LOG_FILE"
+exit 0
+```
+
+```json
+{
+  "hooks": {
+    "post-tool-call": [
+      { "matcher": "*", "command": ".claude/hooks/audit.sh" }
+    ]
+  }
+}
+```
+
+This creates a timestamped append-only log of every tool call across all Claude Code sessions in the project. Add `.claude/audit.log` to `.gitignore` but keep it locally for review.
+
+---
+
+## Reviewing What Tools Claude Used
+
+Beyond hooks-based logging, you can see what Claude did in any session through the conversation history. In interactive mode, tool calls are shown inline as Claude executes them — you see the exact command or file path before and after it runs.
+
+For automated sessions, capture stderr alongside stdout:
+
+```bash
+claude --print --allowedTools "Read,Write,Edit,Bash" \
+  "Refactor the auth module" \
+  2>&1 | tee session.log
+```
+
+Claude Code writes tool call information to stderr, so capturing both streams gives you a full record of what happened.
+
+---
+
+## Team Best Practices
+
+**Principle of least privilege.** Grant Claude Code the minimum tool access needed for the task. For code review: read-only. For refactoring: read + write + bash for tests. For full feature development: full access. Don't default to full access for every task.
+
+**Never use `--dangerously-skip-permissions` in interactive sessions.** The bypass flag is for CI environments where interactive prompts literally cannot work. In a normal terminal session, the default mode's permission prompts are there to give you a moment to review what Claude is about to do.
+
+**Commit `.claude/settings.json`, not `.claude/settings.local.json`.** The team-shared settings file belongs in version control so everyone gets consistent permission defaults. Personal overrides stay in the local settings file, gitignored.
+
+**Review your `settings.json` deny list quarterly.** As your project evolves, new dangerous patterns may emerge. The patterns you blocked six months ago may no longer be the highest-risk operations. Keep the deny list current.
+
+**Use hooks for things that must never happen.** Permission settings in `settings.json` are advisory — hooks with non-zero exit codes are enforced. For operations that must truly never happen (force-push to main, dropping production tables), a pre-tool-call hook is more reliable than a settings entry.
+
+**Audit logs before compliance requirements, not after.** Setting up a post-tool-call audit hook takes ten minutes. Doing it before you have a compliance requirement means you have history when you need it.
+
+---
+
+For setting up the automated CI/CD workflows that depend on these permission configurations, see the [Claude Code Autonomous Mode guide](/en/resources/claude-code-autonomous-mode). For enforcing conventions that go beyond permissions — code style, naming rules, forbidden patterns — see [Advanced CLAUDE.md Patterns](/en/resources/claude-md-advanced-patterns).
+
+ClawHelp helps teams design permission architectures for Claude Code that balance productivity with safety — from CI integration to production-safe autonomous agents. [Talk to us about your security requirements](/en/contact).

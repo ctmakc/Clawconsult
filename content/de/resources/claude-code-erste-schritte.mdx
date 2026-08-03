@@ -1,0 +1,253 @@
+---
+slug: claude-code-erste-schritte
+lang: "de"
+title: "Claude Code: Erste Schritte — Installation und erstes Projekt"
+description: "Schritt-für-Schritt-Anleitung zur Installation von Claude Code, API-Key-Einrichtung, CLAUDE.md-Grundlagen und dem ersten echten Projekt."
+category: guide
+schema: Article
+tags: [installation, erste-schritte, anfaenger, api-key, claude-md]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 8
+seoTitle: "Claude Code Erste Schritte: Installation und Einrichtung | ClawHelp"
+seoDescription: "Claude Code installieren und einrichten: npm-Installation, API-Key, --dangerously-skip-permissions erklärt, CLAUDE.md-Grundlagen und erste Aufgaben für Einsteiger."
+---
+
+# Claude Code: Erste Schritte — Installation und erstes Projekt
+
+Claude Code ist ein terminalbasierter KI-Agent von Anthropic. Anders als IDE-Plugins oder Autocomplete-Tools ist Claude Code dafür ausgelegt, vollständige Aufgaben autonom zu erledigen: Code lesen und schreiben, Tests ausführen, Git-Operationen durchführen, externe Tools aufrufen. Du beschreibst das gewünschte Ergebnis — Claude übernimmt die Schritte dazwischen.
+
+Diese Anleitung führt dich von der Installation bis zum ersten produktiven Einsatz.
+
+---
+
+## Voraussetzungen
+
+- **Node.js 18 oder neuer** — prüfe mit `node --version`
+- **npm** (wird mit Node.js mitgeliefert)
+- Ein **Anthropic-API-Key** (kostenloser Account auf [console.anthropic.com](https://console.anthropic.com))
+- Eine Unix-Shell — macOS Terminal, Linux, oder WSL2 unter Windows
+
+---
+
+## Installation
+
+### Schritt 1: Claude Code global installieren
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Prüfe die Installation:
+
+```bash
+claude --version
+```
+
+### Schritt 2: API-Key einrichten
+
+Claude Code benötigt deinen Anthropic-API-Key. Setze ihn als Umgebungsvariable — am besten dauerhaft in deiner Shell-Konfiguration:
+
+```bash
+# Für Bash (~/.bashrc oder ~/.bash_profile)
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Für Zsh (~/.zshrc)
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Nach dem Hinzufügen die Konfigurationsdatei neu laden:
+
+```bash
+source ~/.bashrc  # oder ~/.zshrc
+```
+
+**Alternative**: Du kannst den Key auch direkt beim Starten angeben:
+
+```bash
+ANTHROPIC_API_KEY="sk-ant-..." claude
+```
+
+**Wichtig**: Commit deinen API-Key niemals in ein Repository. Verwende immer Umgebungsvariablen oder einen Secrets-Manager.
+
+### Schritt 3: Ersten Start testen
+
+Wechsle in ein beliebiges Projektverzeichnis und starte Claude Code:
+
+```bash
+cd ~/mein-projekt
+claude
+```
+
+Claude Code analysiert das Verzeichnis und stellt sich zur Verfügung. Tippe eine einfache Frage:
+
+```
+Was sind die wichtigsten Dateien in diesem Projekt?
+```
+
+Claude Code liest die Verzeichnisstruktur, relevante Konfigurationsdateien und gibt eine Einschätzung.
+
+---
+
+## Der `--dangerously-skip-permissions`-Flag
+
+Beim ersten Start wirst du von Claude Code um Erlaubnis für verschiedene Aktionen gefragt — Dateien lesen, Shell-Befehle ausführen, Dateien schreiben. Das ist das Standard-Sicherheitsverhalten.
+
+Für vertrauenswürdige lokale Entwicklungsumgebungen, in denen du keine Bestätigungsdialoge möchtest, gibt es den Flag:
+
+```bash
+claude --dangerously-skip-permissions
+```
+
+**Wann ist das sinnvoll?**
+- Lokal auf deiner eigenen Maschine, in Projekten die dir gehören
+- In CI/CD-Pipelines, wo kein menschlicher Reviewer vorhanden ist
+- Wenn du Claude Code als Teil eines automatisierten Workflows betreibst
+
+**Wann solltest du ihn nicht verwenden?**
+- Auf gemeinsam genutzten Servern oder Produktionssystemen
+- Bei Projekten mit unbekanntem oder fremdem Code
+- Wenn du nicht sicher bist, was Claude Code in dem Verzeichnis tun könnte
+
+Der Name ist bewusst abschreckend gewählt — er signalisiert, dass du Verantwortung für das übernimmst, was Claude tut. Für normale lokale Entwicklung auf deinem eigenen Rechner ist er aber praktisch und sicher.
+
+---
+
+## CLAUDE.md — Grundlagen
+
+CLAUDE.md ist eine Markdown-Datei, die Claude Code bei jeder Sitzung liest. Sie enthält projektspezifische Informationen, die Claude benötigt, um gut zu arbeiten: Technologie-Stack, Konventionen, verbotene Muster, wichtige Befehle.
+
+Erstelle eine CLAUDE.md im Projektstamm:
+
+```bash
+touch CLAUDE.md
+```
+
+Minimales Beispiel für ein TypeScript-Projekt:
+
+```markdown
+# Mein Projekt
+
+## Stack
+Node 20, TypeScript, PostgreSQL, Prisma, Express
+
+## Befehle
+- Build: `npm run build`
+- Tests: `npm test`
+- Lint: `npm run lint`
+
+## Konventionen
+- Kein `any` in TypeScript
+- Alle Datenbankzugriffe über Prisma (kein rohes SQL)
+- Fehlerbehandlung mit Result-Typ, kein throwing in Businesslogik
+
+## Verboten
+- Niemals `.env`-Dateien committen
+- Niemals generierte Dateien in `/generated/` bearbeiten
+```
+
+**Was gehört in CLAUDE.md?**
+- Stack und Versionen
+- Build- und Testbefehle
+- Code-Stil und Konventionen
+- Verbotene Operationen
+- Wichtige Architekturentscheidungen
+
+**Was gehört nicht hinein?**
+- Sensitive Daten (Passwörter, API-Keys, Tokens)
+- Temporäre Aufgabennotizen
+- Langer Fließtext — halte es kompakt
+
+Claude Code liest CLAUDE.md bei jeder Interaktion. Eine lange CLAUDE.md bedeutet, dass mehr Tokens pro Anfrage verbraucht werden. Halte die Datei unter 100 Zeilen.
+
+---
+
+## Erste Aufgaben: Ein realer Durchlauf
+
+Hier ist ein typischer Einstiegsdurchlauf mit einem bestehenden Projekt.
+
+### Aufgabe 1: Codebase verstehen
+
+```
+Gib mir einen Überblick über dieses Projekt. Welche Module gibt es, 
+wie ist die Verzeichnisstruktur aufgebaut, und was sind die wichtigsten 
+Einstiegspunkte?
+```
+
+Claude Code liest Dateien, analysiert die Struktur und gibt eine strukturierte Zusammenfassung. Das ist ein guter erster Test: Wenn Claude das Projekt korrekt beschreibt, hat es genug Kontext für komplexere Aufgaben.
+
+### Aufgabe 2: Einen Bug finden und beheben
+
+```
+In der Datei src/auth/session.ts gibt es einen Fehler — Sessions 
+werden nach dem Ablauf nicht korrekt invalidiert. Finde das Problem 
+und behebe es.
+```
+
+Claude Code liest die relevanten Dateien, sucht nach dem Bug, schlägt eine Lösung vor und implementiert sie bei Bestätigung.
+
+### Aufgabe 3: Tests schreiben
+
+```
+Schreibe Unit-Tests für das SessionManager-Modul in src/auth/session.ts. 
+Nutze das bestehende Test-Setup mit Jest.
+```
+
+Claude Code liest das Modul, schaut sich bestehende Tests an, um das Setup zu verstehen, und schreibt passende Tests.
+
+### Aufgabe 4: Git-Commit
+
+```
+Committe die Änderungen mit einer sinnvollen Commit-Message.
+```
+
+Claude Code staged die geänderten Dateien, generiert eine beschreibende Commit-Message und committet.
+
+---
+
+## Häufige Anfängerfehler
+
+### 1. Aufgaben zu vage formulieren
+
+**Schlecht**: "Mach den Code besser."  
+**Gut**: "Refaktoriere die `parseUserInput`-Funktion in `src/utils/parser.ts` — sie ist zu lang und enthält doppelten Validierungslogik."
+
+Claude Code arbeitet besser, wenn die Aufgabe konkret ist. Je klarer das Ziel, desto besser das Ergebnis.
+
+### 2. Zu viele Aufgaben auf einmal
+
+**Schlecht**: "Implementiere User-Auth, schreib Tests dafür, füge Rate-Limiting hinzu, und aktualisiere die API-Dokumentation."  
+**Gut**: Aufgaben sequenziell stellen. Implementiere Auth → prüfe das Ergebnis → lass Tests schreiben → prüfe → weiter.
+
+Große Aufgaben erhöhen die Wahrscheinlichkeit, dass etwas schiefgeht und schwer rückgängig zu machen ist.
+
+### 3. Ergebnisse nicht reviewen
+
+Claude Code macht Fehler. Lies den Code, den Claude schreibt, bevor du ihn commitst. Lass dir bei unklaren Änderungen erklären, was Claude gemacht hat und warum.
+
+### 4. CLAUDE.md leer lassen
+
+Ohne CLAUDE.md muss Claude Code raten, welche Konventionen und Einschränkungen gelten. Investiere 15 Minuten zu Beginn in eine gute CLAUDE.md — das spart in jeder späteren Sitzung Zeit.
+
+---
+
+## Empfohlener Workflow für die erste Woche
+
+**Tag 1–2: Kennenlernen**  
+Starte in einem bestehenden, kleinen Projekt. Lass Claude Fragen über den Code beantworten. Lass einfache Refactorings durchführen. Beobachte, wie Claude vorgeht.
+
+**Tag 3–4: Erste echte Aufgaben**  
+Gib Claude eine konkrete, abgegrenzte Aufgabe — einen echten Bug fixen oder eine kleine neue Funktion implementieren. Review das Ergebnis sorgfältig.
+
+**Tag 5–7: Workflow einrichten**  
+Schreibe eine CLAUDE.md für dein Hauptprojekt. Definiere Commit-Konventionen. Lege fest, welche Operationen Claude autonom ausführen darf und bei welchen du bestätigen möchtest.
+
+Nach einer Woche hast du ein gutes Gefühl dafür, für welche Aufgaben Claude Code in deinem spezifischen Kontext am wertvollsten ist.
+
+---
+
+## Nächste Schritte
+
+- [CLAUDE.md Best Practices für Teamprojekte](/de/resources/claude-md-best-practices) — tiefere Einführung in effektive CLAUDE.md-Strukturen
+- [MCP-Server konfigurieren](/de/resources/mcp-server-einrichten) — Claude Code mit externen Tools verbinden
+- [Langsame Performance diagnostizieren](/en/resources/slow-claude-code-performance) — wenn Antworten träge werden

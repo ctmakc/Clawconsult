@@ -1,0 +1,302 @@
+---
+slug: effective-claude-code
+title: "10 High-Leverage Claude Code Practices (and 5 Antipatterns)"
+description: "The definitive guide to using Claude Code effectively — 10 practices that multiply your output, and 5 antipatterns that quietly kill your productivity."
+category: how-to
+tags: [best-practices, productivity, claude-code, tips, workflow]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 12
+relatedServices: [consulting, onboarding]
+seoTitle: "10 Claude Code Best Practices (and 5 Antipatterns to Avoid)"
+seoDescription: "Learn how to use Claude Code effectively with 10 high-leverage practices including CLAUDE.md, parallel agents, worktrees, hooks, and the /compact command — plus the 5 antipatterns that slow you down."
+schema: HowTo
+---
+
+# 10 High-Leverage Claude Code Practices (and 5 Antipatterns)
+
+Claude Code is not just a smarter autocomplete. Used well, it's a force multiplier that can take a senior engineer's output from solo to small-team territory. Used poorly, it's an expensive distraction that produces mediocre code you then have to fix yourself.
+
+This guide distills the highest-leverage practices — things that meaningfully change what Claude can do for you — alongside the antipatterns we see most often when teams first adopt it.
+
+---
+
+## The 10 Practices
+
+### 1. Use CLAUDE.md to Give Claude Persistent Context About Your Codebase
+
+Claude has no memory between sessions by default. Every conversation starts fresh. Without a `CLAUDE.md` file, you spend the first 10 minutes of every session re-explaining your stack, conventions, and constraints.
+
+A `CLAUDE.md` file at the root of your project is automatically loaded at the start of every Claude Code session. It's the most impactful single thing you can do.
+
+A strong `CLAUDE.md` covers:
+
+- **Tech stack** — languages, frameworks, runtime versions
+- **Project structure** — what lives in which directory and why
+- **Development commands** — how to run tests, lint, build, start the dev server
+- **Coding conventions** — naming patterns, error handling style, import order
+- **Off-limits files** — "never modify `db/schema.prisma` directly"
+- **Domain vocabulary** — your business terms Claude should use consistently
+
+```markdown
+# My Project — Claude Context
+
+## Stack
+- Next.js 15, TypeScript strict mode, Tailwind CSS
+- Postgres via Drizzle ORM
+- Vitest for unit tests, Playwright for E2E
+
+## Commands
+- `pnpm dev` — start dev server on :3000
+- `pnpm test` — run all tests
+- `pnpm lint` — ESLint + Prettier check
+
+## Conventions
+- All API routes live in `src/app/api/`
+- Database queries go through `src/lib/db/` — never query directly from components
+- Use `Result<T, E>` pattern for error handling, not try/catch in business logic
+
+## Never touch
+- `src/generated/` — auto-generated, will be overwritten
+```
+
+Keep it under 300 lines. A CLAUDE.md that takes 15 minutes to read defeats its own purpose.
+
+---
+
+### 2. Leverage Parallel Agents for Independent Tasks
+
+Claude Code supports running multiple agents simultaneously. When you have tasks that don't share state — "write unit tests for module A" and "update the API documentation for module B" — running them in parallel cuts wall-clock time in half or better.
+
+The `/dispatching-parallel-agents` skill (or asking Claude explicitly) will spin up subagents in separate worktrees, execute tasks concurrently, and merge results. This is particularly effective for:
+
+- Writing tests across multiple modules simultaneously
+- Running security scans while writing feature code
+- Translating documentation into multiple languages at once
+- Performing independent research across several codebases
+
+The constraint: parallel agents cannot safely share mutable state. If two agents are writing to the same file, you'll get conflicts. Scope tasks so that each agent owns a distinct set of files.
+
+---
+
+### 3. Use Worktrees for Isolated Feature Work
+
+`git worktree` lets you check out multiple branches of the same repo into separate directories simultaneously — no stashing, no branch switching, no context bleed.
+
+Claude Code integrates with worktrees natively. When you start feature work, create a dedicated worktree:
+
+```bash
+git worktree add ../my-feature-worktree -b feature/new-dashboard
+```
+
+Each worktree gets its own Claude Code session. Benefits:
+
+- **No contamination** — changes in one feature can't accidentally affect another
+- **Parallel development** — two features, two agents, simultaneously
+- **Easy cleanup** — `git worktree remove ../my-feature-worktree` when done
+- **Safe experiments** — try a risky refactor in a worktree; if it fails, just delete it
+
+This is especially valuable when Claude is executing a long multi-step plan. If something goes wrong, you haven't touched your main working tree.
+
+---
+
+### 4. Write Precise, Scoped Prompts — Not Vague Requests
+
+The quality of Claude's output is directly proportional to the quality of your prompt. Vague requests produce vague work.
+
+**Weak prompt:**
+> "Fix the authentication"
+
+**Strong prompt:**
+> "The JWT refresh token logic in `src/lib/auth/refresh.ts` fails silently when the token is expired — it returns null instead of throwing. Update it to throw an `AuthError` with code `TOKEN_EXPIRED`. Update the caller in `src/app/api/auth/route.ts` to handle this error and return a 401 with `{ error: 'token_expired' }`. Add a test in `src/lib/auth/refresh.test.ts` covering the expired-token case."
+
+The second prompt tells Claude exactly what's broken, where it lives, what the fix looks like, and what the test should cover. Claude can execute it without guessing.
+
+Three rules for scoped prompts:
+1. **Name the files** — don't say "the auth module", say `src/lib/auth/refresh.ts`
+2. **Define the acceptance criteria** — what does "done" look like?
+3. **Specify constraints** — "don't change the public API", "no new dependencies"
+
+---
+
+### 5. Let Claude Use Plan Mode for Complex Multi-Step Work
+
+For tasks involving more than three or four files, or tasks where the right approach isn't immediately obvious, ask Claude to **plan first**.
+
+> "Before writing any code, produce a step-by-step implementation plan for migrating our user authentication from JWTs to session tokens. List every file that will change, what the change is, and the order of operations."
+
+Review the plan. Correct any misunderstandings. Only then say "proceed with the plan."
+
+This catches two failure modes early:
+- **Scope misunderstanding** — Claude plans to change 15 files when you meant 3
+- **Order-of-operations errors** — Claude was going to migrate the database before updating the ORM layer
+
+Plan mode adds 2 minutes upfront and saves 30 minutes of backtracking.
+
+---
+
+### 6. Use Skills for Repeated Workflows
+
+If you're running the same type of task more than twice a week, it belongs in a skill file. Skills are reusable procedural templates stored in `~/.claude/plugins/` or `.claude/plugins/`.
+
+High-value candidates for skills:
+- **Code review** — your team's specific checklist, not a generic one
+- **Database migration** — safety checks before and after
+- **Deploy checklist** — the 8 things you always verify before shipping
+- **Incident response** — structured triage steps when something is on fire
+- **Onboarding** — walkthrough a new engineer's first setup
+
+Each time you notice yourself giving Claude the same multi-step instructions, that's a skill waiting to be written. A 20-minute investment in a skill file pays back within the week.
+
+---
+
+### 7. Set Up Hooks for Automated Quality Gates
+
+Claude Code supports hooks — shell commands that run automatically at defined lifecycle events: before a tool call, after a tool call, when the session starts, when it ends.
+
+Hooks enforce quality standards without requiring you to remember to ask. Common uses:
+
+**Pre-commit hook** (runs before every git commit Claude makes):
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'git commit'; then npm test && npm run lint; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Post-write hook** (runs after Claude writes a file):
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write \"$CLAUDE_TOOL_RESULT_PATH\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Hooks turn Claude Code from a request-response tool into a quality-enforcing development system.
+
+---
+
+### 8. Use /compact to Manage Context Window
+
+Every message you exchange with Claude consumes context window space. Long sessions — especially those that involve reading many files — eventually push earlier context out of the window. When that happens, Claude loses awareness of decisions made earlier in the session.
+
+The `/compact` command summarizes the current session into a compact representation and continues from there. Run it:
+
+- After completing a major phase of work ("we've finished the auth layer, now starting the UI")
+- When you notice Claude repeating work it already did
+- Before starting a new sub-task that needs fresh context
+
+Think of `/compact` as "save and checkpoint" — it's especially useful in sessions that span hours or multiple features.
+
+---
+
+### 9. Commit Frequently So Claude Can See Git History
+
+Claude Code reads your git history when it needs to understand how the codebase evolved. `git log`, `git blame`, and `git diff` are among its most-used research tools.
+
+Sparse commit history — giant commits with messages like "wip" or "updates" — makes Claude's research harder. Dense, well-described commit history makes it better:
+
+```
+feat(auth): add JWT refresh endpoint
+fix(auth): handle expired refresh tokens with TOKEN_EXPIRED error
+test(auth): add coverage for expired and invalid refresh tokens
+refactor(auth): extract token validation to lib/auth/validate.ts
+```
+
+When Claude needs to understand why a piece of code exists, a clear git history lets it trace the reasoning. Without it, Claude has to guess — and it sometimes guesses wrong.
+
+This also helps Claude generate accurate commit messages itself, since it can match your team's conventions from examples.
+
+---
+
+### 10. Use Task Tools to Track Progress on Long Sessions
+
+For work spanning multiple hours or multiple sessions, use Claude Code's task tracking integration:
+
+```bash
+task-hub create "Migrate user auth to sessions" --agent Claude
+```
+
+At the end of a session, update the task:
+
+```bash
+task-hub touch auth-migration --status in-progress --next "implement session store in Redis"
+```
+
+At the start of the next session, Claude can read the task state and resume where it left off — no re-explaining needed. This also gives you a lightweight audit trail of what was done, which is useful for code reviews and retrospectives.
+
+For large projects, pairing task tracking with a `CLAUDE.md` that references the task hub gives Claude everything it needs to orient itself in seconds.
+
+---
+
+## The 5 Antipatterns
+
+### Antipattern 1: Giving Claude Huge Context Dumps With No Structure
+
+Pasting 3,000 lines of code into a prompt and asking "what's wrong with this?" is the least effective way to use Claude Code. The model has to figure out what's relevant before it can even start on your actual question.
+
+**Fix:** Give Claude targeted context. Point it to specific files with `Read`. Ask a scoped question. If the problem space is large, ask Claude to do the exploration itself — it will read the files it needs systematically, which is more efficient than you pre-selecting them.
+
+---
+
+### Antipattern 2: Approving Every Permission Prompt Without Reading
+
+Claude Code asks for permission before running commands, writing files, or making network requests. These prompts exist for a reason. Developers who click "allow" on autopilot regularly discover that Claude was about to run `rm -rf` on something important, or commit credentials, or write to the wrong environment.
+
+**Fix:** Read permission prompts. When Claude is about to run a Bash command, the command is shown. Glance at it. The 2-second check has saved many engineers from costly mistakes.
+
+---
+
+### Antipattern 3: Never Using CLAUDE.md (Claude Has No Project Memory)
+
+Claude has no persistent memory. Every session starts from zero. Without a CLAUDE.md, you either re-explain your project constantly (wasted time) or Claude makes assumptions that don't match your codebase (wasted effort correcting mistakes).
+
+**Fix:** Write a CLAUDE.md today. It takes 30 minutes and pays back in every single subsequent session. See Practice #1 above.
+
+---
+
+### Antipattern 4: Asking Claude to Do Everything in One Shot
+
+"Build me a full-stack e-commerce platform with auth, payments, inventory, and admin dashboard" is not a prompt — it's a project brief. Claude will attempt it, produce something, and it will be wrong in ways that are expensive to fix because nothing was reviewed at intermediate stages.
+
+**Fix:** Decompose. Break large requests into phases. Review output at each phase. Correct before continuing. Claude is extraordinarily good at sustained focused work on a well-defined task; it's less reliable when given unlimited scope.
+
+---
+
+### Antipattern 5: Ignoring Tool Output Before Confirming Success
+
+Claude Code is an agentic system — it runs tools and interprets their output. But Claude's interpretation of tool output is not always correct. Tests can pass for the wrong reason. Lint can report warnings that look like passing to a quick read. Deployments can succeed in CI but fail in production.
+
+**Fix:** When Claude says "all tests pass" or "deployment successful," check the actual output it used to reach that conclusion. Ask Claude to show you the raw test run output, not just its summary. Trust but verify — especially for high-stakes operations.
+
+---
+
+## Putting It Together
+
+The practices above compound. A team with a solid CLAUDE.md, project-level skills, hooks enforcing their lint and test standards, and a habit of scoped prompts will outperform a team using raw Claude Code by a factor of 3–5x on complex engineering tasks.
+
+None of them require significant time investment. The biggest — writing CLAUDE.md and your first two skills — take an afternoon and then run silently forever.
+
+If you want help auditing your current Claude Code setup and identifying the highest-leverage improvements for your specific stack and team, [ClawHelp offers focused consulting engagements](https://clawhlp.com/services) built around exactly this kind of optimization work.

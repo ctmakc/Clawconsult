@@ -1,0 +1,182 @@
+---
+slug: mcp-not-connecting
+title: "Claude Code MCP Not Connecting — Diagnosis and Fixes"
+description: "Fix MCP server connection failures in Claude Code. Covers bad JSON config, port conflicts, server not running, and transport mismatches."
+category: troubleshooting
+schema: QAPage
+tags: [troubleshooting, mcp, connection, errors]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 3
+seoTitle: "Claude Code MCP Not Connecting — Fix Connection Errors | ClawHelp"
+seoDescription: "Diagnose and fix claude code mcp not connecting errors. Covers bad JSON in settings, port conflicts, server not running, and mcp server connection failed issues."
+---
+
+# Claude Code MCP Not Connecting
+
+**Problem**: An MCP server configured in Claude Code is not available in sessions — tools don't appear, or you see a connection error when Claude tries to call an MCP tool.
+
+MCP connection failures have a small set of well-defined root causes. Work through this diagnostic guide in order and you'll find the issue.
+
+---
+
+## Symptoms
+
+- Claude Code starts but the expected MCP tools are not listed when you ask "what tools do you have?"
+- Claude tries to call an MCP tool and returns: `MCP server connection failed` or `Tool unavailable`
+- The MCP server appears in your settings but Claude says it can't reach it
+- MCP worked before and stopped working after a system restart or settings change
+
+---
+
+## Root Cause 1: Invalid JSON in Settings
+
+This is the most common cause. A single syntax error in `~/.claude/settings.json` or a project-level `.claude/settings.json` will silently prevent MCP servers from loading.
+
+### Diagnosis
+
+Validate your settings file:
+```bash
+cat ~/.claude/settings.json | python3 -m json.tool
+```
+
+If this outputs a JSON parse error, you've found the problem. Common mistakes:
+
+- Trailing comma after the last item in an object or array: `"key": "value",}` — the comma before `}` is invalid JSON
+- Single quotes instead of double quotes: `'key': 'value'` — JSON requires double quotes
+- Missing comma between items
+- Windows-style line endings causing invisible characters
+
+### Fix
+
+Open the settings file in a JSON-aware editor (VS Code will highlight the error). Fix the syntax error and re-run the validator. When the validator outputs correctly-formatted JSON without errors, restart Claude Code.
+
+---
+
+## Root Cause 2: MCP Server Process Not Running
+
+For HTTP/SSE transport MCP servers (those with a URL in the config rather than a command), the server process must be running before Claude Code connects. If the server stopped (crash, system restart, Docker container down), Claude Code has nothing to connect to.
+
+### Diagnosis
+
+Check if the process is running:
+```bash
+# For a local process on port 3000:
+lsof -i :3000
+# Or:
+curl http://localhost:3000/health
+```
+
+If no process is listening on the expected port, the server is down.
+
+### Fix
+
+Restart the MCP server process. The exact command depends on how you installed it:
+
+```bash
+# Example: npm-based MCP server
+node /path/to/mcp-server/index.js &
+
+# Example: Docker-based MCP server
+docker start my-mcp-server
+
+# Example: systemd-managed service
+systemctl start my-mcp-server
+```
+
+To prevent this from recurring, configure the MCP server as a system service (systemd on Linux, launchd on macOS) so it starts automatically on boot.
+
+---
+
+## Root Cause 3: Port Conflict
+
+Another process is using the port your MCP server is configured to run on. The MCP server fails to start, or starts but on a different port.
+
+### Diagnosis
+
+```bash
+# Check what's on the expected port:
+lsof -i :PORT_NUMBER
+# or:
+ss -tlnp | grep PORT_NUMBER
+```
+
+### Fix
+
+Option A: Stop the conflicting process if it's safe to do so.
+
+Option B: Reconfigure your MCP server to use a different port, then update the port in `~/.claude/settings.json` to match.
+
+After changing the port, validate the settings JSON again and restart Claude Code.
+
+---
+
+## Root Cause 4: Transport Mismatch
+
+MCP servers support two transport mechanisms: **stdio** (spawned as a subprocess) and **HTTP/SSE** (running as a network service). If your settings file specifies the wrong transport for how the server is actually running, the connection fails silently.
+
+### Diagnosis
+
+Check your settings entry for the MCP server:
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "node",
+      "args": ["/path/to/server.js"]
+    }
+  }
+}
+```
+
+The `command` / `args` format = stdio transport (Claude spawns the process).
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "url": "http://localhost:3000/sse"
+    }
+  }
+}
+```
+
+The `url` format = HTTP/SSE transport (server must already be running).
+
+If you're using `url` but the server expects to be spawned, or using `command` but the server is already running as a service, the connection will fail.
+
+### Fix
+
+Match the settings format to how your MCP server is designed to run. Check the MCP server's README — it will specify whether it uses stdio or HTTP transport. Update your settings to use the correct format.
+
+---
+
+## Diagnostic Step-by-Step Checklist
+
+Run through these in order:
+
+1. `cat ~/.claude/settings.json | python3 -m json.tool` — validate JSON syntax
+2. Check project-level settings: `cat .claude/settings.json | python3 -m json.tool`
+3. Confirm the MCP server process is running (for HTTP transport)
+4. Check for port conflicts on the expected port
+5. Verify the transport type matches the server's design
+6. Check server logs for startup errors (usually in `~/.mcp-server-name.log` or the terminal where you started it)
+7. Test the server independently: for HTTP servers, `curl http://localhost:PORT/health` should return 200
+
+---
+
+## Prevention Tips
+
+**Use stdio transport for local single-developer setups**: stdio MCP servers are spawned on demand by Claude Code — no separate process to manage, no port to configure. HTTP/SSE is for shared team servers or servers that need to persist state.
+
+**Validate JSON after every edit**: Make it a habit to run `python3 -m json.tool` before restarting Claude Code after editing settings.
+
+**Log MCP server startup**: For HTTP servers, always redirect startup output to a log file so you can diagnose crashes: `node server.js >> ~/.mcp-server.log 2>&1`.
+
+---
+
+## Related Resources
+
+- [Claude Code MCP Integration Service](/services/mcp-integration) — we build and configure MCP servers that work reliably
+- [Claude Code Permission Denied Error](/resources/permission-denied-error) — for permission-related tool failures
+- [Claude Code Setup Service](/services/claude-code-setup) — includes MCP server installation and configuration

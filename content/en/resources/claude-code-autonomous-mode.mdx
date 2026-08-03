@@ -1,0 +1,526 @@
+---
+slug: claude-code-autonomous-mode
+title: "Claude Code Autonomous Mode: CI/CD, Scripting, and Headless Automation"
+description: "How to run Claude Code non-interactively — the --print flag, piping input, CI/CD integration with GitHub Actions and GitLab CI, --allowedTools and --disallowedTools flags, and batch processing patterns."
+category: guide
+schema: Article
+tags: [autonomous, ci-cd, automation, github-actions, headless, scripting, pipelines]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 12
+seoTitle: "Claude Code Autonomous Mode: CI/CD, Scripting & Headless Automation | ClawHelp"
+seoDescription: "Run Claude Code non-interactively in CI/CD pipelines, scripts, and batch jobs. Learn --print mode, --allowedTools, --disallowedTools, GitHub Actions integration, and headless automation patterns."
+---
+
+# Claude Code Autonomous Mode: CI/CD, Scripting, and Headless Automation
+
+Claude Code is designed primarily as an interactive tool — you type, it responds, you review and confirm. But it also has a full non-interactive mode designed for automation: CI/CD pipelines, scheduled jobs, batch processing scripts, and integration into larger automated workflows.
+
+This guide covers everything you need to run Claude Code headlessly and reliably.
+
+---
+
+## The --print Flag: Non-Interactive Output
+
+The core flag for automation is `--print` (short form: `-p`). It tells Claude Code to process your input, print the response to stdout, and exit — no interactive session, no prompts, no waiting.
+
+```bash
+claude --print "Summarize the changes in the last 5 commits"
+```
+
+```bash
+# Short form
+claude -p "What does the main function in src/index.ts do?"
+```
+
+**What --print changes:**
+
+In interactive mode, Claude Code maintains a session, asks for confirmation before tool calls, and waits for your input. With `--print`:
+- Claude Code processes the prompt, executes required tool calls, and outputs the final response
+- It exits with code `0` on success, non-zero on error
+- Output goes to stdout; errors go to stderr
+- No interactive prompts — tool call confirmations are handled by the `--allowedTools` configuration
+
+**Output format:**
+
+By default, `--print` outputs Claude's response as plain text. For structured output in scripts, you can request JSON-formatted responses in your prompt, though the output will still be the raw text Claude produces (not a structured JSON wrapper from Claude Code itself).
+
+---
+
+## Piping Input to Claude Code
+
+You can pipe content directly into Claude Code, which is essential for processing files, logs, or command output:
+
+```bash
+# Pipe a file for analysis
+cat src/auth/session.ts | claude --print "Review this file for security issues"
+
+# Pipe git diff for a commit message
+git diff --staged | claude --print "Write a concise commit message for these changes"
+
+# Pipe error logs for diagnosis
+cat logs/error.log | claude --print "Identify the root cause of these errors and suggest fixes"
+
+# Pipe test output
+npm test 2>&1 | claude --print "The tests failed. Identify which tests failed and why based on this output"
+```
+
+When piping, the stdin content is prepended to the prompt. Claude Code reads both the piped content and your prompt text together.
+
+**Combining piped input with file context:**
+
+Claude Code still has access to the filesystem even in `--print` mode. So you can pipe a specific piece of content and Claude will also read related files if needed:
+
+```bash
+git diff --staged | claude --print "Write a commit message. Also check CLAUDE.md for our commit message conventions and follow them."
+```
+
+---
+
+## --allowedTools and --disallowedTools
+
+In non-interactive mode, Claude Code needs to know which tools it can use without asking for confirmation. The `--allowedTools` and `--disallowedTools` flags control this.
+
+### --allowedTools
+
+Specifies a whitelist of tools Claude is allowed to use. Tools not in the list are blocked.
+
+```bash
+# Allow only read operations — no writes, no shell execution
+claude --print --allowedTools "Read,Glob,Grep" "Analyze the codebase structure and identify circular dependencies"
+
+# Allow reads and writes but no shell execution
+claude --print --allowedTools "Read,Write,Edit,Glob,Grep" "Refactor the authentication module"
+
+# Allow everything except Bash (read/write only)
+claude --print --allowedTools "Read,Write,Edit,MultiEdit,Glob,Grep,LS" "Update all deprecated API calls"
+```
+
+**Available tool names:**
+
+| Tool | What it does |
+|------|-------------|
+| `Read` | Read file contents |
+| `Write` | Write/create files |
+| `Edit` | Edit existing files |
+| `MultiEdit` | Multiple edits in one operation |
+| `Bash` | Execute shell commands |
+| `Glob` | Find files matching patterns |
+| `Grep` | Search file contents |
+| `LS` | List directory contents |
+| `TodoRead` | Read task list |
+| `TodoWrite` | Update task list |
+
+### --disallowedTools
+
+Specifies tools to block. Everything not in this list is allowed (subject to your settings).
+
+```bash
+# Block only shell execution — allow all read/write operations
+claude --print --disallowedTools "Bash" "Review and fix all TypeScript type errors"
+
+# Block write operations — read-only mode
+claude --print --disallowedTools "Write,Edit,MultiEdit,Bash" "Analyze security vulnerabilities in the codebase"
+```
+
+### Choosing Between --allowedTools and --disallowedTools
+
+**Use --allowedTools when:** you want strict control and only trust a specific set of operations. This is the safer choice for untrusted code or production-adjacent automation.
+
+**Use --disallowedTools when:** you want to block one or two dangerous operations and allow everything else. Useful when you trust Claude with most operations but want to prevent specific risks (like shell execution in a code review pipeline).
+
+---
+
+## Running Claude Code in CI/CD Pipelines
+
+### GitHub Actions Integration
+
+**Automated code review on pull requests:**
+
+```yaml
+# .github/workflows/claude-review.yml
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for diff context
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr.diff
+          echo "diff_size=$(wc -c < /tmp/pr.diff)" >> $GITHUB_OUTPUT
+
+      - name: Run Claude Code Review
+        id: claude_review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          REVIEW=$(cat /tmp/pr.diff | claude --print \
+            --allowedTools "Read,Glob,Grep" \
+            "Review this pull request diff. Focus on: bugs, security issues, missing error handling, and code quality. Format as a concise GitHub PR review comment with markdown.")
+          
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post Review Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Claude Code Review\n\n${{ steps.claude_review.outputs.review }}`
+            })
+```
+
+**Automated test generation on push:**
+
+```yaml
+# .github/workflows/claude-tests.yml
+name: Generate Missing Tests
+
+on:
+  push:
+    branches: [feature/*, fix/*]
+
+jobs:
+  generate-tests:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[gen-tests]')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Generate tests for changed files
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          CHANGED_FILES=$(git diff HEAD~1 --name-only --diff-filter=AM | grep -E '\.(ts|tsx|js|jsx)$' | grep -v '\.test\.' | grep -v '\.spec\.')
+          
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ]; then
+              claude --print \
+                --allowedTools "Read,Write,Glob,Grep" \
+                "Write unit tests for $file. Follow the existing test patterns in the project. Create the test file in the appropriate __tests__ directory or alongside the source file."
+            fi
+          done
+
+      - name: Commit generated tests
+        run: |
+          git config --global user.name "Claude Code Bot"
+          git config --global user.email "claude@ci.local"
+          git add "**/*.test.*" "**/*.spec.*" 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "chore: add generated tests [skip ci]"
+          git push
+```
+
+### GitLab CI Integration
+
+```yaml
+# .gitlab-ci.yml (relevant job)
+claude-review:
+  stage: review
+  image: node:20
+  before_script:
+    - npm install -g @anthropic-ai/claude-code
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git diff origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD > /tmp/mr.diff
+    - |
+      REVIEW=$(cat /tmp/mr.diff | claude --print \
+        --allowedTools "Read,Glob,Grep" \
+        "Review this merge request diff. Identify bugs, security issues, and code quality problems. Output as markdown.")
+      echo "$REVIEW" > review-output.md
+  artifacts:
+    paths:
+      - review-output.md
+    expire_in: 1 week
+  only:
+    - merge_requests
+  variables:
+    ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY  # Set in GitLab CI/CD variables
+```
+
+---
+
+## The --dangerously-skip-permissions Flag in Automation
+
+For CI/CD environments where you need Claude Code to operate without any permission prompts, combine `--dangerously-skip-permissions` with tool restrictions:
+
+```bash
+claude --print \
+  --dangerously-skip-permissions \
+  --allowedTools "Read,Write,Edit,Glob,Grep" \
+  "Refactor all deprecated API calls to use the new v2 endpoints"
+```
+
+**Critical safety rules for --dangerously-skip-permissions in CI:**
+
+1. **Always combine with --allowedTools.** Never use `--dangerously-skip-permissions` alone in automation — always specify exactly which tools Claude may use.
+
+2. **Never run in containers with production access.** CI jobs with this flag should run in ephemeral containers with no access to production databases, credentials, or infrastructure.
+
+3. **Pin your Claude Code version.** In CI, use a pinned version: `npm install -g @anthropic-ai/claude-code@1.x.x` to ensure consistent behavior.
+
+4. **Use read-only filesystem mounts where possible.** Mount source directories as read-only if the task doesn't need to write files.
+
+---
+
+## Batch Processing Scripts
+
+For processing multiple files, repositories, or items, combine Claude Code's `--print` mode with shell scripting:
+
+**Process every file in a directory:**
+
+```bash
+#!/bin/bash
+# add-jsdoc-to-all.sh — add JSDoc comments to all undocumented functions
+
+find src -name "*.js" -not -name "*.test.js" | while read -r file; do
+  echo "Processing $file..."
+  
+  # Check if file needs documentation
+  NEEDS_DOCS=$(grep -c 'function\|=>' "$file")
+  
+  if [ "$NEEDS_DOCS" -gt 0 ]; then
+    claude --print \
+      --allowedTools "Read,Write" \
+      "Add JSDoc comments to all exported functions and classes in $file that don't already have them. Preserve all existing code and comments exactly."
+    
+    echo "  Done: $file"
+  fi
+  
+  # Rate limiting — Claude Code API has rate limits
+  sleep 2
+done
+
+echo "Batch complete."
+```
+
+**Process a list of repositories:**
+
+```bash
+#!/bin/bash
+# audit-repos.sh — run a security audit across multiple repositories
+
+REPOS=(
+  "/data/projects/api-service"
+  "/data/projects/auth-service"
+  "/data/projects/worker-service"
+)
+
+OUTPUT_DIR="/tmp/security-audits/$(date +%Y%m%d)"
+mkdir -p "$OUTPUT_DIR"
+
+for repo in "${REPOS[@]}"; do
+  REPO_NAME=$(basename "$repo")
+  echo "Auditing $REPO_NAME..."
+  
+  cd "$repo"
+  
+  AUDIT=$(claude --print \
+    --allowedTools "Read,Glob,Grep" \
+    "Perform a security audit of this codebase. Check for: hardcoded credentials, SQL injection vulnerabilities, insecure dependencies, missing input validation, exposed sensitive routes. Output a structured report.")
+  
+  echo "$AUDIT" > "$OUTPUT_DIR/$REPO_NAME-security-audit.md"
+  echo "  Saved to $OUTPUT_DIR/$REPO_NAME-security-audit.md"
+  
+  sleep 3  # Rate limiting between repos
+done
+
+echo "All audits complete. Reports in $OUTPUT_DIR"
+```
+
+---
+
+## Output Parsing and Integration
+
+Claude Code's `--print` output is plain text. For integration with other tools, you need to either parse the text or instruct Claude to output in a specific format.
+
+**Request structured output:**
+
+```bash
+ANALYSIS=$(claude --print \
+  --allowedTools "Read,Glob,Grep" \
+  "Analyze the codebase for TODO comments. Output ONLY valid JSON in this exact format:
+{
+  \"count\": <number>,
+  \"items\": [
+    {\"file\": \"<path>\", \"line\": <number>, \"text\": \"<todo text>\"}
+  ]
+}
+Output nothing else — only the JSON object.")
+
+# Parse with jq
+echo "$ANALYSIS" | jq '.count'
+echo "$ANALYSIS" | jq '.items[] | select(.file | contains("auth"))'
+```
+
+**Exit code handling:**
+
+```bash
+claude --print --allowedTools "Read,Glob,Grep" "Check if there are any TypeScript errors in src/"
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+  echo "Claude Code encountered an error"
+  exit 1
+fi
+```
+
+**Capture and log output:**
+
+```bash
+TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
+LOG_FILE="/var/log/claude-automation/$TIMESTAMP.log"
+
+claude --print \
+  --allowedTools "Read,Write,Edit,Glob,Grep" \
+  "Apply the database migration in migrations/0042_add_user_preferences.sql" \
+  2>&1 | tee "$LOG_FILE"
+
+if [ ${PIPESTATUS[0]} -ne 0 ]; then
+  echo "Claude Code failed. See $LOG_FILE for details."
+  exit 1
+fi
+```
+
+---
+
+## Environment and Configuration for Automation
+
+**Required environment variables:**
+
+```bash
+# Always required
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Optional: override default model
+export ANTHROPIC_MODEL="claude-opus-4-5"
+
+# Optional: point Claude at a specific working directory
+export CLAUDE_WORKING_DIR="/path/to/project"
+```
+
+**Project-level settings for CI:**
+
+Create a CI-specific settings file or configure `.claude/settings.json` to be appropriate for automated runs:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)"
+    ]
+  }
+}
+```
+
+---
+
+## Practical Patterns: What Works Well Autonomously
+
+**Good candidates for automation:**
+
+- Code review and analysis (read-only, structured output)
+- Generating or updating documentation
+- Adding type annotations to existing code
+- Migrating from deprecated APIs to new ones
+- Running consistency checks across a large codebase
+- Writing tests for existing code
+- Generating commit messages from diffs
+- Security scans and vulnerability reporting
+
+**Patterns that need human oversight:**
+
+- Architectural decisions affecting multiple systems
+- Database schema migrations in production
+- Anything touching authentication or authorization logic
+- Refactors that change public API contracts
+- Anything with external side effects (sending emails, publishing events)
+
+The distinction is roughly: **analysis and generation are good for automation; decisions with broad impact need a human in the loop.**
+
+---
+
+## Rate Limits and Retry Logic
+
+Claude Code is subject to Anthropic API rate limits. In batch scripts, add delays between calls and implement retry logic:
+
+```bash
+run_claude_with_retry() {
+  local prompt="$1"
+  local max_attempts=3
+  local attempt=1
+  
+  while [ $attempt -le $max_attempts ]; do
+    OUTPUT=$(claude --print --allowedTools "Read,Glob,Grep" "$prompt" 2>&1)
+    EXIT_CODE=$?
+    
+    if [ $EXIT_CODE -eq 0 ]; then
+      echo "$OUTPUT"
+      return 0
+    fi
+    
+    if echo "$OUTPUT" | grep -q "rate_limit\|429"; then
+      echo "Rate limited. Waiting 60 seconds... (attempt $attempt/$max_attempts)" >&2
+      sleep 60
+    else
+      echo "Error on attempt $attempt: $OUTPUT" >&2
+      sleep 5
+    fi
+    
+    attempt=$((attempt + 1))
+  done
+  
+  echo "Failed after $max_attempts attempts" >&2
+  return 1
+}
+```
+
+---
+
+Building Claude Code automation into your CI/CD pipeline can dramatically reduce manual review overhead and catch issues earlier. ClawHelp's Claude Code consulting services help teams design and implement production-grade AI automation workflows — from PR review bots to nightly codebase analysis jobs. [Talk to us about your automation needs](/en/contact).

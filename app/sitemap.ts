@@ -14,6 +14,9 @@ const STATIC_PAGES = [
   '/training',
   '/about',
   '/resources',
+  '/blog',
+  '/compare',
+  '/features',
   '/contact',
   '/book-discovery',
 ]
@@ -102,6 +105,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
       changeFrequency: 'yearly',
       priority: 0.6,
+    })
+    // Blog route mirrors resources
+    entries.push({
+      url: absoluteUrl(`/en/blog/${r.slug}`),
+      lastModified: new Date(r.publishDate),
+      alternates: {
+        languages: Object.fromEntries(LOCALES.map((l) => [l, absoluteUrl(`/${l}/blog/${r.slug}`)])),
+      },
+      changeFrequency: 'yearly',
+      priority: 0.65,
+    })
+  }
+
+  // Compare pages (resources with comparison category)
+  const comparisons = resources.filter((r) => r.category === 'comparison')
+  for (const c of comparisons) {
+    entries.push({
+      url: absoluteUrl(`/en/compare/${c.slug}`),
+      lastModified: new Date(c.publishDate),
+      alternates: {
+        languages: Object.fromEntries(LOCALES.map((l) => [l, absoluteUrl(`/${l}/compare/${c.slug}`)])),
+      },
+      changeFrequency: 'monthly',
+      priority: 0.75,
     })
   }
 

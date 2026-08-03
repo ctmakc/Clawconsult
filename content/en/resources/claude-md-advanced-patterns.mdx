@@ -1,0 +1,416 @@
+---
+slug: claude-md-advanced-patterns
+title: "CLAUDE.md Advanced Patterns: Hierarchies, Teams, and Multi-Environment Config"
+description: "Deep dive into CLAUDE.md for experienced teams — the full file hierarchy, conditional per-directory instructions, monorepo patterns, memory vs CLAUDE.md distinctions, security considerations, and real-world templates."
+category: guide
+schema: Article
+tags: [claude-md, project-memory, team, conventions, configuration, monorepo, best-practices, security]
+author: "ClawHelp Team"
+publishDate: "2026-05-16"
+readTime: 13
+seoTitle: "CLAUDE.md Advanced Patterns: Teams, Monorepos & Multi-Environment Config | ClawHelp"
+seoDescription: "Master advanced CLAUDE.md configuration — full hierarchy, per-directory conditional instructions, monorepo patterns, memory vs CLAUDE.md trade-offs, security rules, and production-ready templates for Next.js, Python ML, and microservices."
+---
+
+# CLAUDE.md Advanced Patterns: Hierarchies, Teams, and Multi-Environment Config
+
+CLAUDE.md is the mechanism that makes Claude Code behave consistently across sessions, across machines, and across your entire engineering team. The basics — put your stack and conventions in the file, commit it — are easy to pick up. But there is a lot more power in the system once you understand the full hierarchy, how to write instructions that actually change behavior, when to use CLAUDE.md versus Claude's memory system, and what patterns work at scale.
+
+This guide is for teams already past the beginner stage — teams that have a CLAUDE.md, find it helps, and want to push it further.
+
+---
+
+## Where CLAUDE.md Files Live and What Each Level Controls
+
+Claude Code reads CLAUDE.md from multiple locations, combining them into the working context with a clear precedence order. Understanding this hierarchy is the prerequisite for everything else.
+
+```
+~/.claude/CLAUDE.md              ← personal global defaults (you only, all projects)
+  /home/user/projects/CLAUDE.md  ← parent directory level (optional)
+    /home/user/projects/myapp/CLAUDE.md   ← project root (team-shared, highest priority)
+      /home/user/projects/myapp/apps/frontend/CLAUDE.md  ← subdirectory overrides
+```
+
+**Lower in the tree = higher precedence.** A project-level rule overrides a global rule; a subdirectory rule overrides a project-level rule. This means you can set sensible defaults globally and override them precisely where needed without repeating yourself.
+
+### ~/.claude/CLAUDE.md — Your Personal Global Defaults
+
+This file applies to every Claude Code session you run, regardless of project. It's the right place for:
+
+- Your machine's tool availability (`I have ripgrep, fd, and bat installed`)
+- Communication preferences (`always explain what you are about to do before doing it`)
+- Your experience level (`I am a senior engineer; skip basic explanations`)
+- Shell and environment facts (`I use zsh on Linux; homebrew is not available`)
+- Personal coding preferences that aren't project-specific
+
+```markdown
+# Global Defaults
+
+## My Environment
+- Shell: zsh, Linux (Ubuntu 22.04)
+- Node.js via nvm; Python via pyenv
+- Available tools: ripgrep (rg), fd, jq, yq, gh CLI
+- Package managers: pnpm (Node), uv (Python) — never use npm or pip directly
+
+## Communication Style
+- I'm a senior engineer. Skip introductory explanations; go straight to the point.
+- When implementing something non-trivial, briefly state your approach before writing code.
+- If a task has architectural implications, flag them — don't just do the obvious thing.
+
+## Universal Rules
+- Never commit API keys, tokens, or credentials — use environment variables only
+- Always use explicit TypeScript types; never use `any`
+- Write tests alongside new code, not as an afterthought
+```
+
+### Project-Level CLAUDE.md — The Most Important File
+
+This is the file committed to your repository. It's what every team member's Claude Code session reads, making it the primary tool for team alignment. Keep it focused on what's non-obvious: decisions, conventions, forbidden patterns, and architecture context.
+
+See the [Advanced CLAUDE.md Patterns guide](/en/resources/claude-code-claude-md-advanced) for detailed templates covering React/TypeScript, Python/FastAPI, and Node.js microservices.
+
+### Subdirectory CLAUDE.md — Per-Package Overrides in Monorepos
+
+In monorepos, different packages have different stacks, test frameworks, and conventions. Rather than cramming everything into the root CLAUDE.md and adding qualifiers ("for the frontend, use X; for the backend, use Y"), put a dedicated CLAUDE.md inside each package:
+
+```
+myapp/
+  CLAUDE.md                   ← root: monorepo tooling, cross-cutting rules
+  apps/
+    frontend/
+      CLAUDE.md               ← React/TypeScript specific rules
+    api/
+      CLAUDE.md               ← FastAPI/Python specific rules
+    worker/
+      CLAUDE.md               ← background job worker rules
+  packages/
+    shared-types/
+      CLAUDE.md               ← TypeScript-only package rules
+```
+
+When Claude Code is working inside `apps/frontend/`, it reads both the root CLAUDE.md and `apps/frontend/CLAUDE.md`, with the subdirectory file winning on any conflicts. The combined instruction set is what informs Claude's behavior — you get both the cross-cutting rules and the precise local rules.
+
+---
+
+## Writing Instructions That Actually Change Behavior
+
+There is a large gap between instructions that are in CLAUDE.md and instructions that reliably influence what Claude does. The difference is specificity.
+
+### Ineffective: Vague Principles
+
+```markdown
+## Code Quality
+- Write clean, maintainable code
+- Follow best practices
+- Consider edge cases
+```
+
+These are things Claude would do anyway. They consume context without providing any new guidance.
+
+### Effective: Specific, Actionable Rules
+
+```markdown
+## Code Quality
+
+- Never use `console.log` — use the `logger` utility from `src/lib/logger.ts`
+- All async functions must have explicit error handling — no bare `await` without try/catch or `.catch()`
+- React components must not exceed 200 lines — extract sub-components before that
+- API endpoints must validate request bodies with the Zod schema defined alongside the route handler
+- Every new database query must have a corresponding index migration if it filters by non-indexed columns
+```
+
+Each rule is concrete. Claude can check whether it's complying with each rule as it writes code. Vague rules can't be checked; specific rules can.
+
+### Conditional Instructions for Different Directories
+
+Claude Code respects context about where it's operating. You can use directory-conditional rules in the project-level CLAUDE.md:
+
+```markdown
+## Directory-Specific Rules
+
+### For files in src/api/routes/:
+- Every route handler must have a matching OpenAPI schema in src/api/schemas/
+- Route handlers are thin — all logic goes in the service layer (src/services/)
+- Always add rate limiting via the `rateLimit()` middleware for new routes
+
+### For files in src/tests/ or *.test.ts files:
+- Use Vitest — never Jest
+- Always mock external API calls with msw (src/tests/mocks/handlers.ts)
+- Test files should test behavior, not implementation details — no testing private methods
+
+### For database migration files in migrations/:
+- Always include a rollback (down) migration
+- Never rename columns in a single migration — use a two-phase approach: add new, migrate data, drop old
+- Test the migration against a copy of production data before merging
+```
+
+These conditional rules are especially useful when the project spans different concerns (backend, frontend, infrastructure) in the same repository.
+
+---
+
+## Monorepo CLAUDE.md Architecture
+
+Large monorepos need careful CLAUDE.md design. The goal is to make Claude immediately useful when working anywhere in the repo without forcing it to load irrelevant context.
+
+### Root CLAUDE.md — Cross-Cutting Concerns Only
+
+```markdown
+# Acme Platform Monorepo
+
+## Repository Overview
+This monorepo contains all Acme services. Each package has its own CLAUDE.md with
+package-specific rules. This file covers only cross-cutting concerns.
+
+## Tooling
+- Package manager: pnpm (workspaces)
+- Build system: Turborepo — always run builds/tests via `pnpm turbo <task>`, not directly
+- CI: GitHub Actions (`.github/workflows/`)
+- Container registry: ghcr.io/acme
+
+## Cross-Service Rules
+- Services communicate only via defined API contracts (never direct database access)
+- Shared types live in `packages/shared-types` — do not duplicate type definitions
+- Environment variables documented in each service's `.env.example` file
+- Secrets never in code or config files — use Vault (local) or AWS Secrets Manager (prod)
+
+## Git Workflow
+- Branch naming: `service-name/feat|fix|chore/description` (e.g., `api/feat/user-preferences`)
+- PRs require passing CI and one approval
+- Never force-push to main or develop
+- Conventional commits enforced: feat|fix|docs|chore|test|refactor
+```
+
+### Per-Package CLAUDE.md — Deep Context for That Package
+
+```markdown
+# apps/api — REST API Service
+
+## Stack
+- Node.js 22, TypeScript 5.4, Fastify 4, Prisma 5, PostgreSQL 16
+- Testing: Vitest + Supertest
+- Auth: JWT (access) + opaque tokens (refresh), stored in Redis
+
+## Architecture
+Handler → Service → Repository → Prisma
+
+Never skip layers. No database access in handlers. No HTTP concerns in services.
+
+## Key Files
+- `src/config/index.ts` — all env var loading and validation (Zod)
+- `src/plugins/auth.ts` — Fastify auth plugin (decorate request with `user`)
+- `src/lib/prisma.ts` — singleton Prisma client
+- `src/lib/redis.ts` — singleton Redis client
+
+## Conventions
+- Prisma models in `snake_case`; TypeScript interfaces in `PascalCase`
+- All route handlers are async; errors thrown, not returned
+- Use `fastify.log` for logging — never `console.*`
+- Repository methods return `null` for not-found; throw for unexpected errors
+
+## Do Not
+- Do not use `prisma.user.findUnique` with a `select` that includes passwords — use `omit: { password: true }` or the sanitized DTO
+- Do not create migrations manually — use `pnpm prisma migrate dev --name description`
+- Do not import from `@prisma/client` directly outside `src/lib/prisma.ts`
+```
+
+---
+
+## Memory vs CLAUDE.md: Knowing Which to Use
+
+Claude Code has two persistence mechanisms: CLAUDE.md files and the `/memory` system. They serve fundamentally different purposes, and confusing them leads to the wrong information being in the wrong place.
+
+| Dimension | CLAUDE.md | `/memory` |
+|-----------|-----------|-----------|
+| **Scope** | Project or global (file-based) | User-scoped personal facts |
+| **Audience** | Entire team (committed to git) | You only |
+| **Content** | Project context, team conventions | Personal preferences, long-term facts |
+| **Format** | Markdown file you edit manually | Notes Claude stores in `~/.claude/memory/` |
+| **Updated by** | You (manual edit + commit) | Claude Code (via `/memory` commands) |
+| **Persists across sessions** | Yes (it's a file) | Yes (stored in your home directory) |
+
+**Use CLAUDE.md for:**
+- Tech stack and architecture decisions
+- Team conventions and banned patterns
+- How to run the project (commands, ports, prerequisites)
+- Why certain architectural decisions were made
+- Anything a new team member needs to know
+
+**Use `/memory` for:**
+- Personal coding style preferences that differ from your team defaults
+- Long-term facts about yourself ("I'm learning Rust; explain unfamiliar syntax")
+- Cross-project personal preferences
+- Reminders specific to you, not the project
+
+**The `/memory` command:**
+
+```
+/memory                        # view current memory contents
+/memory add I prefer verbose variable names over short ones
+/memory add Always explain async patterns in detail when I ask about them
+```
+
+Memory files are stored as plain Markdown in `~/.claude/memory/`. You can view and edit them directly:
+
+```bash
+ls ~/.claude/memory/
+cat ~/.claude/memory/preferences.md
+```
+
+Unlike CLAUDE.md, memory is not visible to or shared with your team. It's purely personal context that follows you across all projects and sessions.
+
+---
+
+## Security: What Never Goes in CLAUDE.md
+
+CLAUDE.md is committed to version control. Once a secret is in a committed file, it's effectively permanent — it lives in git history even after deletion, and it's accessible to anyone with repository access.
+
+**Never put in CLAUDE.md:**
+
+```markdown
+# BAD — never do any of these
+ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgres://user:password@prod-db.example.com/myapp
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+STRIPE_SECRET_KEY=sk_live_...
+INTERNAL_ADMIN_URL=https://admin.internal.company.com
+```
+
+**What belongs in `.env` files (gitignored):**
+- API keys and tokens
+- Database connection strings with credentials
+- Any secret or credential
+- Internal hostnames or IPs that shouldn't be public
+
+**What belongs in CLAUDE.md about configuration:**
+- The *names* of environment variables, not their values
+- Where to find the `.env.example` file
+- Which services require API keys and where to get them (documentation links, not values)
+
+```markdown
+## Configuration
+
+Copy `.env.example` to `.env.local` and fill in the required values.
+Required secrets: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`.
+API keys for development are in the team's shared 1Password vault under "Dev Secrets / myapp".
+```
+
+**Gitignore patterns to always have:**
+
+```gitignore
+.env
+.env.local
+.env.*.local
+*.env
+.claude/settings.local.json   # personal Claude settings with possible tokens
+```
+
+---
+
+## Real-World Example: Next.js Project CLAUDE.md
+
+```markdown
+# Project: Acme Dashboard
+
+## Stack
+- Next.js 15 (App Router), TypeScript 5.4, Tailwind CSS 4
+- Auth: NextAuth.js v5 (Auth.js)
+- Database: PostgreSQL via Drizzle ORM (not Prisma)
+- State: Zustand for client state; React Query for server state
+- UI components: shadcn/ui — never install other component libraries
+- Testing: Playwright (E2E), Vitest + React Testing Library (unit/component)
+
+## App Router Conventions
+- Server components by default — only add `"use client"` when genuinely needed for interactivity
+- Data fetching in Server Components via direct database calls or fetch (no API routes for internal data)
+- API routes (`app/api/`) only for external webhooks or third-party integrations
+- Route handlers in `route.ts`; layouts in `layout.tsx`; pages in `page.tsx`
+
+## File Structure
+- `app/` — Next.js app router pages and layouts
+- `components/` — shared React components (subdirs: `ui/`, `forms/`, `charts/`)
+- `lib/` — utility functions, db client, auth config
+- `lib/db/schema.ts` — Drizzle schema (source of truth for DB structure)
+- `lib/db/queries/` — all database query functions (never inline SQL in components)
+
+## Commands
+- `pnpm dev` — dev server (localhost:3000)
+- `pnpm db:push` — push schema changes to dev database
+- `pnpm db:studio` — open Drizzle Studio
+- `pnpm test` — run Vitest unit tests
+- `pnpm test:e2e` — run Playwright E2E tests (requires running dev server)
+
+## Do Not
+- Do not use `getServerSideProps` or `getStaticProps` — this is App Router only
+- Do not use `useEffect` for data fetching — use React Query or Server Components
+- Do not install Prisma — we use Drizzle
+- Do not use `pages/` directory — App Router only
+- Do not use `any` type
+- Do not import server-only code in client components — use `server-only` package where needed
+```
+
+---
+
+## Real-World Example: Python ML Project CLAUDE.md
+
+```markdown
+# Project: Acme ML Pipeline
+
+## Stack
+- Python 3.12, uv for dependency management
+- ML: PyTorch 2.3, scikit-learn 1.5, pandas 2.2
+- Experiment tracking: MLflow (local server on localhost:5000)
+- Data: DVC for versioning large files and datasets
+- Testing: pytest, pytest-cov
+
+## Environment Setup
+- `uv sync` — install all dependencies
+- `uv run python -m mlflow ui` — start MLflow UI
+- `dvc pull` — fetch datasets from remote storage (S3)
+- `uv run pytest` — run tests
+
+## Project Layout
+- `src/acme_ml/` — main package
+  - `data/` — data loading and preprocessing
+  - `models/` — model definitions (PyTorch nn.Module classes)
+  - `training/` — training loops and evaluation
+  - `inference/` — inference pipeline for production
+- `experiments/` — Jupyter notebooks for exploration (not production code)
+- `tests/` — pytest test suite
+- `data/` — DVC-managed; raw data in `data/raw/`, processed in `data/processed/`
+
+## Critical Rules
+- All training runs must log to MLflow — never train without `mlflow.start_run()`
+- Large files (>1MB) must be tracked with DVC, not committed to git
+- Notebooks in `experiments/` are for exploration only — never import from notebooks
+- Production inference code in `src/acme_ml/inference/` must have type annotations
+- Models saved to disk must include their training config in the checkpoint metadata
+
+## Do Not
+- Do not use `pd.DataFrame.append()` — it is removed; use `pd.concat()`
+- Do not commit Jupyter notebook outputs — clear them before committing
+- Do not hardcode file paths — use `pathlib.Path` relative to the project root
+- Do not use `print()` for training metrics — use `logging` or MLflow metrics
+- Do not store raw data in git — use DVC
+```
+
+---
+
+## Best Practices for Maintaining CLAUDE.md Over Time
+
+A CLAUDE.md written once and never touched quickly becomes stale and misleading. Treat it like a living document:
+
+**Update it in the same PR as the change it documents.** If you're adding a new service layer, update CLAUDE.md in that PR to explain the pattern. If you're banning a library, add it to the "Do Not" section in the same commit.
+
+**Remove outdated content actively.** When you migrate from one library to another, remove the old library's instructions from CLAUDE.md. Stale instructions actively mislead Claude.
+
+**Keep it short.** Under 400 lines is ideal. Under 250 is better. Every line consumes context window space; lines that don't improve Claude's output are waste.
+
+**Test it periodically.** Start a fresh session, don't explain the project, and ask Claude to implement something. Watch whether it naturally uses your conventions. If it doesn't, either the instruction isn't in CLAUDE.md or it's not specific enough.
+
+**Use bullet points over prose.** Claude processes bullet point rules efficiently. Long paragraphs of explanation are less effective than concise, scannable rules.
+
+---
+
+For the permissions side of configuring Claude Code — controlling which tools it can use and how to set up safe automation — see the [Claude Code Permissions Model guide](/en/resources/claude-code-permissions-model). For managing what Claude remembers across sessions via the memory system, see the [Claude Code Project Memory System guide](/en/resources/claude-code-project-memory-guide).
+
+Want help designing a CLAUDE.md architecture for your team or monorepo? ClawHelp specializes in production-grade Claude Code configurations that scale across large engineering teams. [Talk to us about a consultation](/en/contact).

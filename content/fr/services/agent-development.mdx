@@ -1,0 +1,150 @@
+---
+slug: agent-development
+title: "Développement d'Agents IA Personnalisés"
+description: "Nous concevons et construisons des flux de travail multi-agents personnalisés utilisant Claude Code — orchestrateurs, sous-agents et pipelines automatisés pour votre équipe."
+category: service
+tags: [agents, automation, subagents, consulting, claude-code]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 5
+lang: "fr"
+seoTitle: "Développement d'Agents IA Personnalisés | ClawHelp"
+seoDescription: "Agents Claude Code personnalisés et flux de travail multi-agents. Patterns orchestrateur + sous-agents, pipelines automatisés et développement d'agents IA personnalisés pour les équipes de dev."
+---
+
+# Développement d'Agents IA Personnalisés
+
+Une seule session Claude Code peut faire beaucoup. Un système multi-agents bien conçu peut effectuer un travail qui prendrait des jours à votre équipe — automatiquement, en parallèle, avec des pistes d'audit.
+
+Nous construisons des **agents Claude Code personnalisés et des flux de travail multi-agents** qui automatisent des tâches d'ingénierie complexes : génération de code coordonnée, pipelines automatisés de révision de PR, écriture autonome de tests, assistants de migration de dépôts, et plus encore. Si vous pouvez décrire le flux de travail, nous pouvons construire un agent qui l'exécute.
+
+## Ce Que Nous Construisons
+
+### Systèmes Orchestrateur + Sous-Agents
+
+Le pattern Claude Code le plus puissant : un **agent orchestrateur** qui décompose un objectif de haut niveau en sous-tâches et distribue des **sous-agents spécialisés** pour gérer chacune en parallèle.
+
+Exemple : un orchestrateur de migration qui lit tout votre répertoire `src/`, distribue un sous-agent par module pour convertir CommonJS en ESM, collecte les résultats, exécute un sous-agent de validation pour vérifier les erreurs d'importation, et produit un rapport de migration — tout cela sans humain dans la boucle.
+
+Nous concevons la stratégie de décomposition des tâches, le protocole de communication inter-agents et la logique d'agrégation des résultats. Nous construisons également la couche de sécurité : des agents qui peuvent faire une pause et demander une révision humaine lorsqu'ils rencontrent une ambiguïté.
+
+### Agents Automatisés de Révision de Code
+
+Un agent de révision de code déclenché sur chaque PR qui :
+
+- Vérifie les anti-patterns de sécurité (identifiants codés en dur, vecteurs d'injection SQL, risques XSS)
+- Vérifie la couverture de test pour les fichiers modifiés
+- Signale les violations des conventions architecturales de votre équipe
+- Génère des commentaires de PR en ligne en utilisant le MCP GitHub
+- Publie une révision récapitulative avec un verdict pass/fail
+
+Ce n'est pas un script de linting — c'est un agent de raisonnement qui comprend le contexte. Il lit la description de la PR, examine le diff par rapport au fichier complet, et prend des décisions.
+
+### Agents Autonomes d'Écriture de Tests
+
+Pointez l'agent sur un module avec une couverture de test insuffisante. Il lit la source, comprend le comportement attendu, rédige des tests unitaires, les exécute, diagnostique les échecs et itère jusqu'à ce que la suite de tests passe. Livrable : une PR avec de nouveaux fichiers de test, prête pour révision.
+
+### Assistants de Migration de Dépôts
+
+Agents à long terme conçus pour des tâches de plusieurs jours :
+
+- Migrations de frameworks (composants React en classes → hooks, jQuery → JavaScript vanilla)
+- Migrations de langages (Python 2 → 3, JavaScript → TypeScript)
+- Mises à niveau de dépendances avec correction automatique des changements d'API cassants
+- Restructuration de monorepo
+
+Nous concevons ces agents avec des points de contrôle pour qu'ils puissent être mis en pause et repris, et avec une porte de révision humaine après chaque lot significatif.
+
+### Agents d'Automatisation de Flux de Travail Personnalisés
+
+Tout flux de travail d'ingénierie répétable qui nécessite actuellement des étapes manuelles et des changements de contexte est un candidat. Exemples courants que nous avons construits :
+
+- **Agent de réponse aux incidents** : lit l'alerte PagerDuty, extrait les journaux pertinents via MCP, recherche dans la base de code les commits récents connexes, rédige une hypothèse de cause principale et publie dans Slack
+- **Agent d'intégration** : à partir du nom d'utilisateur GitHub d'un nouveau membre de l'équipe, génère une liste de lecture personnalisée depuis vos fichiers CLAUDE.md, les PRs récentes et les docs d'architecture
+- **Agent de notes de version** : lit les PRs fusionnées depuis la dernière version, regroupe par catégorie, et rédige un changelog lisible par l'humain dans le style de votre équipe
+
+## Exemple de Flux de Travail Multi-Agents : Pipeline Automatisé de Révision de PR
+
+Voici à quoi ressemble un système d'agents déployé en pratique :
+
+```
+[GitHub Webhook] → PR ouverte
+        ↓
+[Agent Orchestrateur]
+  ├─ Dispatch : Sous-agent Sécurité → analyse le diff pour les patterns de vulnérabilité
+  ├─ Dispatch : Sous-agent Couverture → vérifie les fichiers de test pour les modules modifiés
+  ├─ Dispatch : Sous-agent Convention → vérifie le nommage, la structure, les docs
+  └─ Dispatch : Sous-agent Résumé → lit la description de PR + contexte du diff
+        ↓
+[Agrégateur] → fusionne les résultats, évalue la sévérité
+        ↓
+[MCP GitHub] → publie les commentaires en ligne + révision récapitulative
+```
+
+Chaque sous-agent est isolé — il ne voit que le contexte dont il a besoin. L'orchestrateur gère la coordination et traite les échecs si un sous-agent produit une erreur.
+
+## Livrables
+
+- Code d'agent entièrement implémenté (TypeScript ou Python, au choix)
+- Diagramme d'architecture et explication écrite du rôle de chaque agent
+- Fichiers de configuration intégrés dans votre environnement Claude Code
+- Instructions de déploiement (local, Docker ou fonction cloud)
+- Suite de tests pour le système d'agents lui-même
+- Runbook pour surveiller, déboguer et étendre les agents
+- Support de 30 jours post-lancement
+
+## Le Processus
+
+### Étape 1 — Découverte du Flux de Travail (1–2 heures)
+
+Nous vous interviewons, vous et votre équipe, pour cartographier le flux de travail que vous voulez automatiser : entrées, sorties, points de décision, modes d'échec et taux d'erreur acceptables. Nous identifions quelles parties bénéficient du raisonnement IA vs. du code déterministe.
+
+### Étape 2 — Conception de l'Architecture (1–3 jours)
+
+Nous concevons la topologie des agents : combien d'agents, ce que chacun fait, comment ils communiquent, où vont les portes de révision humaine, et comment le système échoue de manière sécurisée. Vous examinez et approuvez la conception avant qu'un code soit écrit.
+
+### Étape 3 — Construction et Test (1–3 semaines selon la complexité)
+
+Nous construisons les agents de manière itérative, testant chaque composant avec des entrées réalistes avant l'intégration. Vous recevez des démos hebdomadaires avec des fonctionnalités opérationnelles à chaque jalon.
+
+### Étape 4 — Déploiement et Remise
+
+Nous déployons dans votre environnement, exécutons des tests de bout en bout et remettons la base de code avec la documentation que votre équipe peut maintenir. Nous formons au moins une personne dans votre équipe pour étendre et déboguer le système.
+
+## Tarification
+
+| Niveau | Périmètre | Prix |
+|--------|-----------|------|
+| **Agent Unique** | Un agent focalisé, un type de tâche | à partir de 1 200 $ |
+| **Système Multi-Agents** | 2–5 agents coordonnés, orchestration complète | à partir de 3 500 $ |
+| **Pipeline Entreprise** | Flux de travail complexe, serveurs MCP personnalisés, déploiement + monitoring | Contactez-nous |
+
+Prix en USD. Paiement par jalons disponible sur les engagements multi-agents.
+
+## Questions Fréquentes
+
+**À quel point ces agents sont-ils fiables en production ?**
+
+La fiabilité des agents dépend de la conception des tâches. Nous intégrons une gestion explicite de l'incertitude : les agents qui ne sont pas confiants demandent des clarifications plutôt que de continuer. Nous construisons également des harnais de test pour que vous puissiez mesurer la précision avant de déployer. La plupart des clients ciblent 80–90 % de couverture d'automatisation, avec une révision humaine pour les cas restants.
+
+**Dans quel langage les agents sont-ils écrits ?**
+
+Nous utilisons TypeScript par défaut pour sa sécurité de type et son écosystème étendu. Python est également disponible. Le SDK Claude Code supporte les deux. Nous nous adaptons au langage préféré de votre équipe.
+
+**Les agents peuvent-ils s'exécuter selon un calendrier (nocturne, hebdomadaire) ?**
+
+Oui. Les agents peuvent être déclenchés par cron, webhooks, événements CI ou changements du système de fichiers. Nous concevons le mécanisme de déclenchement pour s'adapter à votre infrastructure.
+
+**Comment les agents traitent-ils le code ou les données sensibles ?**
+
+Les agents s'exécutent avec les permissions que vous leur accordez — rien de plus. Les identifiants sensibles sont transmis via des variables d'environnement. Nous concevons les agents avec l'accès minimal requis pour la tâche. Toutes les données restent dans votre infrastructure.
+
+**Que se passe-t-il si un agent fait une erreur ?**
+
+Nous construisons des agents annulables partout où c'est possible (PRs de brouillon, pas de fusions directes ; bases de données de staging, pas de production). Chaque action destructive est par défaut bloquée derrière une étape de confirmation humaine.
+
+## Construisons votre Flux de Travail
+
+Dites-nous ce que votre équipe fait de manière répétitive que Claude devrait faire automatiquement.
+
+[**Réservez un appel de découverte de flux de travail**](/contact?service=agents) — 60 minutes, nous délimiterons ensemble votre premier agent.

@@ -1,0 +1,328 @@
+---
+slug: install-claude-code
+title: "How to Install Claude Code — Complete Setup Guide"
+description: "Step-by-step guide to installing Claude Code on any system, including prerequisites, verification, and first-run configuration."
+category: how-to
+tags: [installation, setup, claude-code, cli]
+author: "ClawHelp Team"
+publishDate: "2026-05-15"
+readTime: 8
+relatedServices: [claude-code-setup]
+seoTitle: "How to Install Claude Code: Complete Guide 2026 | ClawHelp"
+seoDescription: "Install Claude Code in 5 minutes. Step-by-step guide for macOS, Windows, and Linux with prerequisites, verification steps, and common fixes."
+schema: HowTo
+---
+
+# How to Install Claude Code — Complete Setup Guide
+
+Claude Code is Anthropic's official CLI for Claude — an agentic coding assistant that runs in your terminal, reads your codebase, edits files, runs commands, and calls tools autonomously. This guide walks you through every step from zero to a working install, including authentication, initial configuration, and the most common fixes when things go wrong.
+
+Platform-specific deep dives: [macOS](/skills/install-claude-code-mac) · [Windows](/skills/install-claude-code-windows) · [Linux](/skills/install-claude-code-linux)
+
+---
+
+## Prerequisites
+
+Before you touch `npm install`, make sure your environment meets these requirements.
+
+### Node.js 18 or higher
+
+Claude Code requires Node.js 18+. Check your current version:
+
+```bash
+node --version
+# v22.2.0  ← anything 18+ is fine
+```
+
+If you don't have Node.js, or you're on an older version, install it via [nvm](https://github.com/nvm-sh/nvm) (recommended for all platforms):
+
+```bash
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Reload shell, then install the latest LTS
+nvm install --lts
+nvm use --lts
+
+node --version  # confirm 18+
+```
+
+### npm
+
+npm ships with Node.js, so you likely already have it. Verify:
+
+```bash
+npm --version
+# 10.x.x or newer
+```
+
+### An Anthropic account with API access
+
+Claude Code authenticates in one of two ways:
+
+**Option A — Claude.ai Pro subscription (recommended for individuals):** You log in via the browser-based OAuth flow. No API key needed.
+
+**Option B — Anthropic API key:** Required for team/CI use or if you don't have a Pro subscription. Get one at [console.anthropic.com](https://console.anthropic.com) → API Keys → Create Key.
+
+Keep your API key handy; you'll need it in the auth step below.
+
+---
+
+## Step 1: Install Claude Code
+
+Install the CLI globally via npm:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+This pulls the package from the npm registry and installs the `claude` binary into your global `bin` directory. The install typically takes 15–30 seconds.
+
+If you see permission errors (`EACCES`), see the [permissions fix](#common-install-errors) section below.
+
+---
+
+## Step 2: Verify the Installation
+
+Confirm the binary is on your PATH and the version looks sane:
+
+```bash
+claude --version
+# Claude Code 1.x.x
+```
+
+If `claude: command not found`, your global npm `bin` directory is not on your `PATH`. Find it and add it:
+
+```bash
+npm root -g
+# /home/yourname/.nvm/versions/node/v22.2.0/lib/node_modules
+# The bin dir is one level up: /home/yourname/.nvm/versions/node/v22.2.0/bin
+
+# Add to PATH in your shell profile (~/.bashrc or ~/.zshrc):
+export PATH="$HOME/.nvm/versions/node/v22.2.0/bin:$PATH"
+source ~/.bashrc
+```
+
+---
+
+## Step 3: First Run and Authentication
+
+Navigate to any project directory, then start Claude Code:
+
+```bash
+cd ~/my-project
+claude
+```
+
+On first run, Claude Code opens a browser window for OAuth login (Claude.ai Pro path) or prompts you for an API key:
+
+**API key path:**
+```
+? How would you like to authenticate?
+  ❯ Login with Claude.ai (recommended)
+    Enter API key
+```
+
+Select "Enter API key", then paste your key:
+
+```
+? Enter your Anthropic API key: sk-ant-api03-...
+✓ Authenticated successfully
+```
+
+**OAuth path (Claude.ai Pro):**
+The CLI prints a URL. Your browser opens automatically. Log in to claude.ai, approve the authorization, and return to the terminal. You'll see:
+
+```
+✓ Authenticated successfully via Claude.ai
+```
+
+Your credentials are stored in `~/.claude/` — you will not need to re-authenticate unless you explicitly log out.
+
+---
+
+## Step 4: Initial Configuration
+
+Claude Code stores all configuration under `~/.claude/`. Here's what gets created:
+
+```
+~/.claude/
+├── settings.json       # Global settings (model, permissions, hooks)
+├── settings.local.json # Local overrides (gitignored by convention)
+└── projects/           # Per-project memory files
+```
+
+### Review settings.json
+
+Open `~/.claude/settings.json` in your editor. The defaults are reasonable, but two settings are worth knowing about immediately:
+
+```json
+{
+  "model": "claude-sonnet-4-5",
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}
+```
+
+**model** — The Claude model Claude Code uses. `claude-sonnet-4-5` is the default; `claude-opus-4-5` gives stronger reasoning for harder tasks at higher cost.
+
+**permissions.allow** — A list of tool patterns Claude Code is permitted to run without asking you. Example: `["Bash(npm run test:*)", "Read(**)", "Edit(**)"]`. The more you populate this, the less Claude interrupts you with permission prompts.
+
+### Per-project CLAUDE.md
+
+Create a `CLAUDE.md` at the root of each project. Claude Code reads this automatically when it starts in that directory. Use it to describe your stack, coding conventions, and anything the model needs to know:
+
+```markdown
+# Project: my-api
+
+## Stack
+- Node.js 22, TypeScript, Fastify
+- Postgres 16 via pg (no ORM)
+- Tests: Vitest, run with `npm test`
+
+## Conventions
+- All async functions must have explicit return types
+- Error handling: never swallow errors; always log then rethrow
+- Migration files go in db/migrations/
+
+## Do not edit
+- src/generated/ — auto-generated by codegen
+```
+
+---
+
+## Common Install Errors and Fixes
+
+### EACCES: permission denied (global npm install)
+
+npm's global directory is owned by root on some systems. Fix this by configuring a user-owned global prefix instead of using `sudo`:
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH=$HOME/.npm-global/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+
+# Now install without sudo
+npm install -g @anthropic-ai/claude-code
+```
+
+If you must use the system npm and don't want to change the prefix, `sudo npm install -g @anthropic-ai/claude-code` will work but is not recommended.
+
+### `claude` not found after install
+
+Your global npm `bin` directory isn't on `PATH`. Identify it:
+
+```bash
+npm config get prefix
+# /home/user/.npm-global  → add /home/user/.npm-global/bin to PATH
+```
+
+Add the export to your shell profile and reload.
+
+### SSL/TLS certificate errors behind a corporate proxy
+
+Set the proxy environment variables before installing:
+
+```bash
+export HTTP_PROXY=http://proxy.corp.example.com:8080
+export HTTPS_PROXY=http://proxy.corp.example.com:8080
+npm install -g @anthropic-ai/claude-code
+```
+
+If the proxy uses a self-signed cert, you may also need:
+
+```bash
+npm config set cafile /path/to/corporate-ca.crt
+```
+
+### Authentication fails: "Invalid API key"
+
+- Check for leading/trailing whitespace when pasting the key.
+- Confirm the key has not been revoked in [console.anthropic.com](https://console.anthropic.com).
+- Make sure your account has sufficient credits (new keys start with $0 balance; add a payment method first).
+
+### Node version too old
+
+If you installed Claude Code before upgrading Node and see runtime errors:
+
+```bash
+nvm install --lts
+nvm use --lts
+npm install -g @anthropic-ai/claude-code  # reinstall against the new Node
+```
+
+---
+
+## Quick-Start: Your First Conversation
+
+Once authenticated, open a project and ask Claude something concrete:
+
+```bash
+cd ~/my-project
+claude "Explain the main entry point and tell me which files handle authentication"
+```
+
+Or start the interactive REPL without a prompt:
+
+```bash
+claude
+```
+
+Inside the REPL, Claude Code can read files, run shell commands, edit code, and use tools — all in the same session. Type `exit` or press `Ctrl+C` twice to quit.
+
+---
+
+## Next Steps
+
+- **macOS-specific setup** → [Installing Claude Code on macOS](/skills/install-claude-code-mac)
+- **Windows (WSL2 and native)** → [Installing Claude Code on Windows](/skills/install-claude-code-windows)
+- **Linux (Ubuntu, Fedora, Arch)** → [Installing Claude Code on Linux](/skills/install-claude-code-linux)
+- **Automate actions with hooks** → [Claude Code Hooks Guide](/skills/claude-code-hooks)
+- **Build subagents** → [How to Build Subagents in Claude Code](/skills/build-subagent)
+
+---
+
+{/* HowTo schema — consumed by the site's SEO layer
+@schema HowTo
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Install Claude Code",
+  "description": "Step-by-step guide to installing Claude Code on any system",
+  "totalTime": "PT10M",
+  "supply": [
+    { "@type": "HowToSupply", "name": "Node.js 18+" },
+    { "@type": "HowToSupply", "name": "Anthropic API key or Claude.ai Pro subscription" }
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Install Node.js 18+",
+      "text": "Install Node.js 18 or higher using nvm or your platform package manager."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Install Claude Code via npm",
+      "text": "Run: npm install -g @anthropic-ai/claude-code"
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Verify the installation",
+      "text": "Run: claude --version to confirm the binary is accessible."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Authenticate",
+      "text": "Run claude in a project directory and complete the OAuth or API key flow."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Configure settings.json and CLAUDE.md",
+      "text": "Review ~/.claude/settings.json and create a per-project CLAUDE.md file."
+    }
+  ]
+}
+*/}
